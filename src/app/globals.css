@@ -1,0 +1,434 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+
+  --lx-bg: #0b0f12;
+  --lx-bg-elevated: #0f172a;
+  --lx-fg: #e2e8f0;
+
+  --lx-card: rgba(15, 23, 42, 0.55);
+  --lx-card-hover: rgba(15, 23, 42, 0.75);
+  --lx-border: #1f2937;
+  --lx-border-strong: #334155;
+
+  --lx-accent: #7fdbca;
+  --lx-accent-2: #82aaff;
+  --lx-accent-glow: rgba(127, 219, 202, 0.18);
+
+  --lx-success: #34d399;
+  --lx-warning: #fbbf24;
+  --lx-danger: #f87171;
+
+  --lx-difficulty-beginner: #34d399;
+  --lx-difficulty-intermediate: #fbbf24;
+  --lx-difficulty-advanced: #f87171;
+
+  --radius-lx: 0.875rem;
+}
+
+html,
+body {
+  background: var(--lx-bg);
+  color: var(--lx-fg);
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle ambient gradient + grid background for the app shell. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(127, 219, 202, 0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(130, 170, 255, 0.06), transparent 60%),
+    var(--lx-bg);
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: var(--lx-accent-glow);
+  color: var(--lx-accent);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--lx-accent) 70%, white 0%);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ───────────────────────────────────────── Markdoc / Markdown styling ── */
+
+.prose-lx {
+  line-height: 1.75;
+  max-width: none;
+  color: var(--lx-fg);
+}
+
+.prose-lx h1,
+.prose-lx h2,
+.prose-lx h3,
+.prose-lx h4 {
+  scroll-margin-top: 6rem;
+}
+
+.prose-lx h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: #82aaff;
+  letter-spacing: -0.01em;
+}
+.prose-lx h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 1.75rem 0 0.75rem;
+  color: #7fdbca;
+  letter-spacing: -0.005em;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--lx-border);
+}
+.prose-lx h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: #a5f3fc;
+}
+.prose-lx p {
+  margin: 0.85rem 0;
+  color: #cbd5e1;
+}
+.prose-lx ul,
+.prose-lx ol {
+  margin: 0.85rem 0 0.85rem 1.5rem;
+  color: #cbd5e1;
+}
+.prose-lx li {
+  margin: 0.3rem 0;
+}
+.prose-lx li::marker {
+  color: var(--lx-accent);
+}
+.prose-lx strong {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.prose-lx a {
+  color: var(--lx-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in oklab, var(--lx-accent) 50%, transparent);
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.prose-lx a:hover {
+  color: #a7f3d0;
+  border-bottom-color: #a7f3d0;
+}
+.prose-lx code {
+  background: rgba(127, 219, 202, 0.08);
+  color: #fde68a;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-size: 0.88em;
+  border: 1px solid rgba(127, 219, 202, 0.12);
+}
+.prose-lx pre {
+  position: relative;
+  background: #0a0f17;
+  border: 1px solid var(--lx-border);
+  padding: 1rem 1rem 1rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 1.1rem 0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+}
+.prose-lx pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.prose-lx blockquote {
+  border-left: 3px solid var(--lx-accent);
+  background: rgba(127, 219, 202, 0.05);
+  padding: 0.6rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  color: #a7f3d0;
+  font-style: italic;
+}
+.prose-lx blockquote p {
+  margin: 0;
+}
+.prose-lx table {
+  border-collapse: collapse;
+  margin: 1.1rem 0;
+  width: 100%;
+  font-size: 0.92rem;
+  border: 1px solid var(--lx-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.prose-lx th,
+.prose-lx td {
+  border: 1px solid var(--lx-border);
+  padding: 0.5rem 0.85rem;
+  text-align: left;
+}
+.prose-lx th {
+  background: #111827;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.prose-lx tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+.prose-lx hr {
+  border: 0;
+  border-top: 1px solid var(--lx-border);
+  margin: 2rem 0;
+}
+
+/* ───────────────────────────────────────── Component library ── */
+
+@layer components {
+  .lx-card {
+    background: var(--lx-card);
+    border: 1px solid var(--lx-border);
+    border-radius: var(--radius-lx);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: border-color 200ms ease, background 200ms ease, transform 200ms ease;
+  }
+  .lx-card-interactive {
+    cursor: pointer;
+  }
+  .lx-card-interactive:hover {
+    border-color: color-mix(in oklab, var(--lx-accent) 60%, var(--lx-border));
+    background: var(--lx-card-hover);
+    transform: translateY(-1px);
+  }
+
+  .lx-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--lx-border);
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--lx-fg);
+    line-height: 1;
+  }
+  .lx-pill-success {
+    color: var(--lx-success);
+    background: color-mix(in oklab, var(--lx-success) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-success) 30%, transparent);
+  }
+  .lx-pill-accent {
+    color: var(--lx-accent);
+    background: var(--lx-accent-glow);
+    border-color: color-mix(in oklab, var(--lx-accent) 30%, transparent);
+  }
+  .lx-pill-beginner {
+    color: var(--lx-difficulty-beginner);
+    background: color-mix(in oklab, var(--lx-difficulty-beginner) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-difficulty-beginner) 30%, transparent);
+  }
+  .lx-pill-intermediate {
+    color: var(--lx-difficulty-intermediate);
+    background: color-mix(in oklab, var(--lx-difficulty-intermediate) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-difficulty-intermediate) 30%, transparent);
+  }
+  .lx-pill-advanced {
+    color: var(--lx-difficulty-advanced);
+    background: color-mix(in oklab, var(--lx-difficulty-advanced) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-difficulty-advanced) 30%, transparent);
+  }
+
+  .lx-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    font-weight: 600;
+    border-radius: 0.6rem;
+    padding: 0.55rem 1rem;
+    transition: background 150ms ease, color 150ms ease, transform 100ms ease,
+      box-shadow 150ms ease, border-color 150ms ease;
+    border: 1px solid transparent;
+    line-height: 1.1;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .lx-btn:active {
+    transform: translateY(1px);
+  }
+  .lx-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .lx-btn-primary {
+    background: var(--lx-accent);
+    color: #0b0f12;
+    box-shadow: 0 0 0 0 var(--lx-accent-glow);
+  }
+  .lx-btn-primary:hover:not(:disabled) {
+    background: #a7f3d0;
+    box-shadow: 0 4px 18px -6px var(--lx-accent-glow);
+  }
+  .lx-btn-secondary {
+    background: rgba(15, 23, 42, 0.7);
+    color: var(--lx-fg);
+    border-color: var(--lx-border-strong);
+  }
+  .lx-btn-secondary:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: var(--lx-accent);
+    color: var(--lx-accent);
+  }
+  .lx-btn-ghost {
+    background: transparent;
+    color: var(--lx-fg);
+  }
+  .lx-btn-ghost:hover:not(:disabled) {
+    background: rgba(127, 219, 202, 0.08);
+    color: var(--lx-accent);
+  }
+  .lx-btn-sm {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .lx-input {
+    width: 100%;
+    background: rgba(11, 15, 18, 0.7);
+    border: 1px solid var(--lx-border-strong);
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    color: var(--lx-fg);
+    font-family: 'JetBrains Mono', Menlo, monospace;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .lx-input:focus {
+    outline: none;
+    border-color: var(--lx-accent);
+    box-shadow: 0 0 0 3px var(--lx-accent-glow);
+  }
+  .lx-input::placeholder {
+    color: #64748b;
+  }
+
+  .lx-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .lx-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--lx-accent), var(--lx-accent-2));
+    border-radius: 999px;
+    transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .lx-section {
+    @apply lx-card p-5;
+  }
+
+  .lx-kbd {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', Menlo, monospace;
+    font-size: 0.75em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid var(--lx-border-strong);
+    background: rgba(15, 23, 42, 0.8);
+    color: #cbd5e1;
+    line-height: 1.2;
+  }
+
+  .lx-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: 0.5rem 0.9rem;
+    background: var(--lx-accent);
+    color: #0b0f12;
+    border-radius: 0 0 8px 0;
+    font-weight: 600;
+  }
+  .lx-skip-link:focus {
+    left: 0;
+  }
+}
+
+/* Tiny utilities used by the ScrollProgress bar. */
+.lx-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--lx-accent), var(--lx-accent-2));
+  z-index: 60;
+  transition: width 80ms linear;
+}
+
+/* Confetti / success pulse used on completion. */
+@keyframes lx-pulse-success {
+  0% { box-shadow: 0 0 0 0 var(--lx-accent-glow); }
+  70% { box-shadow: 0 0 0 16px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.lx-pulse-success {
+  animation: lx-pulse-success 1.4s ease-out 2;
+}
