@@ -1,0 +1,80 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow only one concurrent deployment, queueing newer runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# Sets permissions for the GITHUB_TOKEN. Pages deploy needs contents: write.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Keep the run on the latest Ubuntu runner so we hit current Node and Pages tooling.
+runs-on: ubuntu-latest
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy standalone assets
+        # The project ships a post-build script that prepares the standalone
+        # output. Run it as a defensive step in case the build script changes
+        # but the workflow still produces a runnable artifact.
+        run: node scripts/copy-standalone-assets.mjs
+        continue-on-error: true
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          # CI mode silences the Next.js "telemetry" prompt and enables stricter
+          # checks. NODE_ENV=production is set automatically by `next build`.
+          CI: 'true'
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # When `output: 'standalone'` is used, the runnable server lives under
+          # `.next/standalone`. GitHub Pages cannot execute Node, so prefer the
+          # static client assets at `.next/static` plus `public/`. If the build
+          # is later switched to `output: 'export'`, change the path to `out/`.
+          path: .next/static
+          retention-days: 30
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
