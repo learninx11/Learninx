@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { submitChallengeAction } from '@/app/lessons/[slug]/actions';
+import { useProgress } from '@/lib/progress-context';
 import { CheckCheckIcon, CheckIcon, CloseIcon } from '@/components/ui/Icon';
 
 export function ChallengeRunner({
   lessonId,
-  lessonSlug,
   lessonSolution,
-  initiallyCompleted,
-  onSuccess,
 }: {
   lessonId: string;
   lessonSlug: string;
@@ -17,18 +14,15 @@ export function ChallengeRunner({
   initiallyCompleted: boolean;
   onSuccess?: () => void;
 }) {
+  const { isCompleted, submitChallenge } = useProgress();
+  const completed = isCompleted(lessonId);
   const [command, setCommand] = useState('');
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(
     null,
   );
-  const [completed, setCompleted] = useState(initiallyCompleted);
   const [submitting, setSubmitting] = useState(false);
   const [reveal, setReveal] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    setCompleted(initiallyCompleted);
-  }, [initiallyCompleted]);
 
   // Build a friendlier hint: show the first accepted form, with everything
   // past the command name masked.
@@ -36,19 +30,19 @@ export function ChallengeRunner({
   //   "chmod 700 script.sh"               ->  "chmod ..."
   const hint = lessonSolution ? buildHint(lessonSolution) : null;
 
-  async function submit(): Promise<void> {
+  // If the user reset their progress externally, clear any stale status.
+  useEffect(() => {
+    if (!completed) setStatus(null);
+  }, [completed]);
+
+  function submit(): void {
     if (!command.trim()) return;
     setSubmitting(true);
-    try {
-      const result = await submitChallengeAction(lessonId, lessonSlug, command);
+    setTimeout(() => {
+      const result = submitChallenge(lessonId, lessonSolution, command);
       setStatus(result);
-      if (result.ok) {
-        setCompleted(true);
-        onSuccess?.();
-      }
-    } finally {
       setSubmitting(false);
-    }
+    }, 0);
   }
 
   return (

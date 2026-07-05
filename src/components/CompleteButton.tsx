@@ -1,23 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { markLessonCompleteAction } from '@/app/lessons/[slug]/actions';
+import { useProgress } from '@/lib/progress-context';
 import { CheckCheckIcon, CheckIcon } from '@/components/ui/Icon';
 
 export function CompleteButton({ lessonId }: { lessonId: string }) {
+  const { isCompleted, markComplete } = useProgress();
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const done = isCompleted(lessonId);
 
   return (
     <button
-      onClick={async () => {
+      onClick={() => {
         setSubmitting(true);
-        try {
-          await markLessonCompleteAction(lessonId);
-          setDone(true);
-        } finally {
+        // Tiny artificial delay so the "Saving…" state is visible.
+        // The actual localStorage write is synchronous.
+        setTimeout(() => {
+          markComplete(lessonId);
           setSubmitting(false);
-        }
+        }, 150);
       }}
       disabled={submitting || done}
       className="lx-btn lx-btn-secondary"

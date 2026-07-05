@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRightIcon,
@@ -7,20 +8,16 @@ import {
   TerminalIcon,
   TrophyIcon,
 } from '@/components/ui/Icon';
-import { Pill, ProgressBar } from '@/components/ui/Pill';
+import { Pill } from '@/components/ui/Pill';
 import { getAllLessons } from '@/lib/lessons';
-import { getProgress } from '@/lib/progress';
-
-// The home page reads the per-browser progress cookie, so it must be
-// rendered on demand — never at build time.
-export const dynamic = 'force-dynamic';
+import {
+  HomeCtaButton,
+  HomeCtaText,
+  HomeProgress,
+} from './_home-progress';
 
 export default function Home() {
   const lessons = getAllLessons();
-  const progress = getProgress();
-  const completedCount = progress.completed.length;
-  const quizAttempts = Object.keys(progress.quiz).length;
-  const isFirstVisit = completedCount === 0 && quizAttempts === 0;
 
   return (
     <div className="space-y-16">
@@ -56,11 +53,7 @@ export default function Home() {
         </div>
 
         <div className="mx-auto mt-10 max-w-md">
-          <ProgressBar
-            value={completedCount}
-            max={lessons.length}
-            label={isFirstVisit ? 'Begin your journey' : 'Lessons completed'}
-          />
+          <HomeProgress totalLessons={lessons.length} />
         </div>
 
         <p className="mt-4 text-xs text-slate-500">
@@ -138,22 +131,10 @@ export default function Home() {
         <div className="lx-card flex flex-col justify-between gap-4 p-6 sm:p-8">
           <div>
             <Pill tone="success">Ready when you are</Pill>
-            <h2 className="mt-3 text-xl font-semibold sm:text-2xl">
-              {isFirstVisit
-                ? 'Open the first lesson'
-                : 'Pick up where you left off'}
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              {isFirstVisit
-                ? 'A 5-minute warm-up. You only need a keyboard.'
-                : `You've completed ${completedCount} of ${lessons.length} lessons. ${quizAttempts} quiz attempt${quizAttempts === 1 ? '' : 's'} so far.`}
-            </p>
+            <HomeCtaText totalLessons={lessons.length} />
           </div>
-          <Link
-            href="/lessons"
-            className="lx-btn lx-btn-secondary self-start"
-          >
-            {isFirstVisit ? 'Open the first lesson' : 'Continue learning'}
+          <Link href="/lessons" className="lx-btn lx-btn-secondary self-start">
+            <HomeCtaButton totalLessons={lessons.length} />
             <ArrowRightIcon size={14} />
           </Link>
         </div>
@@ -169,7 +150,7 @@ function FeatureCard({
   body,
 }: {
   step: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   body: string;
 }) {

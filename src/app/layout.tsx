@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { GithubIcon, TerminalIcon } from '@/components/ui/Icon';
 import { ResetProgressButton } from '@/components/ResetProgressButton';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
+import { ProgressProvider } from '@/lib/progress-context';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -30,7 +31,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="lx-skip-link">
           Skip to content
         </a>
-        <KeyboardShortcuts />
+        <ProgressProvider>
+          <KeyboardShortcuts />
 
         <header className="sticky top-0 z-30 border-b border-slate-800/70 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
           <nav
@@ -89,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="lx-kbd">l</span> to jump to lessons
           </p>
         </footer>
+        </ProgressProvider>
       </body>
     </html>
   );

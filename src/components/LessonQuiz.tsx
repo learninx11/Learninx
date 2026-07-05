@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { submitQuizAction } from '@/app/lessons/[slug]/actions';
+import { useProgress } from '@/lib/progress-context';
 import type { QuizAnswerResult } from '@/lib/types';
 import { CheckCheckIcon, CheckIcon, CloseIcon, SparklesIcon } from '@/components/ui/Icon';
 
 interface Question {
   id: string;
   prompt: string;
+  /** Lower-cased + trimmed expected answer. */
+  answer: string;
 }
 
 const PASS_THRESHOLD = 80;
@@ -21,6 +23,7 @@ export function LessonQuiz({
   questions: Question[];
   previousScore: number | null;
 }) {
+  const { submitQuiz } = useProgress();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{
@@ -31,24 +34,20 @@ export function LessonQuiz({
     results: QuizAnswerResult[];
   } | null>(null);
 
-  async function submit(): Promise<void> {
+  function submit(): void {
     setSubmitting(true);
-    try {
-      const payload = {
+    setTimeout(() => {
+      const r = submitQuiz(
         lessonId,
-        answers: questions.map((q) => ({
+        questions,
+        questions.map((q) => ({
           questionId: q.id,
           answer: answers[q.id] ?? '',
         })),
-      };
-      const r = await submitQuizAction(payload);
-      setResult({
-        ...r,
-        passed: r.passed,
-      });
-    } finally {
+      );
+      setResult(r);
       setSubmitting(false);
-    }
+    }, 0);
   }
 
   function reset(): void {

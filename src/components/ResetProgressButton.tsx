@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { resetProgressAction } from '@/app/lessons/[slug]/actions';
+import { useProgress } from '@/lib/progress-context';
 import { ResetIcon } from '@/components/ui/Icon';
 
 export function ResetProgressButton() {
+  const { reset } = useProgress();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function confirm() {
-    startTransition(async () => {
-      await resetProgressAction();
+    startTransition(() => {
+      reset();
       setOpen(false);
     });
   }
