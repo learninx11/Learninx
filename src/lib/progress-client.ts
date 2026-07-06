@@ -14,13 +14,28 @@
  * the swap stays mechanical.
  */
 
-import type { ProgressState, QuizScore } from './progress-types';
+import type { ProgressState, QuizScore, StreakState } from './progress-types';
 
 const STORAGE_KEY = 'learninx_progress';
 /** One year, in milliseconds. Matches the previous cookie maxAge. */
 const MAX_AGE_MS = 60 * 60 * 24 * 365 * 1000;
 
-const EMPTY: ProgressState = { v: 1, completed: [], quiz: {} };
+const EMPTY_STREAK: StreakState = {
+  current: 0,
+  best: 0,
+  lastActiveDay: null,
+  totalCompletions: 0,
+  totalCorrect: 0,
+  points: 0,
+};
+
+const EMPTY: ProgressState = {
+  v: 1,
+  completed: [],
+  quiz: {},
+  streak: { ...EMPTY_STREAK },
+  lastTipDay: null,
+};
 
 // ──────────────────────────────────────────── storage helpers ──
 
@@ -71,13 +86,83 @@ function normalize(input: Partial<ProgressState>): ProgressState {
       input.quiz && typeof input.quiz === 'object' && !Array.isArray(input.quiz)
         ? (input.quiz as Record<string, QuizScore>)
         : {},
+    streak: normalizeStreak(input.streak),
+    lastTipDay:
+      typeof input.lastTipDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.lastTipDay)
+        ? input.lastTipDay
+        : null,
   };
+}
+
+function normalizeStreak(input: Partial<StreakState> | undefined): StreakState {
+  if (!input || typeof input !== 'object') return { ...EMPTY_STREAK };
+  return {
+    current: clampInt(input.current, 0, 9999),
+    best: clampInt(input.best, 0, 9999),
+    lastActiveDay:
+      typeof input.lastActiveDay === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(input.lastActiveDay)
+        ? input.lastActiveDay
+        : null,
+    totalCompletions: clampInt(input.totalCompletions, 0, 999_999),
+    totalCorrect: clampInt(input.totalCorrect, 0, 999_999),
+    points: clampInt(input.points, 0, 9_999_999),
+  };
+}
+
+function clampInt(value: unknown, min: number, max: number): number {
+  const n = typeof value === 'number' ? Math.floor(value) : NaN;
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
 }
 
 function clone<T>(value: T): T {
   return typeof structuredClone === 'function'
     ? structuredClone(value)
     : (JSON.parse(JSON.stringify(value)) as T);
+}
+
+// ──────────────────────────────────────────── date helpers ──
+
+/** YYYY-MM-DD in UTC. */
+export function utcDayKey(d: Date = new Date()): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Number of whole calendar days between two YYYY-MM-DD strings (b - a). */
+export function dayDiff(a: string, b: string): number {
+  const ad = Date.UTC(
+    Number(a.slice(0, 4)),
+    Number(a.slice(5, 7)) - 1,
+    Number(a.slice(8, 10)),
+  );
+  const bd = Date.UTC(
+    Number(b.slice(0, 4)),
+    Number(b.slice(5, 7)) - 1,
+    Number(b.slice(8, 10)),
+  );
+  return Math.round((bd - ad) / 86_400_000);
+}
+
+function bumpStreak(streak: StreakState, today: string): StreakState {
+  if (streak.lastActiveDay === today) {
+    return streak;
+  }
+  if (streak.lastActiveDay && dayDiff(streak.lastActiveDay, today) === 1) {
+    const current = streak.current + 1;
+    return {
+      ...streak,
+      current,
+      best: Math.max(streak.best, current),
+      lastActiveDay: today,
+    };
+  }
+  return {
+    ...streak,
+    current: 1,
+    best: Math.max(streak.best, 1),
+    lastActiveDay: today,
+  };
 }
 
 // ──────────────────────────────────────────── public API ──
@@ -87,22 +172,50 @@ export function getProgress(): ProgressState {
   return readRaw();
 }
 
-/** Mark a lesson as completed (idempotent). */
+/** Mark a lesson as completed (idempotent). Awards points + streak. */
 export function markLessonComplete(lessonId: string): ProgressState {
   const state = readRaw();
-  if (!state.completed.includes(lessonId)) {
+  const already = state.completed.includes(lessonId);
+  if (!already) {
     state.completed.push(lessonId);
+  }
+  const today = utcDayKey();
+  const streak = bumpStreak(state.streak, today);
+  if (!already) {
+    streak.totalCompletions += 1;
+    streak.points += 10;
+  }
+  writeRaw({ ...state, streak });
+  return { ...state, streak };
+}
+
+/** Record the latest quiz score for a lesson. Awards points for new correct answers. */
+export function recordQuizScore(lessonId: string, score: QuizScore): ProgressState {
+  const state = readRaw();
+  const previous = state.quiz[lessonId];
+  state.quiz[lessonId] = score;
+  // Only award points for *new* correct answers (not re-takes at the same level).
+  const prevCorrect = previous?.correct ?? 0;
+  const delta = Math.max(0, score.correct - prevCorrect);
+  if (delta > 0) {
+    const streak = { ...state.streak, totalCorrect: state.streak.totalCorrect + delta };
+    streak.points += delta; // 1 point per correct answer
+    const next = { ...state, streak };
+    writeRaw(next);
+    return next;
   }
   writeRaw(state);
   return state;
 }
 
-/** Record the latest quiz score for a lesson. Does not change completion. */
-export function recordQuizScore(lessonId: string, score: QuizScore): ProgressState {
+/** Mark the daily tip as seen for today. Idempotent. */
+export function markTipSeen(): ProgressState {
   const state = readRaw();
-  state.quiz[lessonId] = score;
-  writeRaw(state);
-  return state;
+  const today = utcDayKey();
+  if (state.lastTipDay === today) return state;
+  const next = { ...state, lastTipDay: today };
+  writeRaw(next);
+  return next;
 }
 
 /** True if this lesson is in the completed set. */

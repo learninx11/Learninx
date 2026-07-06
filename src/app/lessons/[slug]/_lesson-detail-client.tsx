@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ChallengeRunner } from '@/components/ChallengeRunner';
 import { CompleteButton } from '@/components/CompleteButton';
 import { LessonQuiz } from '@/components/LessonQuiz';
@@ -10,6 +10,8 @@ import { useProgress } from '@/lib/progress-context';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { TerminalClient as Terminal } from '@/components/TerminalClient';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
+import { TableOfContents } from '@/components/TableOfContents';
+import { extractToc } from '@/lib/toc';
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -42,6 +44,7 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
   const quizScore = state.quiz[lesson.id];
   const readingMinutes = Math.max(1, Math.round(lesson.content.length / 1100));
   const sandboxRef = useRef<HTMLDivElement | null>(null);
+  const toc = useMemo(() => extractToc(lesson.content), [lesson.content]);
 
   // Keyboard shortcut: pressing "t" focuses the sandbox so the learner
   // can type into the terminal without reaching for the mouse.
@@ -63,7 +66,7 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
   return (
     <>
       <ScrollProgress />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] xl:gap-8">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,440px)_minmax(0,220px)] xl:gap-8">
         <article className="min-w-0 space-y-6">
           <header className="space-y-3">
             <Link
@@ -235,6 +238,8 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
             />
           </div>
         </aside>
+
+        <TableOfContents entries={toc} />
       </div>
     </>
   );

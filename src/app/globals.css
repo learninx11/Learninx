@@ -26,7 +26,50 @@
   --lx-difficulty-intermediate: #fbbf24;
   --lx-difficulty-advanced: #f87171;
 
+  --lx-muted: #94a3b8;
+  --lx-code-bg: #0a0f17;
+  --lx-grid-line: rgba(255, 255, 255, 0.015);
+  --lx-prose-body: #cbd5e1;
+  --lx-prose-strong: #f1f5f9;
+  --lx-prose-th: #111827;
+  --lx-nav-bg: rgba(2, 6, 23, 0.8);
+
   --radius-lx: 0.875rem;
+}
+
+/* Light mode tokens. Activated by adding `light` class on <html>. */
+:root.light,
+html.light {
+  color-scheme: light;
+
+  --lx-bg: #f8fafc;
+  --lx-bg-elevated: #ffffff;
+  --lx-fg: #0f172a;
+
+  --lx-card: rgba(255, 255, 255, 0.85);
+  --lx-card-hover: rgba(255, 255, 255, 1);
+  --lx-border: #e2e8f0;
+  --lx-border-strong: #cbd5e1;
+
+  --lx-accent: #0d9488;
+  --lx-accent-2: #2563eb;
+  --lx-accent-glow: rgba(13, 148, 136, 0.15);
+
+  --lx-success: #059669;
+  --lx-warning: #d97706;
+  --lx-danger: #dc2626;
+
+  --lx-difficulty-beginner: #059669;
+  --lx-difficulty-intermediate: #d97706;
+  --lx-difficulty-advanced: #dc2626;
+
+  --lx-muted: #475569;
+  --lx-code-bg: #0f172a;
+  --lx-grid-line: rgba(15, 23, 42, 0.05);
+  --lx-prose-body: #334155;
+  --lx-prose-strong: #0f172a;
+  --lx-prose-th: #f1f5f9;
+  --lx-nav-bg: rgba(248, 250, 252, 0.85);
 }
 
 html,
@@ -51,8 +94,8 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(127, 219, 202, 0.08), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(130, 170, 255, 0.06), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklab, var(--lx-accent) 12%, transparent), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in oklab, var(--lx-accent-2) 10%, transparent), transparent 60%),
     var(--lx-bg);
   pointer-events: none;
 }
@@ -62,8 +105,8 @@ body::after {
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    linear-gradient(var(--lx-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lx-grid-line) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
@@ -115,14 +158,14 @@ html {
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 1rem;
-  color: #82aaff;
+  color: var(--lx-accent-2);
   letter-spacing: -0.01em;
 }
 .prose-lx h2 {
   font-size: 1.4rem;
   font-weight: 600;
   margin: 1.75rem 0 0.75rem;
-  color: #7fdbca;
+  color: var(--lx-accent);
   letter-spacing: -0.005em;
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--lx-border);
@@ -131,16 +174,17 @@ html {
   font-size: 1.15rem;
   font-weight: 600;
   margin: 1.25rem 0 0.5rem;
-  color: #a5f3fc;
+  color: var(--lx-accent);
+  opacity: 0.9;
 }
 .prose-lx p {
   margin: 0.85rem 0;
-  color: #cbd5e1;
+  color: var(--lx-prose-body);
 }
 .prose-lx ul,
 .prose-lx ol {
   margin: 0.85rem 0 0.85rem 1.5rem;
-  color: #cbd5e1;
+  color: var(--lx-prose-body);
 }
 .prose-lx li {
   margin: 0.3rem 0;
@@ -149,7 +193,7 @@ html {
   color: var(--lx-accent);
 }
 .prose-lx strong {
-  color: #f1f5f9;
+  color: var(--lx-prose-strong);
   font-weight: 600;
 }
 .prose-lx a {
@@ -159,31 +203,31 @@ html {
   transition: color 150ms ease, border-color 150ms ease;
 }
 .prose-lx a:hover {
-  color: #a7f3d0;
-  border-bottom-color: #a7f3d0;
+  color: var(--lx-accent-2);
+  border-bottom-color: var(--lx-accent-2);
 }
 .prose-lx code {
-  background: rgba(127, 219, 202, 0.08);
-  color: #fde68a;
+  background: color-mix(in oklab, var(--lx-accent) 12%, transparent);
+  color: var(--lx-prose-strong);
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
   font-family: 'JetBrains Mono', Menlo, monospace;
   font-size: 0.88em;
-  border: 1px solid rgba(127, 219, 202, 0.12);
+  border: 1px solid color-mix(in oklab, var(--lx-accent) 18%, transparent);
 }
 .prose-lx pre {
   position: relative;
-  background: #0a0f17;
+  background: var(--lx-code-bg);
   border: 1px solid var(--lx-border);
   padding: 1rem 1rem 1rem;
   border-radius: 10px;
   overflow-x: auto;
   margin: 1.1rem 0;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
 }
 .prose-lx pre code {
   background: transparent;
-  color: inherit;
+  color: var(--lx-fg);
   padding: 0;
   border: none;
   font-size: 0.9rem;
@@ -191,11 +235,11 @@ html {
 }
 .prose-lx blockquote {
   border-left: 3px solid var(--lx-accent);
-  background: rgba(127, 219, 202, 0.05);
+  background: color-mix(in oklab, var(--lx-accent) 8%, transparent);
   padding: 0.6rem 1rem;
   margin: 1rem 0;
   border-radius: 0 6px 6px 0;
-  color: #a7f3d0;
+  color: var(--lx-accent);
   font-style: italic;
 }
 .prose-lx blockquote p {
@@ -217,12 +261,12 @@ html {
   text-align: left;
 }
 .prose-lx th {
-  background: #111827;
-  color: #f1f5f9;
+  background: var(--lx-prose-th);
+  color: var(--lx-prose-strong);
   font-weight: 600;
 }
 .prose-lx tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--lx-grid-line);
 }
 .prose-lx hr {
   border: 0;
