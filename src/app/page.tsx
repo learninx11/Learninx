@@ -3,21 +3,28 @@ import Link from 'next/link';
 import {
   ArrowRightIcon,
   BookIcon,
+  BrainIcon,
+  LightbulbIcon,
   MonitorIcon,
   SparklesIcon,
+  TargetIcon,
   TerminalIcon,
   TrophyIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { getAllLessons } from '@/lib/lessons';
+import { getAllBosses } from '@/lib/bosses';
 import {
   HomeCtaButton,
   HomeCtaText,
   HomeProgress,
 } from './_home-progress';
+import { DailyTipCard } from './_daily-tip';
+import { StreakWidget } from '@/components/StreakWidget';
 
 export default function Home() {
   const lessons = getAllLessons();
+  const bosses = getAllBosses();
 
   return (
     <div className="space-y-16">
@@ -97,13 +104,53 @@ export default function Home() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-4">
+          <DailyTipCard />
+        </div>
+        <StreakWidget />
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <Pill tone="accent">
+              <TargetIcon size={12} /> More to explore
+            </Pill>
+            <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">
+              New tools for self-directed learners.
+            </h2>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <ExploreCard
+            href="/cheatsheet"
+            icon={<BookIcon size={20} />}
+            title="Cheatsheet"
+            body="A searchable reference of every command the in-browser sandbox supports, with examples and category filters."
+          />
+          <ExploreCard
+            href="/boss"
+            icon={<TargetIcon size={20} />}
+            title="Boss levels"
+            body="Multi-step challenges — restore a broken service, sort a messy log folder, and more. Sandbox resets between steps."
+          />
+          <ExploreCard
+            href="/lessons"
+            icon={<LightbulbIcon size={20} />}
+            title="Streaks & points"
+            body="Earn 10 points per completed lesson and 1 per correct quiz answer. Keep the streak alive by showing up daily."
+          />
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="lx-card relative overflow-hidden p-6 sm:p-8">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--lx-accent-glow)] blur-3xl" />
           <Pill tone="accent">Who is this for?</Pill>
           <h2 className="mt-3 text-xl font-semibold sm:text-2xl">
             For anyone who wants to feel at home on a Linux box.
           </h2>
-          <ul className="mt-4 space-y-2.5 text-slate-300">
+          <ul className="mt-4 space-y-2.5 text-[var(--lx-fg)]">
             <li className="flex gap-3">
               <span
                 className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--lx-accent)]"
@@ -140,6 +187,41 @@ export default function Home() {
         </div>
       </section>
     </div>
+  );
+}
+
+function ExploreCard({
+  href,
+  icon,
+  title,
+  body,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="lx-card group relative flex flex-col gap-2 overflow-hidden p-5 sm:p-6"
+    >
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--lx-accent-glow)] opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        aria-hidden
+      />
+      <span
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--lx-border)] bg-slate-900/40 text-[var(--lx-accent)] transition group-hover:border-[var(--lx-accent)]/40"
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <h3 className="font-semibold text-[var(--lx-fg)]">{title}</h3>
+      <p className="text-sm leading-relaxed text-[var(--lx-muted)]">{body}</p>
+      <span className="mt-auto inline-flex items-center gap-1 text-xs text-[var(--lx-accent)]">
+        Open <ArrowRightIcon size={12} />
+      </span>
+    </Link>
   );
 }
 

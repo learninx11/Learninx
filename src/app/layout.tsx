@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
-import { GithubIcon, TerminalIcon } from '@/components/ui/Icon';
+import { GithubIcon, SearchIcon, TerminalIcon } from '@/components/ui/Icon';
 import { ResetProgressButton } from '@/components/ResetProgressButton';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
+import { CommandPalette } from '@/components/CommandPalette';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { ProgressProvider } from '@/lib/progress-context';
 import './globals.css';
 
@@ -27,14 +29,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // <html>/<body> at runtime. `suppressHydrationWarning` tells React the
     // mismatch is expected, so the dev console stops shouting.
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Apply the saved theme *before* React hydrates so the page never
+          flashes the wrong palette. Runs as a tiny inline script with no
+          external dependencies.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('learninx_theme');if(!t){t=matchMedia&&matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}document.documentElement.classList.toggle('light',t==='light');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <a href="#main" className="lx-skip-link">
           Skip to content
         </a>
         <ProgressProvider>
           <KeyboardShortcuts />
+          <CommandPalette />
 
-        <header className="sticky top-0 z-30 border-b border-slate-800/70 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
+        <header className="sticky top-0 z-30 border-b border-[var(--lx-border)] bg-[var(--lx-nav-bg)] backdrop-blur supports-[backdrop-filter]:bg-[var(--lx-nav-bg)]">
           <nav
             aria-label="Primary"
             className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3"
@@ -55,19 +70,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </Link>
 
-            <div className="flex items-center gap-1 text-sm sm:gap-3">
+            <div className="flex items-center gap-1 text-sm sm:gap-2">
               <Link
                 href="/lessons"
-                className="rounded-md px-3 py-1.5 text-slate-300 transition hover:bg-slate-800/60 hover:text-[var(--lx-accent)]"
+                className="rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)]"
               >
                 <span className="hidden sm:inline">Lessons</span>
                 <TerminalIcon size={16} className="sm:hidden" />
               </Link>
+              <Link
+                href="/cheatsheet"
+                className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-block"
+              >
+                Cheatsheet
+              </Link>
+              <ThemeToggle />
               <a
                 href="https://github.com/raveendra11/Learninx"
                 target="_blank"
                 rel="noreferrer"
-                className="hidden items-center gap-1.5 rounded-md px-3 py-1.5 text-slate-400 transition hover:bg-slate-800/60 hover:text-[var(--lx-accent)] sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-flex"
               >
                 <GithubIcon size={14} /> GitHub
               </a>

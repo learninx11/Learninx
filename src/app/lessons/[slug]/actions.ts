@@ -10,9 +10,8 @@ import {
 import {
   markLessonComplete,
   recordQuizScore,
-  type ProgressState,
-  type QuizScore,
 } from '@/lib/progress';
+import type { ProgressState, QuizScore } from '@/lib/progress-types';
 import type { QuizAnswerResult } from '@/lib/types';
 
 const PASS_THRESHOLD = 80;

@@ -12,6 +12,7 @@ import {
 import {
   getProgress as readProgress,
   markLessonComplete as storeMarkLessonComplete,
+  markTipSeen as storeMarkTipSeen,
   normalizeAnswer,
   normalizeCommand,
   recordQuizScore as storeRecordQuizScore,
@@ -31,6 +32,8 @@ interface ProgressContextValue {
   completedSet: Set<string>;
   markComplete: (lessonId: string) => void;
   reset: () => void;
+  /** Mark the daily tip as seen for today. */
+  markTipSeen: () => void;
   /**
    * Client-side replacement for `submitChallengeAction`. Validates
    * the user's command against the lesson's accepted solutions and,
@@ -67,6 +70,15 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     v: 1,
     completed: [],
     quiz: {},
+    streak: {
+      current: 0,
+      best: 0,
+      lastActiveDay: null,
+      totalCompletions: 0,
+      totalCorrect: 0,
+      points: 0,
+    },
+    lastTipDay: null,
   });
   const [ready, setReady] = useState(false);
 
@@ -90,6 +102,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => {
     const next = storeResetProgress();
+    setState(next);
+  }, []);
+
+  const markTipSeen = useCallback(() => {
+    const next = storeMarkTipSeen();
     setState(next);
   }, []);
 
@@ -162,10 +179,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       completedSet,
       markComplete,
       reset,
+      markTipSeen,
       submitChallenge,
       submitQuiz,
     }),
-    [state, ready, isCompleted, completedSet, markComplete, reset, submitChallenge, submitQuiz],
+    [state, ready, isCompleted, completedSet, markComplete, reset, markTipSeen, submitChallenge, submitQuiz],
   );
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

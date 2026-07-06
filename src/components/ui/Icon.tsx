@@ -1,6 +1,12 @@
 // Tiny inline-SVG icon set. Keeps the app dependency-free and the SVGs
 // match the terminal aesthetic (stroke-based, no color fills from the icon
 // itself — `currentColor` lets callers control the hue).
+//
+// Dark Reader (and similar browser extensions) inject inline styles +
+// `data-darkreader-*` attributes on SVGs at runtime, which causes React
+// to log "Extra attributes from the server" warnings. We mark every
+// SVG as `suppressHydrationWarning` to silence the noise without
+// swallowing genuine hydration bugs (props/className still reconcile).
 
 import * as React from 'react';
 
@@ -17,6 +23,7 @@ const base = (size: number): React.SVGAttributes<SVGSVGElement> => ({
   strokeLinejoin: 'round',
   'aria-hidden': true,
   focusable: false,
+  suppressHydrationWarning: true,
 });
 
 export const TerminalIcon = ({ size = 16, ...rest }: IconProps) => (
@@ -142,5 +149,76 @@ export const HelpIcon = ({ size = 16, ...rest }: IconProps) => (
     <circle cx="12" cy="12" r="10" />
     <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
     <path d="M12 17h.01" />
+  </svg>
+);
+
+export const SearchIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
+export const SunIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
+);
+
+export const MoonIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
+export const KeyboardIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M8 18h8" />
+  </svg>
+);
+
+export const FireIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-3-2 1-4 3-4 6a8 8 0 0 0 16 0c0-6-9-11-9-11z" />
+  </svg>
+);
+
+export const LightbulbIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.4 1 2.3v1h6v-1c0-.9.3-1.7 1-2.3A7 7 0 0 0 12 2z" />
+  </svg>
+);
+
+export const TargetIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </svg>
+);
+
+export const CommandIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
+  </svg>
+);
+
+export const StarIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
+
+export const ListIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+  </svg>
+);
+
+export const FilterIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M3 6h18M6 12h12M10 18h4" />
   </svg>
 );
