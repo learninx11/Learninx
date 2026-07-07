@@ -6,19 +6,17 @@ No login. No accounts. No database. Open the page, type commands, learn.
 
 ## Demo
 
-<a href="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
-  <img src="https://img.shields.io/badge/▶%20Watch%20demo-Click%20to%20play-0ea5e9?style=for-the-badge" alt="Watch the Learninx demo" />
-</a>
-
-A short walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox:
+A short walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox — plays automatically on page load:
 
 ```html
 <video
   src="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4"
-  controls
-  preload="metadata"
+  autoplay
+  muted
+  loop
+  playsinline
+  preload="auto"
   width="100%"
-  poster=""
   style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);">
   Your browser does not support the video tag.
   <a href="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
@@ -27,7 +25,7 @@ A short walkthrough of the lessons, the in-browser terminal, and the boss-level 
 </video>
 ```
 
-> On GitHub, the embedded `<video>` player is rendered automatically. On npm registries or other Markdown renderers that strip raw HTML, the badge above still links to the file in this repository's `public/` folder.
+> Autoplay needs `muted` to satisfy modern browser policies. Tap the video to unmute / pause if you want sound. On renderers that strip raw HTML, use the download link below.
 
 [⬇️ Download the demo MP4 (./public/Learninx — Learn Linux the Easy Way.mp4)](./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4)
 
