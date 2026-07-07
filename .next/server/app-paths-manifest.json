@@ -3,8 +3,8 @@
   "/lessons/page": "app/lessons/page.js",
   "/page": "app/page.js",
   "/demo/page": "app/demo/page.js",
-  "/cheatsheet/page": "app/cheatsheet/page.js",
+  "/lessons/[slug]/page": "app/lessons/[slug]/page.js",
   "/boss/[slug]/page": "app/boss/[slug]/page.js",
-  "/boss/page": "app/boss/page.js",
-  "/lessons/[slug]/page": "app/lessons/[slug]/page.js"
+  "/cheatsheet/page": "app/cheatsheet/page.js",
+  "/boss/page": "app/boss/page.js"
 }
