@@ -6,28 +6,24 @@ No login. No accounts. No database. Open the page, type commands, learn.
 
 ## Demo
 
-A short walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox — plays automatically on page load:
+GitHub's README sanitizer strips autoplay attributes from raw `<video>` tags, so the demo opens in a tiny in-browser player page instead — one click, no download:
 
-```html
-<video
-  src="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4"
-  autoplay
-  muted
-  loop
-  playsinline
-  preload="auto"
-  width="100%"
-  style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);">
-  Your browser does not support the video tag.
-  <a href="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
-    Download the demo video
+<p align="left">
+  <a href="./docs/demo.html">
+    <img src="https://img.shields.io/badge/▶%20Play%20demo-Open%20in--browser%20player-0ea5e9?style=for-the-badge" alt="Play the Learninx demo" />
   </a>
-</video>
-```
+  &nbsp;
+  <a href="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
+    <img src="https://img.shields.io/badge/⬇%20Direct%20MP4-Raw%20file-475569?style=for-the-badge" alt="Direct link to the demo MP4" />
+  </a>
+</p>
 
-> Autoplay needs `muted` to satisfy modern browser policies. Tap the video to unmute / pause if you want sound. On renderers that strip raw HTML, use the download link below.
+A short walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox.
 
-[⬇️ Download the demo MP4 (./public/Learninx — Learn Linux the Easy Way.mp4)](./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4)
+> The player page ([`docs/demo.html`](./docs/demo.html)) hosts the `<video>` element with `autoplay muted loop playsinline preload="auto" controls` and a small script that re-invokes `play()` on `canplay` and on `visibilitychange` — so it starts as soon as the page loads, on every modern browser, and never asks the user to download anything.
+
+[▶ Open the in-browser demo](./docs/demo.html) ·
+[⬇️ Direct MP4](./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4)
 
 ## Highlights
 
