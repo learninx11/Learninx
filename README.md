@@ -6,24 +6,22 @@ No login. No accounts. No database. Open the page, type commands, learn.
 
 ## Demo
 
-GitHub's README sanitizer strips autoplay attributes from raw `<video>` tags, so the demo opens in a tiny in-browser player page instead — one click, no download:
+A short autoplaying walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox. The video starts as soon as the page loads — one click, in-browser, no download.
 
 <p align="left">
-  <a href="./docs/demo.html">
+  <a href="https://learninx11.github.io/Learninx/demo">
     <img src="https://img.shields.io/badge/▶%20Play%20demo-Open%20in--browser%20player-0ea5e9?style=for-the-badge" alt="Play the Learninx demo" />
   </a>
   &nbsp;
-  <a href="./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
+  <a href="https://raw.githubusercontent.com/learninx11/Learninx/main/public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4">
     <img src="https://img.shields.io/badge/⬇%20Direct%20MP4-Raw%20file-475569?style=for-the-badge" alt="Direct link to the demo MP4" />
   </a>
 </p>
 
-A short walkthrough of the lessons, the in-browser terminal, and the boss-level sandbox.
+> The player lives at [learninx11.github.io/Learninx/demo](https://learninx11.github.io/Learninx/demo) and is built by Next.js — autoplay works because it is a real rendered page, not a sanitized README tag.
 
-> The player page ([`docs/demo.html`](./docs/demo.html)) hosts the `<video>` element with `autoplay muted loop playsinline preload="auto" controls` and a small script that re-invokes `play()` on `canplay` and on `visibilitychange` — so it starts as soon as the page loads, on every modern browser, and never asks the user to download anything.
-
-[▶ Open the in-browser demo](./docs/demo.html) ·
-[⬇️ Direct MP4](./public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4)
+[▶ Open the in-browser demo](https://learninx11.github.io/Learninx/demo) ·
+[⬇️ Direct MP4 (raw)](https://raw.githubusercontent.com/learninx11/Learninx/main/public/Learninx%20%E2%80%94%20Learn%20Linux%20the%20Easy%20Way.mp4)
 
 ## Highlights
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRightIcon, LightbulbIcon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
@@ -59,12 +60,12 @@ export function DailyTipCard() {
         >
           Got it
         </button>
-        <a
+        <Link
           href="/cheatsheet"
           className="inline-flex items-center gap-1 text-xs text-[var(--lx-accent)] hover:underline"
         >
           See the cheatsheet <ArrowRightIcon size={12} />
-        </a>
+        </Link>
       </div>
     </article>
   );
