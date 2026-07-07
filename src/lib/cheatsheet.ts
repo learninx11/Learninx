@@ -680,30 +680,6 @@ export const CHEATSHEET: CheatEntry[] = [
     keywords: ['ssh', 'remote', 'login', 'shell'],
   },
   {
-    cmd: 'chmod',
-    short: 'Change file permissions',
-    long: 'Updates the read / write / execute bits. The octal form is easiest: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--, 0 = ---. In the sandbox the change is acknowledged but not enforced.',
-    examples: ['chmod +x script.sh', 'chmod 755 script.sh', 'chmod 600 secret.txt'],
-    category: 'Permissions',
-    keywords: ['permissions', 'mode', 'rwx', 'octal', 'executable'],
-  },
-  {
-    cmd: 'ps',
-    short: 'List running processes',
-    long: 'Without flags, lists processes in the current session. `ps aux` (supported in the sandbox) gives the full system-wide view with CPU and memory columns.',
-    examples: ['ps', 'ps aux'],
-    category: 'System',
-    keywords: ['processes', 'list', 'running', 'pid', 'ps'],
-  },
-  {
-    cmd: 'top',
-    short: 'Live process viewer (snapshot)',
-    long: 'In a real terminal `top` updates continuously. The sandbox prints a single representative frame so you can read the columns without a live REPL.',
-    examples: ['top', 'top -n 1'],
-    category: 'System',
-    keywords: ['top', 'processes', 'monitor', 'tasks', 'cpu'],
-  },
-  {
     cmd: 'chain',
     short: 'Chain commands with ;, &&, ||, and pipe with |',
     long: 'The Learninx shell supports the four classic control operators. `;` runs unconditionally. `&&` runs the right side only if the left side succeeded. `||` runs only on failure. `|` passes the left side’s stdout into the right side’s stdin.',
@@ -715,14 +691,6 @@ export const CHEATSHEET: CheatEntry[] = [
     ],
     category: 'Help',
     keywords: ['chain', 'and', 'or', 'pipe', 'semicolon', '&&', '||', '|'],
-  },
-  {
-    cmd: 'uname',
-    short: 'Print system information',
-    long: 'Prints the kernel name. `-a` includes the version, architecture and hostname.',
-    examples: ['uname', 'uname -a'],
-    category: 'System',
-    keywords: ['system', 'kernel', 'info', 'version'],
   },
 
   // Inspection
