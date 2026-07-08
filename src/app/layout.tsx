@@ -12,9 +12,10 @@ export const metadata: Metadata = {
   title: 'Learninx — Learn Linux the Easy Way',
   description:
     'An interactive Linux learning platform with in-browser terminal, lessons, and quizzes. No signup required.',
-  icons: {
-    icon: '/favicon.svg',
-  },
+  // Icons are provided by `src/app/icon.svg` and `src/app/apple-icon.svg`,
+  // which Next.js automatically wires up at the correct basePath (e.g.
+  // `/Learninx/icon.svg` on GitHub Pages). Do NOT use `icons.icon: '/favicon.svg'`
+  // here — the hardcoded path ignores basePath and 404s on GitHub Pages.
 };
 
 export const viewport: Viewport = {
