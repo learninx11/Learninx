@@ -1,1 +1,85 @@
+# ─────────────────────────────────────────── Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# ─────────────────────────────────────────── Next.js build output
+# `next build` outputs `.next/` (dev cache, build manifest, server bundle)
+# and `out/` (when `next export` is used). Both should never be committed.
+.next
+out
+next-env.d.ts
+
+# ─────────────────────────────────────────── TypeScript build artefacts
+# `tsc -b` / `next build` may emit these. They are reproducible from source.
+*.tsbuildinfo
+dist
+build
+lib
+*.js.map
+*.d.ts.map
+
+# ─────────────────────────────────────────── Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─────────────────────────────────────────── Environment / secrets
+# Never commit real secrets. The .example file is a safe template.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# ─────────────────────────────────────────── Test / coverage
+coverage
+.nyc_output
+*.lcov
+
+# ─────────────────────────────────────────── Cache / tmp
+.cache
+.parcel-cache
+.eslintcache
+.turbo
+.tmp
+tmp
+temp
+.pnpm-store
+
+# ─────────────────────────────────────────── OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ─────────────────────────────────────────── Editor / IDE
+.vscode/*
+!.vscode/settings.json.example
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea
+*.swp
+*.swo
+*~
+
+# ─────────────────────────────────────────── Docker
+# Ignore local container build artefacts but keep the recipes.
+Dockerfile.bak
+docker-compose.override.yml
+docker-compose.local.yml
+.env.docker
+
+# ─────────────────────────────────────────── Misc
+*.tgz
+*.tar.gz
+*.zip
+.pnp.*
+.history
 node_modules
