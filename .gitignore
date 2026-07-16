@@ -15,7 +15,7 @@ next-env.d.ts
 *.tsbuildinfo
 dist
 build
-lib
+/lib
 *.js.map
 *.d.ts.map
 
