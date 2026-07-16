@@ -39,6 +39,41 @@ export function KeyboardShortcuts() {
         if (pending) clearTimeout(pending);
         return;
       }
+      if (last === 'g' && key === 'b') {
+        e.preventDefault();
+        router.push('/boss');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
+      if (last === 'g' && key === 'a') {
+        e.preventDefault();
+        router.push('/achievements');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
+      if (last === 'g' && key === 'p') {
+        e.preventDefault();
+        router.push('/profile');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
+      if (last === 'g' && key === 't') {
+        e.preventDefault();
+        router.push('/typing');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
+      if (last === 'g' && key === 'c') {
+        e.preventDefault();
+        router.push('/cheatsheet');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
 
       if (key === 'g') {
         last = 'g';

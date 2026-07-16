@@ -35,11 +35,16 @@ const EMPTY_STREAK: StreakState = {
 };
 
 const EMPTY: ProgressState = {
-  v: 1,
+  v: 2,
   completed: [],
   quiz: {},
   streak: { ...EMPTY_STREAK },
   lastTipDay: null,
+  bookmarks: [],
+  notes: {},
+  achievements: [],
+  bestTyping: null,
+  bossesCompleted: [],
 };
 
 // ─────────────────────────────────────────────── signing key ──
@@ -92,7 +97,7 @@ function decode(raw: string | undefined): ProgressState {
     const json = Buffer.from(body, 'base64url').toString('utf8');
     const parsed = JSON.parse(json) as Partial<ProgressState>;
     return {
-      v: 1,
+      v: 2,
       completed: Array.isArray(parsed.completed) ? parsed.completed : [],
       quiz:
         parsed.quiz && typeof parsed.quiz === 'object' ? parsed.quiz : {},
@@ -102,6 +107,20 @@ function decode(raw: string | undefined): ProgressState {
         /^\d{4}-\d{2}-\d{2}$/.test(parsed.lastTipDay)
           ? parsed.lastTipDay
           : null,
+      bookmarks: Array.isArray(parsed.bookmarks)
+        ? parsed.bookmarks.filter((s): s is string => typeof s === 'string')
+        : [],
+      notes:
+        parsed.notes && typeof parsed.notes === 'object' && !Array.isArray(parsed.notes)
+          ? (parsed.notes as Record<string, { text: string; updatedAt: number }>)
+          : {},
+      achievements: Array.isArray(parsed.achievements)
+        ? parsed.achievements.filter((s): s is string => typeof s === 'string')
+        : [],
+      bestTyping: null,
+      bossesCompleted: Array.isArray(parsed.bossesCompleted)
+        ? parsed.bossesCompleted.filter((s): s is string => typeof s === 'string')
+        : [],
     };
   } catch {
     return cloneEmpty();
@@ -110,11 +129,16 @@ function decode(raw: string | undefined): ProgressState {
 
 function cloneEmpty(): ProgressState {
   return {
-    v: 1,
+    v: 2,
     completed: [],
     quiz: {},
     streak: { ...EMPTY_STREAK },
     lastTipDay: null,
+    bookmarks: [],
+    notes: {},
+    achievements: [],
+    bestTyping: null,
+    bossesCompleted: [],
   };
 }
 

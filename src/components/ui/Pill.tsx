@@ -37,14 +37,16 @@ export function ProgressBar({
   value,
   max,
   label,
+  className,
 }: {
   value: number;
   max: number;
   label?: string;
+  className?: string;
 }) {
   const pct = max === 0 ? 0 : Math.max(0, Math.min(100, (value / max) * 100));
   return (
-    <div className="space-y-1.5">
+    <div className={className ? `space-y-1.5 ${className}` : 'space-y-1.5'}>
       {label && (
         <div className="flex justify-between text-xs text-slate-400">
           <span>{label}</span>

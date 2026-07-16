@@ -12,10 +12,13 @@ import {
 } from 'react';
 import {
   ArrowRightIcon,
+  AwardIcon,
   BookIcon,
   CommandIcon,
+  GamepadIcon,
   SearchIcon,
   TerminalIcon,
+  UserIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { getAllLessons } from '@/lib/lessons';
@@ -63,6 +66,30 @@ const STATIC_NAV: Omit<PaletteItem, 'id'>[] = [
     href: '/boss',
     icon: <TerminalIcon size={14} />,
     keywords: ['boss', 'challenge', 'hard'],
+  },
+  {
+    title: 'Typing test',
+    description: 'Practice typing real shell commands',
+    group: 'Navigate',
+    href: '/typing',
+    icon: <GamepadIcon size={14} />,
+    keywords: ['typing', 'wpm', 'speed', 'practice', 'game'],
+  },
+  {
+    title: 'Achievements',
+    description: 'See your unlocked badges',
+    group: 'Navigate',
+    href: '/achievements',
+    icon: <AwardIcon size={14} />,
+    keywords: ['achievements', 'badges', 'rewards', 'trophies'],
+  },
+  {
+    title: 'Profile',
+    description: 'Lifetime stats, export, and import',
+    group: 'Navigate',
+    href: '/profile',
+    icon: <UserIcon size={14} />,
+    keywords: ['profile', 'stats', 'export', 'import', 'backup'],
   },
 ];
 

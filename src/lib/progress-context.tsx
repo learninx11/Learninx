@@ -11,18 +11,27 @@ import {
 } from 'react';
 import {
   getProgress as readProgress,
+  importProgress as storeImportProgress,
+  isBookmarked as storeIsBookmarked,
   markLessonComplete as storeMarkLessonComplete,
   markTipSeen as storeMarkTipSeen,
+  markBossComplete as storeMarkBossComplete,
   normalizeAnswer,
   normalizeCommand,
   recordQuizScore as storeRecordQuizScore,
+  recordTypingScore as storeRecordTypingScore,
   resetProgress as storeResetProgress,
+  setLessonNote as storeSetLessonNote,
   subscribeProgress,
+  toggleBookmark as storeToggleBookmark,
+  unlockAchievement as storeUnlockAchievement,
 } from './progress-client';
-import type { ProgressState, QuizScore } from './progress-types';
+import type { ProgressState, QuizScore, TypingScore } from './progress-types';
 import type { QuizAnswerResult } from './types';
+import { diffAchievements } from './achievements';
 
 const PASS_THRESHOLD = 80;
+const EMPTY_ACHIEVEMENTS: string[] = [];
 
 interface ProgressContextValue {
   state: ProgressState;
@@ -60,14 +69,37 @@ interface ProgressContextValue {
     score: number;
     passed: boolean;
   };
+  /** Bookmark a lesson (toggles). */
+  toggleBookmark: (lessonId: string) => boolean;
+  isBookmarked: (lessonId: string) => boolean;
+  /** Save a free-form note for a lesson. */
+  setNote: (lessonId: string, text: string) => void;
+  /** Mark a boss-level id as completed. */
+  markBossComplete: (bossId: string) => void;
+  /** Record a typing-test result. */
+  recordTyping: (score: TypingScore) => void;
+  /** Replace the whole progress snapshot from an imported JSON string. */
+  importJson: (json: string) => ProgressState;
+  /** Achievements that were unlocked on the most recent write. */
+  newlyUnlocked: string[];
+  /** Dismiss the "newly unlocked" banner (called after the UI shows it). */
+  clearNewlyUnlocked: () => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
+/** Read the progress state, re-evaluating derived achievements. */
+function applyDerivedAchievements(state: ProgressState): ProgressState {
+  const fresh = diffAchievements(state);
+  if (fresh.length === 0) return state;
+  const achievements = [...state.achievements, ...fresh];
+  return { ...state, achievements };
+}
+
 export function ProgressProvider({ children }: { children: ReactNode }) {
   // Stable empty state for SSR/static export. We hydrate on mount.
   const [state, setState] = useState<ProgressState>({
-    v: 1,
+    v: 2,
     completed: [],
     quiz: {},
     streak: {
@@ -79,13 +111,21 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       points: 0,
     },
     lastTipDay: null,
+    bookmarks: EMPTY_ACHIEVEMENTS,
+    notes: {},
+    achievements: EMPTY_ACHIEVEMENTS,
+    bestTyping: null,
+    bossesCompleted: [],
   });
   const [ready, setReady] = useState(false);
+  const [newlyUnlocked, setNewlyUnlocked] = useState<string[]>([]);
 
   useEffect(() => {
-    setState(readProgress());
+    setState(applyDerivedAchievements(readProgress()));
     setReady(true);
-    return subscribeProgress(setState);
+    return subscribeProgress((next) =>
+      setState(applyDerivedAchievements(next)),
+    );
   }, []);
 
   const completedSet = useMemo(() => new Set(state.completed), [state.completed]);
@@ -95,14 +135,34 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [state.completed],
   );
 
-  const markComplete = useCallback((lessonId: string) => {
-    const next = storeMarkLessonComplete(lessonId);
-    setState(next);
-  }, []);
+  const captureNewlyUnlocked = useCallback(
+    (before: ProgressState, after: ProgressState) => {
+      const fresh = diffAchievements(before).filter(
+        (id) => !before.achievements.includes(id),
+      );
+      // Only flag achievements that didn't exist *or* are in the after-state.
+      const persisted = fresh.filter((id) =>
+        after.achievements.includes(id),
+      );
+      if (persisted.length > 0) setNewlyUnlocked(persisted);
+    },
+    [],
+  );
+
+  const markComplete = useCallback(
+    (lessonId: string) => {
+      const before = readProgress();
+      const next = storeMarkLessonComplete(lessonId);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
 
   const reset = useCallback(() => {
     const next = storeResetProgress();
     setState(next);
+    setNewlyUnlocked([]);
   }, []);
 
   const markTipSeen = useCallback(() => {
@@ -118,7 +178,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const expected = normalizeCommand(solution);
       const accepted = expected.split('||').map((p) => p.trim());
       if (accepted.includes(normalizeCommand(command))) {
+        const before = readProgress();
         const next = storeMarkLessonComplete(lessonId);
+        captureNewlyUnlocked(before, next);
         setState(next);
         return {
           ok: true,
@@ -130,13 +192,15 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         message: 'Not quite — try again, or peek at the hint in the sandbox.',
       };
     },
-    [],
+    [captureNewlyUnlocked],
   );
 
   const submitQuiz = useCallback<ProgressContextValue['submitQuiz']>(
     (lessonId, questions, answers) => {
       if (questions.length === 0) {
+        const before = readProgress();
         const next = storeMarkLessonComplete(lessonId);
+        captureNewlyUnlocked(before, next);
         setState(next);
         return { results: [], correct: 0, total: 0, score: 0, passed: true };
       }
@@ -159,17 +223,71 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const score = Math.round((correct / total) * 100);
       const passed = score >= PASS_THRESHOLD;
 
+      const before = readProgress();
       const quizScore: QuizScore = { score, correct, total, at: Date.now() };
       let next = storeRecordQuizScore(lessonId, quizScore);
       if (passed) {
         next = storeMarkLessonComplete(lessonId);
       }
+      captureNewlyUnlocked(before, next);
       setState(next);
 
       return { results, correct, total, score, passed };
     },
-    [],
+    [captureNewlyUnlocked],
   );
+
+  const toggleBookmark = useCallback((lessonId: string) => {
+    const result = storeToggleBookmark(lessonId);
+    setState(result.state);
+    // Bookmarking itself isn't an achievement trigger, but if the
+    // user just hit 5 bookmarks we want the `bookworm` achievement to
+    // show up in the next evaluate pass (which runs via the
+    // `subscribeProgress` listener).
+    return result.added;
+  }, []);
+
+  const isBookmarked = useCallback(
+    (lessonId: string) =>
+      state.bookmarks.includes(lessonId) || (!ready && storeIsBookmarked(lessonId)),
+    [state.bookmarks, ready],
+  );
+
+  const setNote = useCallback((lessonId: string, text: string) => {
+    const before = readProgress();
+    const next = storeSetLessonNote(lessonId, text);
+    captureNewlyUnlocked(before, next);
+    setState(next);
+  }, [captureNewlyUnlocked]);
+
+  const markBoss = useCallback(
+    (bossId: string) => {
+      const before = readProgress();
+      const next = storeMarkBossComplete(bossId);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
+
+  const recordTyping = useCallback(
+    (score: TypingScore) => {
+      const before = readProgress();
+      const next = storeRecordTypingScore(score);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
+
+  const importJson = useCallback((json: string): ProgressState => {
+    const next = applyDerivedAchievements(storeImportProgress(json));
+    setState(next);
+    setNewlyUnlocked([]);
+    return next;
+  }, []);
+
+  const clearNewlyUnlocked = useCallback(() => setNewlyUnlocked([]), []);
 
   const value = useMemo<ProgressContextValue>(
     () => ({
@@ -182,8 +300,34 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       markTipSeen,
       submitChallenge,
       submitQuiz,
+      toggleBookmark,
+      isBookmarked,
+      setNote,
+      markBossComplete: markBoss,
+      recordTyping,
+      importJson,
+      newlyUnlocked,
+      clearNewlyUnlocked,
     }),
-    [state, ready, isCompleted, completedSet, markComplete, reset, markTipSeen, submitChallenge, submitQuiz],
+    [
+      state,
+      ready,
+      isCompleted,
+      completedSet,
+      markComplete,
+      reset,
+      markTipSeen,
+      submitChallenge,
+      submitQuiz,
+      toggleBookmark,
+      isBookmarked,
+      setNote,
+      markBoss,
+      recordTyping,
+      importJson,
+      newlyUnlocked,
+      clearNewlyUnlocked,
+    ],
   );
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
