@@ -12,6 +12,7 @@ import { Pill } from '@/components/ui/Pill';
 import { createInitialFs, type FsDir } from '@/lib/shell/fs';
 import { runCommand, type ShellContext } from '@/lib/shell/evaluator';
 import { getBossBySlug, type BossLevel } from '@/lib/bosses';
+import { useProgress } from '@/lib/progress-context';
 
 interface Props {
   slug: string;
@@ -35,6 +36,7 @@ export function BossClient({ slug }: Props) {
 }
 
 function BossRunner({ boss }: { boss: BossLevel }) {
+  const { markBossComplete, state, ready } = useProgress();
   const [stepIdx, setStepIdx] = useState(0);
   const [statuses, setStatuses] = useState<StepStatus[]>(() =>
     boss.steps.map(() => 'pending'),
@@ -48,6 +50,16 @@ function BossRunner({ boss }: { boss: BossLevel }) {
 
   const isComplete = statuses.every((s) => s === 'passed');
   const currentStep = boss.steps[stepIdx];
+
+  // When the learner completes the boss, mark it in the progress
+  // store exactly once. The store handles achievement re-evaluation
+  // and the toaster fires automatically.
+  useEffect(() => {
+    if (!ready) return;
+    if (!isComplete) return;
+    if (state.bossesCompleted.includes(boss.id)) return;
+    markBossComplete(boss.id);
+  }, [ready, isComplete, boss.id, state.bossesCompleted, markBossComplete]);
 
   function reset() {
     setStepIdx(0);

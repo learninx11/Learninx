@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRightIcon,
+  BookmarkIcon,
   CheckIcon,
   FilterIcon,
   SearchIcon,
@@ -21,7 +22,14 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   advanced: 'Advanced',
 };
 
-type StatusFilter = 'all' | 'completed' | 'todo';
+type StatusFilter = 'all' | 'completed' | 'todo' | 'bookmarked';
+
+function statusLabel(s: StatusFilter): string {
+  if (s === 'completed') return 'completed';
+  if (s === 'todo') return 'to do';
+  if (s === 'bookmarked') return 'bookmarked';
+  return 'all';
+}
 
 export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
   const { completedSet, state, ready } = useProgress();
@@ -52,8 +60,9 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
       lessons.map((l) => ({
         ...l,
         completed: completedSet.has(l.id),
+        bookmarked: ready ? state.bookmarks.includes(l.id) : false,
       })),
-    [lessons, completedSet],
+    [lessons, completedSet, ready, state.bookmarks],
   );
 
   const filtered = useMemo(() => {
@@ -62,6 +71,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
       if (difficulty !== 'all' && l.difficulty !== difficulty) return false;
       if (status === 'completed' && !l.completed) return false;
       if (status === 'todo' && l.completed) return false;
+      if (status === 'bookmarked' && !l.bookmarked) return false;
       if (q) {
         const haystack = [
           l.title,
@@ -186,13 +196,18 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
             active={status === 'completed'}
             onClick={() => setStatus('completed')}
           />
+          <Chip
+            label="Bookmarked"
+            active={status === 'bookmarked'}
+            onClick={() => setStatus('bookmarked')}
+          />
         </div>
         {showResultsHint && (
           <p className="text-xs text-[var(--lx-muted)]">
             Showing {totalMatching} of {lessons.length} lessons
             {query ? ` matching “${query}”` : ''}
             {difficulty !== 'all' ? ` in ${DIFFICULTY_LABELS[difficulty]}` : ''}
-            {status !== 'all' ? ` · ${status === 'completed' ? 'completed' : 'to do'}` : ''}
+            {status !== 'all' ? ` · ${statusLabel(status)}` : ''}
             {' · '}
             <button
               type="button"
@@ -271,7 +286,7 @@ function LessonRow({
   lesson,
   query,
 }: {
-  lesson: Lesson & { completed: boolean };
+  lesson: Lesson & { completed: boolean; bookmarked: boolean };
   query: string;
 }) {
   return (
@@ -298,6 +313,11 @@ function LessonRow({
               <Highlighted text={lesson.title} query={query} />
             </h2>
             {lesson.completed && <Pill tone="success">Completed</Pill>}
+            {lesson.bookmarked && (
+              <Pill tone="accent">
+                <BookmarkIcon size={10} /> Bookmarked
+              </Pill>
+            )}
           </div>
           <p className="mt-0.5 line-clamp-2 text-sm text-[var(--lx-muted)]">
             <Highlighted text={lesson.description} query={query} />

@@ -21,15 +21,19 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Auto-graded challenges** and end-of-lesson quizzes with score-based completion.
 - **Boss levels** — multi-step scenarios for learners who finish the regular catalogue (restore a broken service, sort a messy log folder, etc.).
 - **Searchable cheatsheet** of every command the in-browser shell supports.
+- **Typing test** — type real shell commands against the clock, with WPM and accuracy tracking. Earn badges for speed.
+- **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Everything is stored in your browser only.
+- **Achievements** — 15 unlockable badges (streaks, perfect quizzes, boss runs, study tools, typing speed, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
+- **Profile + export/import** — lifetime stats and a JSON backup you can take to another browser.
 - **Cmd/Ctrl+K command palette** for fast navigation across the site.
 - **Light & dark themes** with automatic detection and a per-browser toggle.
-- **Streaks & points** (10 per lesson, 1 per correct quiz answer) tracked in a signed per-browser cookie / localStorage.
+- **Streaks & points** (10 per lesson, 1 per correct quiz, 25 per boss, 5 per badge) tracked in a signed per-browser cookie / localStorage.
 - **Daily Linux tip** card on the home page, deterministic by UTC day.
 - **Table of contents** on long lessons, with active-section highlighting.
-- **Search and filter** on the lessons index.
+- **Search and filter** on the lessons index (text + difficulty + completed / to-do / bookmarked).
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
 - Polished, terminal-inspired dark/light UI with a shared design-token system (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`).
-- Keyboard shortcuts: `g l` jumps to lessons, `g h` jumps home, `/` focuses search, `Cmd/Ctrl+K` opens the palette.
+- Keyboard shortcuts: `g l` lessons, `g h` home, `g b` boss, `g c` cheatsheet, `g a` achievements, `g p` profile, `g t` typing, `/` focuses search, `Cmd/Ctrl+K` opens the palette.
 - Ships with Docker support for production-style deployments.
 
 ## Stack
@@ -113,12 +117,15 @@ learninx/
 │   └── copy-standalone-assets.mjs   # Idempotent post-build step
 └── src/
     ├── app/
-    │   ├── layout.tsx     # Root layout: skip link, nav, footer, theme + keyboard shortcuts + palette
+    │   ├── layout.tsx     # Root layout: skip link, nav, footer, theme + keyboard shortcuts + palette + toaster
     │   ├── page.tsx       # Landing page (reads progress cookie, daily tip, streak widget)
     │   ├── loading.tsx    # Global loading state
     │   ├── not-found.tsx  # 404 page
     │   ├── _daily-tip.tsx # Client: daily Linux tip card
     │   ├── _home-progress.tsx  # Client: home progress widgets
+    │   ├── achievements/
+    │   │   ├── page.tsx              # Server shell
+    │   │   └── _achievements-client.tsx # Client: badge grid + summary stats
     │   ├── boss/
     │   │   ├── page.tsx              # Index of all boss levels
     │   │   └── [slug]/
@@ -127,13 +134,19 @@ learninx/
     │   ├── cheatsheet/
     │   │   ├── page.tsx              # Server shell
     │   │   └── _cheatsheet-client.tsx # Client: search + category filters
-    │   └── lessons/
-    │       ├── page.tsx                # Server shell
-    │       ├── _lessons-index-client.tsx  # Client: search + filter + highlights
-    │       └── [slug]/
-    │           ├── page.tsx           # Server: generates static params
-    │           ├── _lesson-detail-client.tsx # Client: lesson + challenge + quiz
-    │           └── actions.ts         # Server actions (kept for Docker build)
+    │   ├── lessons/
+    │   │   ├── page.tsx                # Server shell
+    │   │   ├── _lessons-index-client.tsx  # Client: search + filter + highlights + bookmark chip
+    │   │   └── [slug]/
+    │   │       ├── page.tsx           # Server: generates static params
+    │   │       ├── _lesson-detail-client.tsx # Client: lesson + challenge + quiz + bookmark + notes
+    │   │       └── actions.ts         # Server actions (kept for Docker build)
+    │   ├── profile/
+    │   │   ├── page.tsx              # Server shell
+    │   │   └── _profile-client.tsx   # Client: lifetime stats + export / import + reset
+    │   └── typing/
+    │       ├── page.tsx              # Server shell
+    │       └── _typing-test-client.tsx # Client: WPM / accuracy / timer
     ├── components/
     │   ├── Terminal.tsx            # xterm.js sandbox (client-only, with tab complete + paste)
     │   ├── TerminalClient.tsx      # next/dynamic wrapper with skeleton loader
@@ -143,11 +156,15 @@ learninx/
     │   ├── Markdown.tsx            # react-markdown wrapper (uses CodeBlock, adds heading ids)
     │   ├── CodeBlock.tsx           # Fenced code block with copy + language label
     │   ├── ResetProgressButton.tsx # Wipes the progress cookie
-    │   ├── KeyboardShortcuts.tsx   # `g l`, `g h` global shortcuts
+    │   ├── KeyboardShortcuts.tsx   # `g l`, `g h`, `g b`, `g c`, `g a`, `g p`, `g t` shortcuts
     │   ├── CommandPalette.tsx      # Cmd/Ctrl+K palette with lesson + nav search
     │   ├── ThemeToggle.tsx         # Dark/light theme switch
     │   ├── StreakWidget.tsx        # Card + inline variants of the streak widget
     │   ├── TableOfContents.tsx     # Sticky ToC for long lessons
+    │   ├── BookmarkButton.tsx      # Per-lesson bookmark toggle
+    │   ├── LessonNoteEditor.tsx    # Per-lesson scratchpad with autosave
+    │   ├── AchievementBadge.tsx    # Inline-SVG medallion for a single achievement
+    │   ├── AchievementToaster.tsx  # Bottom-right toast when a badge unlocks
     │   └── ui/                     # Shared primitives (Icon, Pill, Card, ProgressBar, ScrollProgress)
     └── lib/
         ├── lessons.ts          # Lesson + quiz catalogue (plain TypeScript)
@@ -155,6 +172,8 @@ learninx/
         ├── bosses.ts           # Multi-step boss scenarios (verifier + seed)
         ├── toc.ts              # Markdown → table of contents helper
         ├── tips.ts             # Daily Linux tips
+        ├── typing-snippets.ts  # Shell-command snippet library for the typing test
+        ├── achievements.ts     # Achievement catalogue + pure evaluator
         ├── progress.ts         # Signed-cookie progress store (HMAC-SHA256, Docker)
         ├── progress-client.ts  # localStorage progress store (GitHub Pages)
         ├── progress-types.ts   # Shared ProgressState / QuizScore / StreakState types
@@ -180,19 +199,42 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 
 - Completing a lesson awards **+10 points** and bumps the streak if the day has changed.
 - Each correct quiz answer awards **+1 point** (only new correct answers, not re-takes at the same level).
+- Defeating a boss level awards **+25 points** (one-time per boss).
+- Unlocking an achievement awards **+5 points** (one-time per badge).
 - Missing a calendar day (UTC) resets the current streak to 1 the next time the learner shows up.
 - The home page and lessons index show a streak widget; both client and cookie stores share the same shape.
+
+### Bookmarks, notes, and achievements
+
+- **Bookmarks** are a per-lesson `string[]` on the progress state. Toggle via the
+  bookmark button on a lesson page or the "Bookmarked" filter on the index.
+- **Notes** are a `Record<lessonId, { text, updatedAt }>` with a 4000-character
+  per-lesson cap. They autosave to `localStorage` 350 ms after the last keystroke.
+- **Achievements** are recomputed from the progress snapshot by
+  `evaluateAchievements()` in `src/lib/achievements.ts` every time the store
+  updates. Newly-unlocked ids are surfaced via a bottom-right toast and on the
+  `/achievements` page.
+
+### Export and import
+
+- The `/profile` page includes an "Export" button that downloads
+  `learninx-progress-YYYY-MM-DD.json` containing the full progress state.
+- The "Import" button accepts a previously-exported file. Importing replaces the
+  current snapshot on the browser, so the visitor keeps full control.
 
 ## Pages
 
 | Route              | Purpose                                                   |
 | ------------------ | --------------------------------------------------------- |
 | `/`                | Home — pitch, daily tip, streak widget, "more to explore" |
-| `/lessons`         | Lesson index with search, difficulty & status filters     |
-| `/lessons/[slug]`  | Lesson detail (markdown + ToC + challenge + quiz)         |
+| `/lessons`         | Lesson index with search, difficulty & status filters (incl. bookmarked) |
+| `/lessons/[slug]`  | Lesson detail (markdown + ToC + challenge + quiz + bookmark + notes) |
 | `/cheatsheet`      | Searchable command reference                              |
 | `/boss`            | Index of multi-step boss challenges                       |
 | `/boss/[slug]`     | One boss level with per-step grading + sandbox            |
+| `/typing`          | Typing test — type real shell commands against the clock  |
+| `/achievements`    | Grid of 15 unlockable badges                              |
+| `/profile`         | Lifetime stats, export / import, reset                    |
 
 ## Key bindings
 
@@ -200,6 +242,11 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 | ----------------------- | --------------------------------------- |
 | `g` then `l`            | Jump to lessons                         |
 | `g` then `h`            | Jump to home                            |
+| `g` then `b`            | Jump to boss levels                     |
+| `g` then `c`            | Jump to cheatsheet                      |
+| `g` then `a`            | Jump to achievements                    |
+| `g` then `p`            | Jump to profile                         |
+| `g` then `t`            | Jump to typing test                     |
 | `Cmd` / `Ctrl` + `K`    | Open the command palette                |
 | `/`                     | Focus the search box on the current page|
 | `Esc`                   | Close the command palette               |
@@ -322,6 +369,37 @@ export const BOSS_LEVELS: BossLevel[] = [
 ```
 
 Each step runs the user's command in a **fresh seeded VFS**, so retries do not pollute the filesystem. The verifier gets the resulting `fs`, `cwd`, `output`, and the original `command`.
+
+## Adding a new achievement
+
+Edit `src/lib/achievements.ts` and append to `ACHIEVEMENTS`, then add the
+matching unlock rule in `evaluateAchievements`. Achievements are pure
+derivations of the progress snapshot, so no plumbing changes are required.
+
+```ts
+// src/lib/achievements.ts
+export const ACHIEVEMENTS: Achievement[] = [
+  // …existing entries…
+  {
+    id: 'ten-bosses',
+    title: 'Centurion',
+    description: 'Defeat every boss level ten times across sessions.',
+    glyph: 'trophy',
+  },
+];
+
+export function evaluateAchievements(state: ProgressState) {
+  // …existing rules…
+  set('ten-bosses', state.bossesCompleted.length >= 10);
+  return ACHIEVEMENTS.map((a) => ({ id: a.id, unlocked: byId.get(a.id) ?? false }));
+}
+```
+
+`glyph` is one of the inline-SVG keys defined in
+`src/components/AchievementBadge.tsx` (`rocket`, `book`, `streak`,
+`quiz`, `boss`, `bookmark`, `note`, `trophy`, `share`, `typing`,
+`first`, `perfectionist`). Set `hidden: true` for a secret badge that
+should only appear after it has been unlocked.
 
 ## NPM scripts
 

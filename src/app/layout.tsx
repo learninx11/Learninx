@@ -5,6 +5,7 @@ import { ResetProgressButton } from '@/components/ResetProgressButton';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AchievementToaster } from '@/components/AchievementToaster';
 import { ProgressProvider } from '@/lib/progress-context';
 import './globals.css';
 
@@ -85,6 +86,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Cheatsheet
               </Link>
+              <Link
+                href="/typing"
+                className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-block"
+              >
+                Typing
+              </Link>
+              <Link
+                href="/achievements"
+                className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-block"
+              >
+                Badges
+              </Link>
+              <Link
+                href="/profile"
+                className="rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)]"
+              >
+                <span className="hidden sm:inline">Profile</span>
+                <SearchIcon size={16} className="sm:hidden" />
+              </Link>
               <ThemeToggle />
               <a
                 href="https://github.com/raveendra11/Learninx"
@@ -114,6 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="lx-kbd">l</span> to jump to lessons
           </p>
         </footer>
+        <AchievementToaster />
         </ProgressProvider>
       </body>
     </html>

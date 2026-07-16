@@ -12,6 +12,8 @@ import { TerminalClient as Terminal } from '@/components/TerminalClient';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
 import { TableOfContents } from '@/components/TableOfContents';
 import { extractToc } from '@/lib/toc';
+import { BookmarkButton } from '@/components/BookmarkButton';
+import { LessonNoteEditor } from '@/components/LessonNoteEditor';
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -91,10 +93,15 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {lesson.title}
             </h1>
-            <p className="max-w-2xl text-slate-400">{lesson.description}</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="max-w-2xl text-slate-400">{lesson.description}</p>
+              <BookmarkButton lessonId={lesson.id} />
+            </div>
           </header>
 
           <Markdown content={lesson.content} />
+
+          <LessonNoteEditor lessonId={lesson.id} />
 
           {lesson.challenge && (
             <section id="challenge" className="lx-card scroll-mt-24 p-5 sm:p-6">

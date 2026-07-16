@@ -2,14 +2,17 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRightIcon,
+  AwardIcon,
   BookIcon,
   BrainIcon,
+  GamepadIcon,
   LightbulbIcon,
   MonitorIcon,
   SparklesIcon,
   TargetIcon,
   TerminalIcon,
   TrophyIcon,
+  UserIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { getAllLessons } from '@/lib/lessons';
@@ -121,7 +124,7 @@ export default function Home() {
             </h2>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <ExploreCard
             href="/cheatsheet"
             icon={<BookIcon size={20} />}
@@ -135,9 +138,27 @@ export default function Home() {
             body="Multi-step challenges — restore a broken service, sort a messy log folder, and more. Sandbox resets between steps."
           />
           <ExploreCard
+            href="/typing"
+            icon={<GamepadIcon size={20} />}
+            title="Typing test"
+            body="Practice typing real shell commands against the clock. Hit 30 WPM to earn the Fast-fingers badge."
+          />
+          <ExploreCard
+            href="/achievements"
+            icon={<AwardIcon size={20} />}
+            title="Achievements"
+            body="Earn badges for streaks, perfect quizzes, bookmarks, notes, boss runs, and typing speed. Pure browser-side."
+          />
+          <ExploreCard
+            href="/profile"
+            icon={<UserIcon size={20} />}
+            title="Profile &amp; backup"
+            body="Lifetime stats, plus export and import for moving your progress between browsers."
+          />
+          <ExploreCard
             href="/lessons"
             icon={<LightbulbIcon size={20} />}
-            title="Streaks & points"
+            title="Streaks &amp; points"
             body="Earn 10 points per completed lesson and 1 per correct quiz answer. Keep the streak alive by showing up daily."
           />
         </div>

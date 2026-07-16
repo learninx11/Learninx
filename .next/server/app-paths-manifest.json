@@ -1,5 +1,7 @@
 {
+  "/cheatsheet/page": "app/cheatsheet/page.js",
+  "/lessons/page": "app/lessons/page.js",
+  "/typing/page": "app/typing/page.js",
   "/page": "app/page.js",
-  "/icon.svg/route": "app/icon.svg/route.js",
-  "/cheatsheet/page": "app/cheatsheet/page.js"
+  "/achievements/page": "app/achievements/page.js"
 }
