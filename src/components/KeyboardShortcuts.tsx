@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getLessonNeighbours } from '@/lib/lesson-nav';
 
 /** Two-key keyboard shortcut handler. `g l` -> /lessons, `g h` -> /. */
 export function KeyboardShortcuts() {
@@ -73,6 +74,26 @@ export function KeyboardShortcuts() {
         last = null;
         if (pending) clearTimeout(pending);
         return;
+      }
+      if (last === 'g' && key === 'n') {
+        const next = getLessonNeighbours()?.next;
+        if (next) {
+          e.preventDefault();
+          router.push(`/lessons/${next.slug}`);
+          last = null;
+          if (pending) clearTimeout(pending);
+          return;
+        }
+      }
+      if (last === 'g' && key === 'p') {
+        const prev = getLessonNeighbours()?.previous;
+        if (prev) {
+          e.preventDefault();
+          router.push(`/lessons/${prev.slug}`);
+          last = null;
+          if (pending) clearTimeout(pending);
+          return;
+        }
       }
 
       if (key === 'g') {

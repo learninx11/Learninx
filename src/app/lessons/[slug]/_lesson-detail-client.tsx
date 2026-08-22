@@ -12,6 +12,7 @@ import { TerminalClient as Terminal } from '@/components/TerminalClient';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
 import { TableOfContents } from '@/components/TableOfContents';
 import { extractToc } from '@/lib/toc';
+import { setLessonNeighbours } from '@/lib/lesson-nav';
 import { BookmarkButton } from '@/components/BookmarkButton';
 import { LessonNoteEditor } from '@/components/LessonNoteEditor';
 import {
@@ -64,6 +65,16 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Publish this lesson's prev/next neighbours so the global
+  // `KeyboardShortcuts` component can route `g n` / `g p` to them.
+  useEffect(() => {
+    setLessonNeighbours({
+      previous: neighbours.previous ? { slug: neighbours.previous.slug } : null,
+      next: neighbours.next ? { slug: neighbours.next.slug } : null,
+    });
+    return () => setLessonNeighbours(null);
+  }, [neighbours.previous, neighbours.next]);
 
   return (
     <>
@@ -196,6 +207,7 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
                 className="lx-btn lx-btn-ghost text-slate-400"
               >
                 <ChevronLeftIcon size={14} /> {neighbours.previous.title}
+                <ShortcutHint keys="g p" />
               </Link>
             ) : (
               <span />
@@ -206,6 +218,7 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
                 className="lx-btn lx-btn-secondary"
               >
                 {neighbours.next.title} <ArrowRightIcon size={14} />
+                <ShortcutHint keys="g n" />
               </Link>
             ) : (
               <span className="inline-flex items-center gap-2 self-end rounded-md border border-[var(--lx-accent)]/30 bg-[var(--lx-accent)]/10 px-3 py-1.5 text-sm text-[var(--lx-accent)]">
@@ -249,5 +262,16 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
         <TableOfContents entries={toc} />
       </div>
     </>
+  );
+}
+
+function ShortcutHint({ keys }: { keys: string }) {
+  return (
+    <span
+      aria-hidden
+      className="ml-2 hidden items-center gap-1 rounded border border-slate-700/70 bg-slate-900/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-500 sm:inline-flex"
+    >
+      {keys}
+    </span>
   );
 }
