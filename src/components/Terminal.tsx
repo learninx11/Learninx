@@ -111,41 +111,131 @@ export function Terminal({
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
-    term.open(containerRef.current);
+
+    /**
+     * xterm 5.3.0 has a known race: the Viewport's constructor schedules
+     * a `setTimeout(..., 0)` that calls `syncScrollArea → _refresh → raf
+     * (_innerRefresh)`. The first call to `_innerRefresh` reads
+     * `this._renderer.value.dimensions`, but `_renderer.value` is only
+     * populated by the RenderService's first frame paint — which can
+     * run *after* the Viewport's setTimeout fires when `term.open()` is
+     * called on a freshly-mounted container.
+     *
+     * Two-pronged fix:
+     *   1. Defer `term.open()` until the container has a real layout
+     *      size (skip if it's still 0x0 during the first paint).
+     *   2. After `term.open()` returns, override `term.viewport._innerRefresh`
+     *      on the instance to be a no-op when `_renderer.value` is
+     *      undefined. The first successful `fit.fit()` restores the
+     *      original method.
+     */
+    let opened = false;
+    let viewportOriginal: ((start: number, end: number) => void) | null = null;
+
+    const openAndStart = () => {
+      if (disposed || opened) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect || rect.width < 16 || rect.height < 16) return;
+      opened = true;
+      try {
+        term.open(containerRef.current!);
+      } catch {
+        /* container was unmounted between the size check and open() */
+        opened = false;
+        return;
+      }
+      // Patch the Viewport's `_innerRefresh` instance method so the
+      // first (or any) refresh is a no-op while the renderer isn't
+      // ready. We restore the original method on the first successful
+      // `fit.fit()` — see safeFit().
+      try {
+        const viewport = (term as unknown as {
+          viewport?: {
+            _innerRefresh?: (start: number, end: number) => void;
+            _renderer?: { value?: { dimensions?: { css?: { cell?: { width?: number } } } } };
+          };
+        }).viewport;
+        const original = viewport?._innerRefresh;
+        if (typeof original === 'function') {
+          viewportOriginal = original;
+          viewport!._innerRefresh = function patched(
+            this: { _renderer?: { value?: { dimensions?: { css?: { cell?: { width?: number } } } } } },
+            start: number,
+            end: number,
+          ) {
+            if (!this._renderer?.value?.dimensions?.css?.cell?.width) {
+              // Renderer isn't ready yet — drop this refresh. The next
+              // fit.fit() will trigger another refresh once everything
+              // is wired up.
+              return;
+            }
+            return original.call(this, start, end);
+          };
+        }
+      } catch {
+        /* if we can't patch, the renderer-ready guard in safeFit still
+           prevents fit() from being called too early. */
+      }
+      xtermRef.current = term;
+      fitRef.current = fit;
+      // Defer the first fit/focus to the next frame so the canvas
+      // has a chance to lay out.
+      requestAnimationFrame(() => {
+        if (disposed) return;
+        safeFit();
+        try {
+          term.focus();
+        } catch {
+          /* ignore */
+        }
+      });
+    };
+
+    const ro = new ResizeObserver(() => {
+      if (!opened) openAndStart();
+      else safeFit();
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+    // Fallback in case the container is already sized on first paint
+    // and the ResizeObserver doesn't fire.
+    const raf = requestAnimationFrame(openAndStart);
+    const initialFit = window.setTimeout(openAndStart, 50);
 
     /** Safe `fit.fit()` that bails out if the terminal was disposed. */
     const safeFit = () => {
       if (disposed) return;
+      const core = (term as unknown as { _core?: { _renderService?: { _dimensions?: { css?: { cell?: { width?: number; height?: number } } } } } })
+        ._core;
+      const rendererReady = !!core?._renderService?._dimensions?.css?.cell?.width;
+      if (!rendererReady) return;
       try {
         fit.fit();
       } catch {
         /* xterm not fully wired yet, or container has zero size */
       }
+      // First successful fit: restore the original Viewport refresh.
+      restoreViewportPatch();
     };
 
-    // Defer the first fit until the layout is settled (requestAnimationFrame
-    // + a small timeout covers the case where the container is still 0x0
-    // during Fast Refresh, which would otherwise throw on fit.fit()).
-    const raf = requestAnimationFrame(() => {
-      if (disposed) return;
-      safeFit();
+    function restoreViewportPatch() {
+      if (!viewportOriginal) return;
       try {
-        term.focus();
+        const viewport = (term as unknown as {
+          viewport?: { _innerRefresh?: (start: number, end: number) => void };
+        }).viewport;
+        if (viewport?._innerRefresh) {
+          viewport._innerRefresh = viewportOriginal;
+        }
+        viewportOriginal = null;
       } catch {
         /* ignore */
       }
-    });
-    const initialFit = window.setTimeout(safeFit, 50);
-
-    xtermRef.current = term;
-    fitRef.current = fit;
+    }
 
     const handleResize = () => {
       safeFit();
     };
     window.addEventListener('resize', handleResize);
-    const ro = new ResizeObserver(handleResize);
-    ro.observe(containerRef.current);
 
     const greet = [
       `\x1b[36mLearninx Sandbox v0.1\x1b[0m`,
@@ -391,8 +481,18 @@ export function Terminal({
       window.clearTimeout(initialFit);
       window.removeEventListener('resize', handleResize);
       ro.disconnect();
+      restoreViewportPatch();
+      // Detach the custom key event handler first so any further
+      // keydown events on the host element don't try to write into a
+      // disposed terminal.
       try {
-        term.dispose();
+        (term as unknown as { attachCustomKeyEventHandler?: (h: (e: KeyboardEvent) => boolean) => void })
+          .attachCustomKeyEventHandler?.(() => true);
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (opened) term.dispose();
       } catch {
         /* already disposed */
       }

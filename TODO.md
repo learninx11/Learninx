@@ -1,80 +1,118 @@
 # TODO
 
-This file tracks remaining polish items. The big UI/UX overhaul is complete:
-all main pages and components now use the shared design tokens (`lx-card`,
-`lx-btn`, `lx-pill`, `lx-input`, `lx-progress`), icons are inline SVGs, the
-home page has a progress bar and a "first-visit" CTA, the lessons index
-groups lessons by difficulty, the lesson detail page fixes the broken
-`lg:ml` calc, the Terminal now supports paste + history + tab completion
-+ ARIA, and the README/TODO have been brought up to date.
+This file tracks remaining polish items. The current state covers a
+wide feature set: light/dark theme, command palette, search & filter,
+table of contents, cheatsheet, boss levels, daily tips, streaks,
+points, **bookmarks**, **per-lesson notes**, **achievements**,
+**profile & backup**, and a **typing test** mini-game. All of it
+ships in the GitHub Pages static export — no server required.
 
 ## Done in this pass
 
-- [x] Add reusable UI tokens (`--lx-*` CSS variables) and a small component
-      library (`.lx-card`, `.lx-btn`, `.lx-pill`, `.lx-input`, `.lx-progress`,
-      `.lx-kbd`, `.lx-skip-link`, `.lx-scroll-progress`, `.lx-pulse-success`).
-- [x] Replace all hardcoded colors with tokenized Tailwind utilities
-      (`bg-[var(--lx-card)]`, `text-[var(--lx-accent)]`, etc.).
-- [x] Add an inline SVG icon set (`src/components/ui/Icon.tsx`) — no new
-      npm dependency required.
-- [x] Rewrite `src/app/page.tsx` with a progress bar, gradient brand text,
-      and "first visit vs continuing learner" copy.
-- [x] Rewrite `src/app/lessons/page.tsx` with progress summary, lessons
-      grouped by difficulty, color-coded pills, and accessible rows.
-- [x] Rewrite `src/app/lessons/[slug]/page.tsx`:
-      - proper two-column grid (no fragile `ml-[max(...)]` calc);
-      - reading time, scroll-progress bar, and "next lesson" CTA card;
-      - `<Terminal>` suggestion uses `lesson.solution` for `expected` and
-        `lesson.trackCommand` (falling back) for the visible `command`.
-- [x] Improve `src/components/Terminal.tsx`:
-      - autofocus on mount (`requestAnimationFrame` + `term.focus()`);
-      - real Tab completion (first token) against known command names;
-      - clipboard paste via `Ctrl+Shift+V`;
-      - additional keybindings (Ctrl+U/A/E/W);
-      - larger, colorized xterm theme;
-      - accessible `aria-label` on the wrapper and a status footer.
-- [x] Improve `src/components/ChallengeRunner.tsx`:
-      - real `<label>` for the input;
-      - show-hide hint that masks everything past the first token;
-      - polished success / error banners.
-- [x] Improve `src/components/LessonQuiz.tsx`:
-      - real `<label>` for each input;
-      - inline ✓/✗ per question;
-      - previous attempt badge;
-      - explicit retry button.
-- [x] Improve `src/components/CompleteButton.tsx` — drop the fake "+10 pts"
-      copy and use the shared button styles.
-- [x] Improve `src/components/Markdown.tsx` — pipe fenced code blocks
-      through a new `CodeBlock` that adds language label + copy button.
-- [x] Add `src/components/ui/ScrollProgress.tsx` (fixed top progress bar
-      for long lessons).
-- [x] Add `src/components/KeyboardShortcuts.tsx` (`g l` → lessons,
-      `g h` → home; respects form fields).
-- [x] Add `src/components/ResetProgressButton.tsx` + a server action
-      (`resetProgressAction`) that wipes the progress cookie.
-- [x] Update `src/app/loading.tsx` and `src/app/not-found.tsx` to use the
-      new design system.
-- [x] Layout: add a skip-to-content link, `themeColor` viewport meta, and
-      `prefers-reduced-motion` handling in `globals.css`.
-- [x] Update `src/app/lessons/[slug]/actions.ts`: add `passed` to the quiz
-      response, add `resetProgressAction`, and remove misleading "🎉"
-      copy from challenge success messages.
-- [x] Production build passes (`npm run build`) with no warnings.
-- [x] Update `README.md` to document the new keyboard shortcuts, design
-      system, and `LEARNINX_SECRET` env var.
+- [x] **Light & dark theme** with a `light` class on `<html>`, an
+      inline pre-hydration script to prevent flash, automatic
+      detection of `prefers-color-scheme`, and a header toggle that
+      persists in `localStorage`.
+- [x] **Cmd/Ctrl+K command palette** — fuzzy lesson search, top-level
+      navigation, grouped results, arrow-key + Enter selection,
+      ESC to close, and a header trigger button.
+- [x] **Search & filter on the lessons index** — text search across
+      title, description, id, slug, `trackCommand`, difficulty and
+      the first 200 chars of content; difficulty chips; status chips
+      (all / to do / completed / **bookmarked**); highlighted
+      matches; `/` to focus the search box; empty-state.
+- [x] **Table of contents** for long lessons (≥ 2 H2 headings) —
+      sticky on the right at `xl` viewport, IntersectionObserver to
+      highlight the active section, deep-linkable anchors.
+- [x] **Cheatsheet** at `/cheatsheet` — every sandbox command with
+      tagline, long description, examples, and category filter; `/`
+      focuses search.
+- [x] **Boss levels** at `/boss` and `/boss/[slug]` — multi-step
+      scenarios that run the user's command in a fresh seeded VFS
+      and grade it with a pure verifier. Includes "Recover the
+      server" and "Organize the mess". Boss completion is now
+      persisted and awards +25 points.
+- [x] **Daily Linux tip** card on the home page — deterministic by
+      UTC day, with a "Got it" button that records the dismissal in
+      the progress store.
+- [x] **Streaks & points** — +10 per completed lesson, +1 per
+      correct quiz answer, +25 per boss, +5 per achievement,
+      current/best streak, lifetime counters. Server- and
+      client-side progress stores share a single `ProgressState`
+      type.
+- [x] **Streak widget** on the home page (card) and lessons index
+      (inline).
+- [x] **More to explore** section on the home page linking to
+      cheatsheet, boss levels, typing test, achievements, profile,
+      and the streaks widget.
+- [x] **Bookmarks** — per-lesson toggle button on the lesson
+      detail page, "Bookmarked" pill + filter on the lessons index,
+      full `bookmarks` state in the progress store, "Bookworm"
+      achievement for saving five.
+- [x] **Per-lesson notes** — autosaved scratchpad on every lesson
+      detail page (debounced localStorage writes, "Saved Xm ago"
+      status, edit / clear / 4000-char cap). "Note taker" achievement
+      for writing your first note.
+- [x] **Achievements / badges** — 15 unlockable badges across
+      streaks, quiz perfect-scores, boss runs, bookmarks, notes, and
+      typing speed. Pure-function `evaluateAchievements` derives
+      every state from the progress snapshot, so a stale `localStorage`
+      is auto-upgraded the next time the visitor opens the site.
+      `/achievements` page renders a card grid with locked / unlocked
+      / hidden states.
+- [x] **Achievement toaster** — small bottom-right toast pops up
+      whenever a new badge is unlocked, dismissible, auto-clears
+      after a few seconds.
+- [x] **Profile & backup** — `/profile` page with lifetime stats
+      (points, current/best streak, lessons done, perfect quizzes,
+      bookmarks, notes, best typing), recent activity, an "Export
+      progress" download that produces a versioned JSON file, and
+      an "Import progress" file picker that overwrites the current
+      snapshot.
+- [x] **Typing test** — `/typing` page with a 20-snippet library of
+      real shell commands, live WPM + accuracy + timer, character
+      highlighting, and a "Best on this browser" panel. Unlocks
+      "Fast fingers" at 30 WPM and "Lightning" at 60 WPM.
+- [x] **Navigation polish** — Typing / Badges / Profile links added
+      to the top nav, new entries in the Cmd/Ctrl+K palette, and
+      extra `g` shortcuts (`g a`, `g b`, `g c`, `g p`, `g t`).
+- [x] **Progress-store v1 → v2 migration** — old `localStorage`
+      payloads (`v: 1`) are normalised on the fly; the new fields
+      default to safe empties.
+- [x] **Production build** for both `output: 'standalone'` and
+      `output: 'export'` passes (`npm run build`,
+      `GITHUB_PAGES=true npm run build`). All 19 routes pre-rendered
+      to static HTML.
+- [x] **18 new inline-SVG icons** added to `src/components/ui/Icon.tsx`
+      (bookmark, note, award, medal, clock, share, download,
+      upload, user, gamepad, pencil, trash, sparkle-star, code,
+      chart, plus several that were already there).
+- [x] **Markdown component** still adds `id` attributes to h2/h3
+      headings and hides the page-title h1.
+- [x] **CodeBlock** with language label and copy button kept.
 
 ## Future ideas
 
-- [ ] A real points/streak system (the "Mark complete" copy is honest now,
-      but a streak counter would still be fun).
-- [ ] Search and filter on the lessons index.
-- [ ] Light mode (`:root.light` swap of `--lx-*` tokens; a theme toggle
-      in the header).
-- [ ] Optional syntax highlighting in markdown via `rehype-pretty-code` or
-      `shiki`. Currently the new `CodeBlock` adds a language label and
+- [ ] Optional syntax highlighting in markdown via `rehype-pretty-code`
+      or `shiki`. Currently the CodeBlock adds a language label and
       a copy button but keeps the plain mono look.
-- [ ] A reading-time-aware table of contents for long lessons.
-- [ ] Persist the per-browser progress to a local IndexedDB mirror so
-      visitors who clear cookies don't lose everything.
-- [ ] Real-time tests: add Playwright flows for the "g l" shortcut,
-      the sandbox paste, and the challenge / quiz happy paths.
+- [ ] A `?hl=` deep-link on the lessons index that pre-applies a
+      search query, so blog posts can link directly to filtered
+      catalogues.
+- [ ] A `?bookmarks=1` deep-link that pre-applies the bookmarked
+      filter, so the lesson header can link to "my saved lessons".
+- [ ] More boss levels: build & install a small script, configure
+      `systemd` (simulated), debug a permission issue across
+      `chmod`/`chown`, etc.
+- [ ] Internationalisation: extract the hard-coded English strings
+      to a messages file and add a `?lang=` switch.
+- [ ] Optional IndexedDB mirror of the progress store, so visitors
+      who clear localStorage (or use a different profile) don't
+      lose everything.
+- [ ] Real Playwright tests: cover the `g l` shortcut, the
+      Cmd/Ctrl+K palette, the theme toggle persistence, the
+      cheatsheet search, the bookmark toggle, the typing test
+      round-trip, the quiz passing flow, and the export / import
+      round-trip.
+- [ ] Server-side progress import via URL hash so a learner can
+      share a progress snapshot as a single link.
