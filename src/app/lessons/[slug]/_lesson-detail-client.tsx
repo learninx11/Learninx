@@ -15,6 +15,7 @@ import { extractToc } from '@/lib/toc';
 import { setLessonNeighbours } from '@/lib/lesson-nav';
 import { BookmarkButton } from '@/components/BookmarkButton';
 import { LessonNoteEditor } from '@/components/LessonNoteEditor';
+import { ShareButton } from '@/components/ShareButton';
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -106,7 +107,10 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
             </h1>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-slate-400">{lesson.description}</p>
-              <BookmarkButton lessonId={lesson.id} />
+              <div className="flex flex-wrap items-center gap-2">
+                <BookmarkButton lessonId={lesson.id} />
+                <ShareButton path={`/lessons/${lesson.slug}`} title={lesson.title} />
+              </div>
             </div>
           </header>
 

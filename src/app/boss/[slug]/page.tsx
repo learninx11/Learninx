@@ -4,6 +4,7 @@ import { Pill } from '@/components/ui/Pill';
 import { TargetIcon } from '@/components/ui/Icon';
 import { getAllBosses, getBossBySlug } from '@/lib/bosses';
 import { BossClient } from './_boss-client';
+import { BossShareIsland } from './_share-island';
 
 export function generateStaticParams() {
   return getAllBosses().map((b) => ({ slug: b.slug }));
@@ -39,7 +40,10 @@ export default function BossPage({ params }: { params: { slug: string } }) {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           {boss.title}
         </h1>
-        <p className="max-w-2xl text-[var(--lx-muted)]">{boss.description}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-2xl text-[var(--lx-muted)]">{boss.description}</p>
+          <BossShareIsland path={`/boss/${boss.slug}`} title={boss.title} />
+        </div>
       </header>
       {/* Client component looks the boss up by slug (so verifier
           functions and seed callbacks never cross the RSC boundary). */}
