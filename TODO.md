@@ -34,7 +34,10 @@ ships in the GitHub Pages static export — no server required.
       persisted and awards +25 points.
 - [x] **Daily Linux tip** card on the home page — deterministic by
       UTC day, with a "Got it" button that records the dismissal in
-      the progress store.
+      the progress store. Includes a "Shuffle" button that surfaces
+      a different tip from the catalogue, a "Back to today" reset,
+      and a small "N seen" counter. Unlocks the new **Tip explorer**
+      achievement at 5 unique tips.
 - [x] **Streaks & points** — +10 per completed lesson, +1 per
       correct quiz answer, +25 per boss, +5 per achievement,
       current/best streak, lifetime counters. Server- and
@@ -53,13 +56,13 @@ ships in the GitHub Pages static export — no server required.
       detail page (debounced localStorage writes, "Saved Xm ago"
       status, edit / clear / 4000-char cap). "Note taker" achievement
       for writing your first note.
-- [x] **Achievements / badges** — 15 unlockable badges across
-      streaks, quiz perfect-scores, boss runs, bookmarks, notes, and
-      typing speed. Pure-function `evaluateAchievements` derives
-      every state from the progress snapshot, so a stale `localStorage`
-      is auto-upgraded the next time the visitor opens the site.
-      `/achievements` page renders a card grid with locked / unlocked
-      / hidden states.
+- [x] **Achievements / badges** — 16 unlockable badges across
+      streaks, quiz perfect-scores, boss runs, bookmarks, notes, tip
+      exploration, and typing speed. Pure-function
+      `evaluateAchievements` derives every state from the progress
+      snapshot, so a stale `localStorage` is auto-upgraded the next
+      time the visitor opens the site. `/achievements` page renders
+      a card grid with locked / unlocked / hidden states.
 - [x] **Achievement toaster** — small bottom-right toast pops up
       whenever a new badge is unlocked, dismissible, auto-clears
       after a few seconds.

@@ -50,6 +50,7 @@ const EMPTY: ProgressState = {
   achievements: [],
   bestTyping: null,
   bossesCompleted: [],
+  tipsSeen: [],
 };
 
 // ──────────────────────────────────────────── storage helpers ──
@@ -119,7 +120,21 @@ function normalize(input: Partial<ProgressState>): ProgressState {
     bossesCompleted: Array.isArray(input.bossesCompleted)
       ? input.bossesCompleted.filter((s): s is string => typeof s === 'string')
       : [],
+    tipsSeen: normalizeTipsSeen(input.tipsSeen),
   };
+}
+
+function normalizeTipsSeen(input: unknown): number[] {
+  if (!Array.isArray(input)) return [];
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const v of input) {
+    const n = typeof v === 'number' ? Math.floor(v) : NaN;
+    if (!Number.isFinite(n) || n < 0 || n > 9999 || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out;
 }
 
 function normalizeNotes(input: unknown): Record<string, LessonNote> {
@@ -281,13 +296,35 @@ export function recordQuizScore(lessonId: string, score: QuizScore): ProgressSta
 }
 
 /** Mark the daily tip as seen for today. Idempotent. */
-export function markTipSeen(): ProgressState {
+export function markTipSeen(tipIndex?: number): ProgressState {
   const state = readRaw();
   const today = utcDayKey();
-  if (state.lastTipDay === today) return state;
-  const next = { ...state, lastTipDay: today };
-  writeRaw(next);
-  return next;
+  if (state.lastTipDay !== today) {
+    state.lastTipDay = today;
+  }
+  if (typeof tipIndex === 'number' && Number.isFinite(tipIndex)) {
+    const idx = Math.max(0, Math.min(9999, Math.floor(tipIndex)));
+    if (!state.tipsSeen.includes(idx)) {
+      state.tipsSeen.push(idx);
+    }
+  }
+  writeRaw(state);
+  return state;
+}
+
+/**
+ * Record that a specific tip (by index in the catalogue) was shown to
+ * the visitor, without changing the day-key. Used when the visitor
+ * shuffles to a new tip from the home page.
+ */
+export function recordTipSeen(tipIndex: number): ProgressState {
+  const state = readRaw();
+  if (!Number.isFinite(tipIndex)) return state;
+  const idx = Math.max(0, Math.min(9999, Math.floor(tipIndex)));
+  if (state.tipsSeen.includes(idx)) return state;
+  state.tipsSeen.push(idx);
+  writeRaw(state);
+  return state;
 }
 
 /** True if this lesson is in the completed set. */

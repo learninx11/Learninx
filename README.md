@@ -23,12 +23,12 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Searchable cheatsheet** of every command the in-browser shell supports.
 - **Typing test** — type real shell commands against the clock, with WPM and accuracy tracking. Earn badges for speed.
 - **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Everything is stored in your browser only.
-- **Achievements** — 15 unlockable badges (streaks, perfect quizzes, boss runs, study tools, typing speed, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
+- **Achievements** — 16 unlockable badges (streaks, perfect quizzes, boss runs, study tools, tip exploration, typing speed, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
 - **Profile + export/import** — lifetime stats and a JSON backup you can take to another browser.
 - **Cmd/Ctrl+K command palette** for fast navigation across the site.
 - **Light & dark themes** with automatic detection and a per-browser toggle.
 - **Streaks & points** (10 per lesson, 1 per correct quiz, 25 per boss, 5 per badge) tracked in a signed per-browser cookie / localStorage.
-- **Daily Linux tip** card on the home page, deterministic by UTC day.
+- **Daily Linux tip** card on the home page, deterministic by UTC day. Includes a "Shuffle" button so visitors can browse the rest of the tip catalogue and an "N seen" counter that tracks unique tips surfaced.
 - **Table of contents** on long lessons, with active-section highlighting.
 - **Search and filter** on the lessons index (text + difficulty + completed / to-do / bookmarked).
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
@@ -233,7 +233,7 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 | `/boss`            | Index of multi-step boss challenges                       |
 | `/boss/[slug]`     | One boss level with per-step grading + sandbox            |
 | `/typing`          | Typing test — type real shell commands against the clock  |
-| `/achievements`    | Grid of 15 unlockable badges                              |
+| `/achievements`    | Grid of 16 unlockable badges                              |
 | `/profile`         | Lifetime stats, export / import, reset                    |
 
 ## Key bindings

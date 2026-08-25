@@ -19,6 +19,7 @@ import {
   normalizeAnswer,
   normalizeCommand,
   recordQuizScore as storeRecordQuizScore,
+  recordTipSeen as storeRecordTipSeen,
   recordTypingScore as storeRecordTypingScore,
   resetProgress as storeResetProgress,
   setLessonNote as storeSetLessonNote,
@@ -42,7 +43,13 @@ interface ProgressContextValue {
   markComplete: (lessonId: string) => void;
   reset: () => void;
   /** Mark the daily tip as seen for today. */
-  markTipSeen: () => void;
+  markTipSeen: (tipIndex?: number) => void;
+  /**
+   * Record that the visitor has surfaced a specific tip (by index in
+   * the catalogue) without changing the day-key. Used by the home
+   * page when the visitor shuffles to a different tip.
+   */
+  recordTipSeen: (tipIndex: number) => void;
   /**
    * Client-side replacement for `submitChallengeAction`. Validates
    * the user's command against the lesson's accepted solutions and,
@@ -116,6 +123,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     achievements: EMPTY_ACHIEVEMENTS,
     bestTyping: null,
     bossesCompleted: [],
+    tipsSeen: [],
   });
   const [ready, setReady] = useState(false);
   const [newlyUnlocked, setNewlyUnlocked] = useState<string[]>([]);
@@ -165,10 +173,25 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setNewlyUnlocked([]);
   }, []);
 
-  const markTipSeen = useCallback(() => {
-    const next = storeMarkTipSeen();
-    setState(next);
-  }, []);
+  const markTipSeen = useCallback(
+    (tipIndex?: number) => {
+      const before = readProgress();
+      const next = storeMarkTipSeen(tipIndex);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
+
+  const recordTipSeen = useCallback(
+    (tipIndex: number) => {
+      const before = readProgress();
+      const next = storeRecordTipSeen(tipIndex);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
 
   const submitChallenge = useCallback<ProgressContextValue['submitChallenge']>(
     (lessonId, solution, command) => {
@@ -298,6 +321,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       markComplete,
       reset,
       markTipSeen,
+      recordTipSeen,
       submitChallenge,
       submitQuiz,
       toggleBookmark,
@@ -317,6 +341,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       markComplete,
       reset,
       markTipSeen,
+      recordTipSeen,
       submitChallenge,
       submitQuiz,
       toggleBookmark,

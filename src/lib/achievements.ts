@@ -19,7 +19,7 @@ export interface Achievement {
   title: string;
   description: string;
   /** Simple emoji-style badge rendered as an inline-SVG inside the card. */
-  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist';
+  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist' | 'shuffle';
   /** Optional hidden achievement — not shown until unlocked. */
   hidden?: boolean;
 }
@@ -110,6 +110,12 @@ export const ACHIEVEMENTS: Achievement[] = [
     glyph: 'typing',
   },
   {
+    id: 'tip-explorer',
+    title: 'Tip explorer',
+    description: 'Browse five different daily tips.',
+    glyph: 'shuffle',
+  },
+  {
     id: 'completionist',
     title: 'Completionist',
     description: 'Unlock every other achievement.',
@@ -168,6 +174,7 @@ export function evaluateAchievements(
   set('note-taker', noteCount >= 1);
   set('fast-fingers', !!bestTyping && bestTyping.wpm >= 30);
   set('lightning', !!bestTyping && bestTyping.wpm >= 60);
+  set('tip-explorer', state.tipsSeen.length >= 5);
 
   // `completionist` is satisfied once every other achievement is unlocked.
   const othersUnlocked = ALL_OTHER_IDS.every((id) =>

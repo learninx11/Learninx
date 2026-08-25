@@ -45,6 +45,7 @@ const EMPTY: ProgressState = {
   achievements: [],
   bestTyping: null,
   bossesCompleted: [],
+  tipsSeen: [],
 };
 
 // ─────────────────────────────────────────────── signing key ──
@@ -121,6 +122,11 @@ function decode(raw: string | undefined): ProgressState {
       bossesCompleted: Array.isArray(parsed.bossesCompleted)
         ? parsed.bossesCompleted.filter((s): s is string => typeof s === 'string')
         : [],
+      tipsSeen: Array.isArray(parsed.tipsSeen)
+        ? (parsed.tipsSeen as unknown[])
+            .filter((n): n is number => typeof n === 'number')
+            .map((n) => Math.max(0, Math.min(9999, Math.floor(n))))
+        : [],
     };
   } catch {
     return cloneEmpty();
@@ -139,6 +145,7 @@ function cloneEmpty(): ProgressState {
     achievements: [],
     bestTyping: null,
     bossesCompleted: [],
+    tipsSeen: [],
   };
 }
 

@@ -68,4 +68,10 @@ export interface ProgressState {
   bestTyping: TypingScore | null;
   /** Set of boss-level ids the visitor has completed. */
   bossesCompleted: string[];
+  /**
+   * Set of tip indices the visitor has surfaced via the daily-tip
+   * card (either today's deterministic pick, or a shuffled one).
+   * Used to award the "Tip explorer" achievement.
+   */
+  tipsSeen: number[];
 }
