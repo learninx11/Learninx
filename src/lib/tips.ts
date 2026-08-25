@@ -76,12 +76,14 @@ const TIPS: DailyTip[] = [
 export function getDailyTip(now: Date = new Date()): {
   tip: DailyTip;
   dayKey: string;
+  /** Index into the TIPS array, so callers can persist the seen set. */
+  index: number;
 } {
   const dayKey = now.toISOString().slice(0, 10);
   // Convert YYYY-MM-DD into a stable integer seed.
   const seed = Number(dayKey.replace(/-/g, '')) || 1;
   const idx = seed % TIPS.length;
-  return { tip: TIPS[idx], dayKey };
+  return { tip: TIPS[idx], dayKey, index: idx };
 }
 
 export function getAllTips(): DailyTip[] {

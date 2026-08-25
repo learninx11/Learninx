@@ -77,5 +77,5 @@ interface AchievementToast {
   id: string;
   title: string;
   description: string;
-  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist';
+  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist' | 'shuffle';
 }

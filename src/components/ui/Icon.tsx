@@ -332,3 +332,20 @@ export const ChartIcon = ({ size = 16, ...rest }: IconProps) => (
     <path d="M7 14l3-3 4 4 5-6" />
   </svg>
 );
+
+export const ShuffleIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M16 3h5v5" />
+    <path d="M4 20 21 3" />
+    <path d="M21 16v5h-5" />
+    <path d="m15 15 6 6" />
+    <path d="M4 4l5 5" />
+  </svg>
+);
+
+export const RotateCcwIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+);
