@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRightIcon,
   BookmarkIcon,
   CheckIcon,
   FilterIcon,
   SearchIcon,
+  SparklesIcon,
   TerminalIcon,
 } from '@/components/ui/Icon';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
@@ -55,6 +57,9 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const router = useRouter();
+  const lastSurpriseRef = useRef<string | null>(null);
+
   const lessonsWithStatus = useMemo(
     () =>
       lessons.map((l) => ({
@@ -64,6 +69,25 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
       })),
     [lessons, completedSet, ready, state.bookmarks],
   );
+
+  // Pick a random lesson, preferring ones the user hasn't completed yet.
+  // Avoids repeating the same slug twice in a row. No-op when no lessons
+  // are available (e.g. during SSR before data hydrates).
+  const surprise = useCallback(() => {
+    if (lessonsWithStatus.length === 0) return;
+    const pool =
+      lessonsWithStatus.filter((l) => !l.completed).length > 0
+        ? lessonsWithStatus.filter((l) => !l.completed)
+        : lessonsWithStatus;
+    const candidates =
+      pool.length > 1 && lastSurpriseRef.current
+        ? pool.filter((l) => l.slug !== lastSurpriseRef.current)
+        : pool;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!pick) return;
+    lastSurpriseRef.current = pick.slug;
+    router.push(`/lessons/${pick.slug}`);
+  }, [lessonsWithStatus, router]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -120,10 +144,22 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Lessons
         </h1>
-        <p className="max-w-2xl text-[var(--lx-muted)]">
-          Work through the chapters in order. Each lesson ends with a small
-          challenge. Your progress is saved on this browser.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-2xl text-[var(--lx-muted)]">
+            Work through the chapters in order. Each lesson ends with a small
+            challenge. Your progress is saved on this browser.
+          </p>
+          <button
+            type="button"
+            onClick={surprise}
+            disabled={lessons.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--lx-accent)]/40 bg-[var(--lx-accent-glow)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--lx-accent)] transition hover:border-[var(--lx-accent)] hover:bg-[var(--lx-accent)]/15 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Open a random lesson"
+            title="Open a random lesson"
+          >
+            <SparklesIcon size={12} /> Surprise me
+          </button>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <ProgressBar
