@@ -22,6 +22,7 @@ import {
   HomeCtaText,
   HomeProgress,
 } from './_home-progress';
+import { ContinueRow } from './_continue-row';
 import { DailyTipCard } from './_daily-tip';
 import { StreakWidget } from '@/components/StreakWidget';
 
@@ -70,6 +71,7 @@ export default function Home() {
           {lessons.length} lessons available · free forever · your progress is
           saved on this browser
         </p>
+        <ContinueRow lessons={lessons} />
       </section>
 
       <section id="how-it-works" className="scroll-mt-20 space-y-6">
