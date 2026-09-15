@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SearchIcon } from '@/components/ui/Icon';
+import { CheckIcon, CopyIcon, SearchIcon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import {
   CHEATSHEET,
@@ -163,14 +163,51 @@ function CheatCard({ entry }: { entry: CheatEntry }) {
             {entry.examples.map((ex) => (
               <li
                 key={ex}
-                className="rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)] px-2.5 py-1.5 text-[var(--lx-fg)]"
+                className="rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)] flex items-center justify-between gap-2 pl-2.5 pr-1.5 py-1.5 text-[var(--lx-fg)]"
               >
-                <code>$ {ex}</code>
+                <code className="truncate">$ {ex}</code>
+                <CopyExampleButton text={ex} />
               </li>
             ))}
           </ul>
         </div>
       )}
     </article>
+  );
+}
+/**
+ * Small per-example copy button. Shows a check for a moment after a
+ * successful copy so the user gets confirmation without a toast.
+ */
+function CopyExampleButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard blocked (e.g. insecure context) */
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex shrink-0 items-center gap-1 rounded border-[var(--lx-border)] px-1.5 py-0.5 text-[0.7rem] text-[var(--lx-muted)] transition hover:border-[var(--lx-accent)] hover:text-[var(--lx-accent)]"
+      aria-label={copied ? `Copied: ${text}` : `Copy command: ${text}`}
+    >
+      {copied ? (
+        <>
+          <CheckIcon size={12} /> Copied
+        </>
+      ) : (
+        <>
+          <CopyIcon size={12} /> Copy
+        </>
+      )}
+    </button>
   );
 }
