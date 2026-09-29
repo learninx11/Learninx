@@ -17,47 +17,84 @@ import {
   TrophyIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
-import { TYPING_SNIPPETS } from '@/lib/typing-snippets';
+import { TYPING_SNIPPETS, type TypingSnippet } from '@/lib/typing-snippets';
 import { useProgress } from '@/lib/progress-context';
 import type { TypingScore } from '@/lib/progress-types';
 
+type Mode = 'practice' | 'test';
 type Status = 'idle' | 'running' | 'finished';
 
-function pickSnippet(previous?: string): string {
-  if (TYPING_SNIPPETS.length === 0) return 'ls -la';
-  if (TYPING_SNIPPETS.length === 1) return TYPING_SNIPPETS[0] as string;
-  let next: string | undefined = previous;
+/** Take Test always runs for exactly this long, however many snippets get through. */
+const TEST_DURATION_MS = 3 * 60_000;
+
+const FALLBACK_SNIPPET: TypingSnippet = {
+  text: 'ls -la',
+  usage: 'List every file in the current directory, including hidden ones.',
+};
+
+function pickSnippet(previous?: TypingSnippet): TypingSnippet {
+  if (TYPING_SNIPPETS.length === 0) return FALLBACK_SNIPPET;
+  if (TYPING_SNIPPETS.length === 1) return TYPING_SNIPPETS[0]!;
+  let next: TypingSnippet | undefined = previous;
   // Roll a few times to avoid repeating the previous one.
-  for (let i = 0; i < 4 && next === previous; i += 1) {
+  for (let i = 0; i < 4 && next?.text === previous?.text; i += 1) {
     next = TYPING_SNIPPETS[Math.floor(Math.random() * TYPING_SNIPPETS.length)];
   }
   return next ?? TYPING_SNIPPETS[0]!;
 }
 
 /**
- * Standard "5 words = 1 word" approximation used by every typing
- * tutor. The snippet is just a string of characters; we count word
- * boundaries the way a typing tutor would.
+ * Standard "5 characters = 1 word" approximation used by every typing
+ * tutor, applied to a raw character count so both modes (one snippet in
+ * Practice, many stitched together in Take Test) can share it.
  */
-function wordsTyped(text: string): number {
-  return text.length === 0 ? 0 : Math.max(1, Math.ceil(text.length / 5));
+function wordsFromChars(chars: number): number {
+  return chars === 0 ? 0 : Math.max(1, Math.ceil(chars / 5));
+}
+
+function countCorrect(typed: string, target: string): number {
+  let correct = 0;
+  for (let i = 0; i < typed.length; i += 1) {
+    if (typed[i] === target[i]) correct += 1;
+  }
+  return correct;
 }
 
 export function TypingTestClient() {
   const { state, ready, recordTyping } = useProgress();
-  const [snippet, setSnippet] = useState<string>(() => pickSnippet());
+  const [mode, setMode] = useState<Mode>('practice');
+
+  const [snippet, setSnippet] = useState<TypingSnippet>(() => pickSnippet());
   const [typed, setTyped] = useState<string>('');
   const [status, setStatus] = useState<Status>('idle');
+
+  // Practice mode: one snippet, timer counts up, ends the moment it's typed.
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [lastScore, setLastScore] = useState<TypingScore | null>(null);
+
+  // Take Test mode: a fixed 3-minute clock counting down, snippets advance
+  // automatically as each is finished, and stats accumulate across all of them.
+  const [testStartedAt, setTestStartedAt] = useState<number | null>(null);
+  const [testRemainingMs, setTestRemainingMs] = useState(TEST_DURATION_MS);
+  const [testTotalChars, setTestTotalChars] = useState(0);
+  const [testCorrectChars, setTestCorrectChars] = useState(0);
+  const [testSnippetsDone, setTestSnippetsDone] = useState(0);
+  const [testResult, setTestResult] = useState<{
+    wpm: number;
+    accuracy: number;
+    snippets: number;
+  } | null>(null);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards against double-firing the end of whichever mode is active —
+  // only one mode is ever running at a time, so one flag is enough.
   const finishedRef = useRef<boolean>(false);
 
-  // Ticker while the test runs so the seconds counter stays live.
+  // Practice-mode ticker: elapsed time, counting up.
   useEffect(() => {
-    if (status !== 'running') {
+    if (mode !== 'practice' || status !== 'running') {
       if (tickRef.current) {
         clearInterval(tickRef.current);
         tickRef.current = null;
@@ -70,40 +107,98 @@ export function TypingTestClient() {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [status, startedAt]);
+  }, [mode, status, startedAt]);
 
-  const remaining = snippet.length - typed.length;
-  const accuracy = useMemo(() => {
-    if (typed.length === 0) return 100;
-    let correct = 0;
-    for (let i = 0; i < typed.length; i += 1) {
-      if (typed[i] === snippet[i]) correct += 1;
+  // Take-Test ticker: just refreshes the countdown. Deliberately kept
+  // dumb (no decisions here) so the "what happens at zero" logic below
+  // always runs with a fresh render's state instead of whatever was
+  // captured when this interval was created three minutes ago.
+  useEffect(() => {
+    if (mode !== 'test' || status !== 'running' || testStartedAt == null) return;
+    const id = setInterval(() => {
+      setTestRemainingMs(Math.max(0, TEST_DURATION_MS - (Date.now() - testStartedAt)));
+    }, 100);
+    return () => clearInterval(id);
+  }, [mode, status, testStartedAt]);
+
+  // Fires the instant the countdown reaches zero. Because this effect
+  // re-runs on every `testRemainingMs` tick, `finishTest` below is
+  // always a fresh closure over the current typed/snippet/totals — no
+  // stale-closure risk despite the long-lived interval above.
+  useEffect(() => {
+    if (mode === 'test' && status === 'running' && testRemainingMs <= 0) {
+      finishTest();
     }
-    return Math.round((correct / typed.length) * 100);
-  }, [typed, snippet]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testRemainingMs, mode, status]);
+
+  const remaining = snippet.text.length - typed.length;
+
+  const accuracy = useMemo(() => {
+    if (mode === 'practice') {
+      if (typed.length === 0) return 100;
+      return Math.round((countCorrect(typed, snippet.text) / typed.length) * 100);
+    }
+    const totalTyped = testTotalChars + typed.length;
+    if (totalTyped === 0) return 100;
+    const correctSoFar = testCorrectChars + countCorrect(typed, snippet.text);
+    return Math.round((correctSoFar / totalTyped) * 100);
+  }, [mode, typed, snippet, testTotalChars, testCorrectChars]);
 
   const liveWpm = useMemo(() => {
-    if (elapsedMs <= 0) return 0;
-    const minutes = elapsedMs / 60_000;
-    return Math.round(wordsTyped(typed) / minutes);
-  }, [typed, elapsedMs]);
+    if (mode === 'practice') {
+      if (elapsedMs <= 0) return 0;
+      const minutes = elapsedMs / 60_000;
+      return Math.round(wordsFromChars(typed.length) / minutes);
+    }
+    const elapsedTestMs = TEST_DURATION_MS - testRemainingMs;
+    if (elapsedTestMs <= 0) return 0;
+    const totalChars = testTotalChars + typed.length;
+    const minutes = elapsedTestMs / 60_000;
+    return Math.round(wordsFromChars(totalChars) / minutes);
+  }, [mode, typed, elapsedMs, testRemainingMs, testTotalChars]);
 
-  const reset = useCallback(
-    (nextSnippet: string = pickSnippet()) => {
-      finishedRef.current = false;
-      setSnippet(nextSnippet);
-      setTyped('');
-      setStatus('idle');
-      setStartedAt(null);
-      setElapsedMs(0);
-      setLastScore(null);
-      // Defer focus so the DOM has the new input.
-      requestAnimationFrame(() => inputRef.current?.focus());
-    },
-    [],
-  );
+  const resetPractice = useCallback((nextSnippet: TypingSnippet = pickSnippet()) => {
+    finishedRef.current = false;
+    setSnippet(nextSnippet);
+    setTyped('');
+    setStatus('idle');
+    setStartedAt(null);
+    setElapsedMs(0);
+    setLastScore(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
-  function start() {
+  const resetTest = useCallback(() => {
+    finishedRef.current = false;
+    setTestTotalChars(0);
+    setTestCorrectChars(0);
+    setTestSnippetsDone(0);
+    setTestResult(null);
+    setTestRemainingMs(TEST_DURATION_MS);
+    setTestStartedAt(null);
+    setSnippet(pickSnippet());
+    setTyped('');
+    setStatus('idle');
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    resetPractice(pickSnippet());
+    // resetPractice already clears the shared bits (status/typed/etc);
+    // just also zero out the other mode's session so switching back
+    // and forth never carries stale progress with it.
+    setTestTotalChars(0);
+    setTestCorrectChars(0);
+    setTestSnippetsDone(0);
+    setTestResult(null);
+    setTestRemainingMs(TEST_DURATION_MS);
+    setTestStartedAt(null);
+  }
+
+  function startPractice() {
     setStatus('running');
     const t = Date.now();
     setStartedAt(t);
@@ -111,22 +206,27 @@ export function TypingTestClient() {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  function commit() {
+  function startTest() {
+    setStatus('running');
+    const t = Date.now();
+    setTestStartedAt(t);
+    setTestRemainingMs(TEST_DURATION_MS);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function commitPractice() {
     if (finishedRef.current) return;
     finishedRef.current = true;
     const totalMs = startedAt == null ? 0 : Date.now() - startedAt;
     const minutes = totalMs / 60_000 || 1 / 60_000;
-    const wpm = Math.round(wordsTyped(typed) / minutes);
-    let correct = 0;
-    for (let i = 0; i < typed.length; i += 1) {
-      if (typed[i] === snippet[i]) correct += 1;
-    }
+    const wpm = Math.round(wordsFromChars(typed.length) / minutes);
+    const correct = countCorrect(typed, snippet.text);
     const finalAccuracy =
       typed.length === 0 ? 0 : Math.round((correct / typed.length) * 100);
     const score: TypingScore = {
       wpm,
       accuracy: finalAccuracy,
-      length: snippet.length,
+      length: snippet.text.length,
       at: Date.now(),
     };
     setLastScore(score);
@@ -134,15 +234,49 @@ export function TypingTestClient() {
     if (ready) recordTyping(score);
   }
 
+  /** Current snippet finished with time still on the clock — credit it and load the next one. */
+  function advanceTestSnippet() {
+    // The 3-minute clock can run out in the same instant the last
+    // snippet is completed (this runs from a deferred setTimeout, so
+    // `finishTest` may already have ended the session by the time it
+    // fires) — once finished, don't keep mutating session state.
+    if (finishedRef.current) return;
+    setTestTotalChars((n) => n + snippet.text.length);
+    setTestCorrectChars((n) => n + countCorrect(typed, snippet.text));
+    setTestSnippetsDone((n) => n + 1);
+    setSnippet(pickSnippet(snippet));
+    setTyped('');
+  }
+
+  /** The 3-minute clock ran out — tally everything, including a partial credit for the in-flight snippet. */
+  function finishTest() {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const totalChars = testTotalChars + typed.length;
+    const correctChars = testCorrectChars + countCorrect(typed, snippet.text);
+    const minutes = TEST_DURATION_MS / 60_000;
+    const wpm = Math.round(wordsFromChars(totalChars) / minutes);
+    const finalAccuracy = totalChars === 0 ? 0 : Math.round((correctChars / totalChars) * 100);
+    setTestResult({ wpm, accuracy: finalAccuracy, snippets: testSnippetsDone });
+    setStatus('finished');
+    setTestRemainingMs(0);
+    const score: TypingScore = { wpm, accuracy: finalAccuracy, length: totalChars, at: Date.now() };
+    if (ready) recordTyping(score);
+  }
+
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (status === 'finished') return;
     const value = e.target.value;
-    if (status === 'idle' && value.length > 0) start();
-    if (status === 'running' && value.length > snippet.length) return;
+    if (status === 'idle' && value.length > 0) {
+      if (mode === 'practice') startPractice();
+      else startTest();
+    }
+    if (status === 'running' && value.length > snippet.text.length) return;
     setTyped(value);
-    if (value === snippet) {
-      // Defer the commit so the final character paints first.
-      setTimeout(commit, 0);
+    if (value === snippet.text) {
+      // Defer so the final character paints before we react to it.
+      if (mode === 'practice') setTimeout(commitPractice, 0);
+      else setTimeout(advanceTestSnippet, 0);
     }
   }
 
@@ -155,31 +289,68 @@ export function TypingTestClient() {
         <h1 className="text-balance text-3xl font-bold sm:text-4xl">Typing test</h1>
         <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
           Type the command exactly as shown, as fast and as accurately as you can.
-          Hitting 30 WPM unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks{' '}
-          <em>Lightning</em>.
+          <strong className="text-slate-300"> Practice</strong> is one snippet at a time,
+          no pressure. <strong className="text-slate-300">Take Test</strong> is a focused
+          3-minute sprint across as many snippets as you can get through. Hitting 30 WPM
+          unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
+          either mode counts.
         </p>
       </header>
+
+      <div className="mx-auto flex w-fit gap-1 rounded-full border border-[var(--lx-border)] bg-slate-900/40 p-1">
+        <button
+          type="button"
+          onClick={() => switchMode('practice')}
+          className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+            mode === 'practice'
+              ? 'bg-[var(--lx-accent)] text-slate-950'
+              : 'text-slate-400 hover:text-[var(--lx-fg)]'
+          }`}
+        >
+          Practice
+        </button>
+        <button
+          type="button"
+          onClick={() => switchMode('test')}
+          className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+            mode === 'test'
+              ? 'bg-[var(--lx-accent)] text-slate-950'
+              : 'text-slate-400 hover:text-[var(--lx-fg)]'
+          }`}
+        >
+          Take Test · 3 min
+        </button>
+      </div>
 
       <section className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-3">
           <Stat label="WPM" value={liveWpm} />
           <Stat label="Accuracy" value={`${accuracy}%`} />
-          <Stat label="Time" value={formatSeconds(elapsedMs)} />
+          <Stat
+            label={mode === 'test' ? 'Time left' : 'Time'}
+            value={formatSeconds(mode === 'test' ? testRemainingMs : elapsedMs)}
+          />
         </div>
       </section>
 
       <section className="lx-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Pill tone="accent">
-            <TargetIcon size={12} /> Round {Math.floor(Math.random() * 999) + 1}
-          </Pill>
+          {mode === 'practice' ? (
+            <Pill tone="accent">
+              <TargetIcon size={12} /> Round {Math.floor(Math.random() * 999) + 1}
+            </Pill>
+          ) : (
+            <Pill tone="accent">
+              <ClockIcon size={12} /> {testSnippetsDone} snippet{testSnippetsDone === 1 ? '' : 's'} completed
+            </Pill>
+          )}
           <button
             type="button"
-            onClick={() => reset()}
+            onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
             className="lx-btn lx-btn-ghost lx-btn-sm"
-            title="Pick a new snippet"
+            title={mode === 'practice' ? 'Pick a new snippet' : 'Restart the 3-minute test'}
           >
-            <ResetIcon size={12} /> New snippet
+            <ResetIcon size={12} /> {mode === 'practice' ? 'New snippet' : 'Restart test'}
           </button>
         </div>
 
@@ -187,7 +358,7 @@ export function TypingTestClient() {
           className="font-mono text-lg leading-relaxed sm:text-2xl"
           aria-hidden
         >
-          {snippet.split('').map((ch, idx) => {
+          {snippet.text.split('').map((ch, idx) => {
             const userChar = typed[idx];
             const state =
               userChar == null
@@ -212,6 +383,8 @@ export function TypingTestClient() {
           })}
         </p>
 
+        <p className="text-sm text-slate-400">{snippet.usage}</p>
+
         <input
           ref={inputRef}
           type="text"
@@ -221,31 +394,50 @@ export function TypingTestClient() {
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
-          placeholder={status === 'idle' ? 'Start typing to begin…' : ''}
+          placeholder={
+            status === 'idle'
+              ? mode === 'practice'
+                ? 'Start typing to begin…'
+                : 'Start typing to begin the 3-minute test…'
+              : ''
+          }
           aria-label="Type the command"
           className="lx-input w-full font-mono"
           disabled={status === 'finished'}
         />
 
         <p className="text-xs text-slate-500">
-          {status === 'idle' && 'Press a key to start the timer.'}
-          {status === 'running' && `${remaining} character${remaining === 1 ? '' : 's'} left.`}
-          {status === 'finished' && lastScore && (
+          {mode === 'practice' && status === 'idle' && 'Press a key to start the timer.'}
+          {mode === 'practice' &&
+            status === 'running' &&
+            `${remaining} character${remaining === 1 ? '' : 's'} left.`}
+          {mode === 'practice' && status === 'finished' && lastScore && (
             <>
               Round over: <strong>{lastScore.wpm} WPM</strong> at{' '}
               <strong>{lastScore.accuracy}%</strong> accuracy.
             </>
           )}
+          {mode === 'test' && status === 'idle' && 'Press a key to start the 3-minute test.'}
+          {mode === 'test' &&
+            status === 'running' &&
+            `${remaining} character${remaining === 1 ? '' : 's'} left in this snippet — the next one loads automatically.`}
+          {mode === 'test' && status === 'finished' && testResult && (
+            <>
+              Time&apos;s up: <strong>{testResult.wpm} WPM</strong> at{' '}
+              <strong>{testResult.accuracy}%</strong> accuracy across{' '}
+              <strong>{testResult.snippets}</strong> snippet{testResult.snippets === 1 ? '' : 's'}.
+            </>
+          )}
         </p>
 
-        {status === 'finished' && lastScore && (
+        {status === 'finished' && (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
               className="lx-btn lx-btn-primary"
             >
-              <ArrowRightIcon size={14} /> Try another
+              <ArrowRightIcon size={14} /> {mode === 'practice' ? 'Try another' : 'Take test again'}
             </button>
             <Link href="/achievements" className="lx-btn lx-btn-secondary">
               <TrophyIcon size={14} /> See your badges
@@ -268,11 +460,11 @@ export function TypingTestClient() {
             <div className="grid gap-3 sm:grid-cols-3">
               <Stat label="Best WPM" value={state.bestTyping.wpm} />
               <Stat label="Best accuracy" value={`${state.bestTyping.accuracy}%`} />
-              <Stat label="Snippet length" value={state.bestTyping.length} />
+              <Stat label="Characters typed" value={state.bestTyping.length} />
             </div>
           ) : (
             <p className="text-sm text-slate-400">
-              No runs yet on this browser. Finish a snippet to set a baseline.
+              No runs yet on this browser. Finish a snippet (or a full test) to set a baseline.
             </p>
           )}
         </div>
@@ -291,7 +483,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 }
 
 function formatSeconds(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   if (minutes === 0) return `${seconds}s`;
