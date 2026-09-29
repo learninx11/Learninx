@@ -153,9 +153,8 @@ function editorStub(
     );
     out.push(`  echo "your text" > ${abs}        # overwrite`);
     out.push(`  echo "more" >> ${abs}            # append`);
-    out.push(`  cat > ${abs} <<'EOF'             # multi-line (Ctrl+D to end)`);
-    out.push(`  sed -i 's/old/new/' ${abs}       # in-place replace`);
-    out.push(`  printf '%s\n' 'line1' 'line2' > ${abs}  # precise writes`);
+    out.push(`  printf 'line1\\nline2\\n' > ${abs}  # multi-line, one command`);
+    out.push(`  sed 's/old/new/' ${abs} | tee ${abs}  # find-and-replace, written back`);
     out.push('');
   }
   return out.join('\n');
@@ -170,6 +169,84 @@ function writeFile(ctx: ShellContext, path: string, content: string): boolean {
   if (!loc) return false;
   loc.parent.children[loc.name] = { type: 'file', content };
   return true;
+}
+
+// Like `mkdir -p`, but returns the resulting directory node instead of an
+// error string. Used by commands (e.g. `apt`) that need a well-known
+// directory to exist before writing state into it.
+function ensureDir(ctx: ShellContext, path: string): FsDir {
+  const parts = joinPath(ctx.cwd, path).split('/').filter(Boolean);
+  let cursor: FsNode = ctx.fs;
+  for (const part of parts) {
+    if (cursor.type !== 'dir') break;
+    let next: FsNode | undefined = cursor.children[part];
+    if (!next) {
+      next = { type: 'dir', children: {} };
+      cursor.children[part] = next;
+    }
+    cursor = next;
+  }
+  return cursor as FsDir;
+}
+
+// ── simulated `apt` package catalogue ──
+// A small, fixed set of well-known packages. "Installing" a package writes
+// a marker file under /var/lib/dpkg/info/<pkg>.list — the same directory
+// real Debian/Ubuntu systems use to track installed files — so
+// `apt list --installed` reflects genuine (simulated) state instead of
+// just printing canned text.
+const APT_CATALOG: Record<string, string> = {
+  curl: '7.81.0-1ubuntu1.15',
+  git: '1:2.34.1-1ubuntu1.10',
+  nginx: '1.18.0-6ubuntu14.4',
+  htop: '3.0.5-7build2',
+  tree: '2.0.2-1',
+  vim: '2:8.2.3995-1ubuntu2.15',
+  wget: '1.21.2-2ubuntu1',
+  'build-essential': '12.9ubuntu3',
+};
+
+function dpkgInfoDir(ctx: ShellContext): FsDir | null {
+  const node = resolveNode(ctx, '/var/lib/dpkg/info');
+  return node && node.type === 'dir' ? node : null;
+}
+
+function isPackageInstalled(ctx: ShellContext, pkg: string): boolean {
+  const dir = dpkgInfoDir(ctx);
+  return !!dir && `${pkg}.list` in dir.children;
+}
+
+// Recursively list every file/dir path contained in a node, relative to
+// `name` — used by `tar -t` to print an archive's manifest.
+function walkArchivePaths(name: string, node: FsNode): string[] {
+  if (node.type === 'file') return [name];
+  const out = [`${name}/`];
+  for (const [child, cnode] of Object.entries(node.children)) {
+    out.push(...walkArchivePaths(`${name}/${child}`, cnode));
+  }
+  return out;
+}
+
+function gunzipImpl(args: string[], ctx: ShellContext): string | null {
+  const keep = args.includes('-k') || args.includes('--keep');
+  const target = args.find((a) => !a.startsWith('-'));
+  if (!target) return 'gunzip: missing file operand';
+  if (!target.endsWith('.gz')) return `gzip: ${target}: unknown suffix -- ignored`;
+  const node = resolveNode(ctx, target);
+  if (!node || node.type !== 'file') return `gunzip: ${target}: No such file or directory`;
+  let decoded: string;
+  try {
+    decoded = atob(node.content);
+  } catch {
+    return `gunzip: ${target}: not in gzip format`;
+  }
+  const dest = target.slice(0, -3);
+  writeFile(ctx, dest, decoded);
+  if (!keep) {
+    const loc = resolveParent(ctx, target);
+    if (loc) delete loc.parent.children[loc.name];
+  }
+  return null;
 }
 
 function nodeSize(node: FsNode): number {
@@ -259,17 +336,25 @@ const COMMANDS: Record<string, CommandSpec> = {
   },
   printf: {
     name: 'printf',
-    summary: 'format and print data',
+    summary: 'format and print data (supports %s, %d, \\n/\\t escapes, and format re-use for extra args)',
     run: (args) => {
       if (args.length === 0) return 'printf: usage: printf format [arguments]';
       const fmt = args[0];
       const subs = args.slice(1);
+      const hasDirective = /%[sd]/.test(fmt);
       let i = 0;
-      return fmt.replace(/%[sd]/g, (m) => {
-        if (m === '%s') return String(subs[i++] ?? '');
-        if (m === '%d') return String(parseInt(subs[i++] ?? '0', 10));
-        return m;
-      });
+      const passes: string[] = [];
+      do {
+        passes.push(
+          fmt.replace(/%[sd]/g, (m) => {
+            if (m === '%s') return String(subs[i++] ?? '');
+            if (m === '%d') return String(parseInt(subs[i++] ?? '0', 10));
+            return m;
+          }),
+        );
+      } while (hasDirective && i < subs.length);
+      const substituted = passes.join('');
+      return substituted.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
     },
   },
   exit: { name: 'exit', summary: 'exit the shell (simulated)', run: () => 'logout' },
@@ -469,12 +554,15 @@ const COMMANDS: Record<string, CommandSpec> = {
           if (!force) return `rm: cannot remove '${arg}': No such file or directory`;
           continue;
         }
-        if (!loc.parent.children[arg]) continue;
-        const target = loc.parent.children[arg];
+        const target = loc.parent.children[loc.name];
+        if (!target) {
+          if (!force) return `rm: cannot remove '${arg}': No such file or directory`;
+          continue;
+        }
         if (target.type === 'dir' && !recursive) {
           return `rm: cannot remove '${arg}': Is a directory`;
         }
-        delete loc.parent.children[arg];
+        delete loc.parent.children[loc.name];
       }
       return null;
     },
@@ -678,6 +766,14 @@ const COMMANDS: Record<string, CommandSpec> = {
     run: (args) => {
       if (args.length < 2) return 'chmod: missing operand';
       return `chmod: set ${args[0]} on ${args.slice(1).join(' ')} ✓`;
+    },
+  },
+  chown: {
+    name: 'chown',
+    summary: 'change file owner and group (simulated)',
+    run: (args) => {
+      if (args.length < 2) return 'chown: missing operand';
+      return `chown: set owner ${args[0]} on ${args.slice(1).join(' ')} ✓`;
     },
   },
   ln: {
@@ -893,7 +989,13 @@ Modify: ${new Date().toUTCString()}`;
       }
       const pattern = filtered[0];
       if (!pattern) return 'grep: missing pattern';
-      const targets = filtered.slice(1);
+      const targets =
+        filtered.length > 1
+          ? filtered.slice(1)
+          : typeof ctx.__lastStdin === 'string'
+            ? [`__STDIN__:${ctx.__lastStdin}`]
+            : [];
+      if (targets.length === 0) return 'grep: missing file operand';
       const re = new RegExp(escapeRegex(pattern), ignoreCase ? 'i' : '');
       const out: string[] = [];
       for (const t of targets) {
@@ -979,7 +1081,13 @@ Modify: ${new Date().toUTCString()}`;
       if (fieldIdx < 0 && charIdx < 0) return 'cut: you must specify a list of fields or characters';
       const spec = fieldIdx >= 0 ? args[fieldIdx + 1] : args[charIdx + 1];
       if (!spec) return 'cut: missing field spec';
-      const targets = args.filter((a) => !a.startsWith('-') && a !== delim && a !== spec);
+      const explicitTargets = args.filter((a) => !a.startsWith('-') && a !== delim && a !== spec);
+      const targets =
+        explicitTargets.length > 0
+          ? explicitTargets
+          : typeof ctx.__lastStdin === 'string'
+            ? [`__STDIN__:${ctx.__lastStdin}`]
+            : [];
       if (targets.length === 0) return 'cut: missing file operand';
       const ranges = spec
         .split(',')
@@ -1239,9 +1347,15 @@ Modify: ${new Date().toUTCString()}`;
     name: 'sed',
     summary: 'stream editor — supports s/find/replace/[g]',
     run: (args, ctx) => {
-      if (args.length < 2) return 'sed: missing expression or file';
+      if (args.length === 0) return 'sed: missing expression or file';
       const expr = args[0];
-      const targets = args.slice(1).filter((a) => !a.startsWith('-'));
+      const explicitTargets = args.slice(1).filter((a) => !a.startsWith('-'));
+      const targets =
+        explicitTargets.length > 0
+          ? explicitTargets
+          : typeof ctx.__lastStdin === 'string'
+            ? [`__STDIN__:${ctx.__lastStdin}`]
+            : [];
       if (targets.length === 0) return 'sed: missing file';
       const m = expr.match(/^s\/(.+?)\/(.*?)\/([g]*)$/);
       if (!m) {
@@ -1274,7 +1388,12 @@ Modify: ${new Date().toUTCString()}`;
       const m = program.match(/print\s+\$(\d+)/);
       if (!m) return 'awk: only `print $N` is supported in this sandbox';
       const field = parseInt(m[1], 10);
-      const targets = files.length > 0 ? files : [];
+      const targets =
+        files.length > 0
+          ? files
+          : typeof ctx.__lastStdin === 'string'
+            ? [`__STDIN__:${ctx.__lastStdin}`]
+            : [];
       if (targets.length === 0) return 'awk: missing file operand';
       const out: string[] = [];
       for (const t of targets) {
@@ -1366,6 +1485,196 @@ Modify: ${new Date().toUTCString()}`;
         if (r != null) out.push(Array.isArray(r) ? r.join('\n') : r);
       }
       return out.join('\n');
+    },
+  },
+
+  // ── archiving / compression (simulated) ──
+  tar: {
+    name: 'tar',
+    summary: 'archive files (simulated) — -c create, -x extract, -t list; -f file, -v verbose, -z gzip',
+    run: (args, ctx) => {
+      let flags = '';
+      const positional: string[] = [];
+      for (const a of args) {
+        if (/^-?[cxtvzf]+$/.test(a)) flags += a.replace(/^-/, '');
+        else positional.push(a);
+      }
+      const create = flags.includes('c');
+      const extract = flags.includes('x');
+      const list = flags.includes('t');
+      const gzipped = flags.includes('z');
+      const verbose = flags.includes('v');
+      if (!create && !extract && !list) {
+        return 'tar: you must specify one of -c, -x, -t';
+      }
+      if (!flags.includes('f')) {
+        return 'tar: refusing to read archive contents from the terminal (missing -f)';
+      }
+      const archivePath = positional[0];
+      if (!archivePath) return 'tar: missing archive name';
+
+      if (create) {
+        const sources = positional.slice(1);
+        if (sources.length === 0) return 'tar: no source files specified';
+        const entries: { name: string; node: FsNode }[] = [];
+        for (const src of sources) {
+          const node = resolveNode(ctx, src);
+          if (!node) return `tar: ${src}: No such file or directory`;
+          const name = src.replace(/\/+$/, '').split('/').pop() ?? src;
+          entries.push({ name, node: JSON.parse(JSON.stringify(node)) });
+        }
+        const manifest = JSON.stringify(entries);
+        const content = gzipped ? `LEARNINX_TAR_GZ_V1\n${btoa(manifest)}` : `LEARNINX_TAR_V1\n${manifest}`;
+        writeFile(ctx, archivePath, content);
+        if (!verbose) return null;
+        return entries.flatMap((e) => walkArchivePaths(e.name, e.node)).join('\n');
+      }
+
+      // extract / list both need to read and parse the archive first.
+      const raw = readInput(archivePath, ctx);
+      if (raw === null) return `tar: ${archivePath}: Cannot open: No such file or directory`;
+      let entries: { name: string; node: FsNode }[];
+      if (raw.startsWith('LEARNINX_TAR_GZ_V1\n')) {
+        try {
+          entries = JSON.parse(atob(raw.slice('LEARNINX_TAR_GZ_V1\n'.length)));
+        } catch {
+          return `tar: ${archivePath}: Corrupt archive`;
+        }
+      } else if (raw.startsWith('LEARNINX_TAR_V1\n')) {
+        entries = JSON.parse(raw.slice('LEARNINX_TAR_V1\n'.length));
+      } else {
+        return `tar: ${archivePath}: Not a tar archive (this sandbox only reads archives it created)`;
+      }
+
+      if (list) {
+        return entries.flatMap((e) => walkArchivePaths(e.name, e.node)).join('\n');
+      }
+
+      // extract into the current directory
+      const cwdNode = resolveNode(ctx, ctx.cwd);
+      if (!cwdNode || cwdNode.type !== 'dir') return `tar: ${ctx.cwd}: not a directory`;
+      for (const e of entries) {
+        cwdNode.children[e.name] = JSON.parse(JSON.stringify(e.node));
+      }
+      if (!verbose) return null;
+      return entries.flatMap((e) => walkArchivePaths(e.name, e.node)).join('\n');
+    },
+  },
+  gzip: {
+    name: 'gzip',
+    summary: 'compress a file (simulated) — replaces file with file.gz; -d decompress, -k keep original',
+    run: (args, ctx) => {
+      if (args.includes('-d') || args.includes('--decompress')) return gunzipImpl(args, ctx);
+      const keep = args.includes('-k') || args.includes('--keep');
+      const target = args.find((a) => !a.startsWith('-'));
+      if (!target) return 'gzip: missing file operand';
+      if (target.endsWith('.gz')) return `gzip: ${target} already has .gz suffix -- unchanged`;
+      const node = resolveNode(ctx, target);
+      if (!node || node.type !== 'file') return `gzip: ${target}: No such file or directory`;
+      let encoded: string;
+      try {
+        encoded = btoa(node.content);
+      } catch {
+        return 'gzip: failed to compress (unsupported characters in this sandbox)';
+      }
+      writeFile(ctx, `${target}.gz`, encoded);
+      if (!keep) {
+        const loc = resolveParent(ctx, target);
+        if (loc) delete loc.parent.children[loc.name];
+      }
+      return null;
+    },
+  },
+  gunzip: {
+    name: 'gunzip',
+    summary: 'decompress a .gz file (simulated) — -k keeps the .gz copy',
+    run: (args, ctx) => gunzipImpl(args, ctx),
+  },
+
+  // ── package management (simulated Debian/Ubuntu `apt`) ──
+  apt: {
+    name: 'apt',
+    summary: 'simulated package manager — update, install, remove, search, list --installed',
+    run: (args, ctx) => {
+      if (args.length === 0) {
+        return 'apt: usage: apt <update|upgrade|install|remove|search|list> [package...]';
+      }
+      const [sub, ...rest] = args;
+      const pkgs = rest.filter((a) => !a.startsWith('-'));
+      switch (sub) {
+        case 'update':
+          return 'Reading package lists... Done\nBuilding dependency tree... Done\nAll packages are up to date.';
+        case 'upgrade':
+          return 'Reading package lists... Done\nBuilding dependency tree... Done\n0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.';
+        case 'install': {
+          if (pkgs.length === 0) return 'apt: missing package operand';
+          const out = ['Reading package lists... Done', 'Building dependency tree... Done'];
+          const toInstall: string[] = [];
+          for (const pkg of pkgs) {
+            if (!(pkg in APT_CATALOG)) {
+              out.push(`E: Unable to locate package ${pkg}`);
+            } else if (isPackageInstalled(ctx, pkg)) {
+              out.push(`${pkg} is already the newest version (${APT_CATALOG[pkg]}).`);
+            } else {
+              toInstall.push(pkg);
+            }
+          }
+          if (toInstall.length > 0) {
+            out.push('The following NEW packages will be installed:');
+            out.push(`  ${toInstall.join(' ')}`);
+            const dir = ensureDir(ctx, '/var/lib/dpkg/info');
+            for (const pkg of toInstall) {
+              dir.children[`${pkg}.list`] = { type: 'file', content: `/usr/bin/${pkg}\n` };
+              out.push(`Setting up ${pkg} (${APT_CATALOG[pkg]}) ...`);
+            }
+          }
+          return out.join('\n');
+        }
+        case 'remove':
+        case 'purge': {
+          if (pkgs.length === 0) return 'apt: missing package operand';
+          const dir = dpkgInfoDir(ctx);
+          const out: string[] = [];
+          for (const pkg of pkgs) {
+            if (!dir || !(`${pkg}.list` in dir.children)) {
+              out.push(`Package '${pkg}' is not installed, so not removed`);
+              continue;
+            }
+            delete dir.children[`${pkg}.list`];
+            out.push(`Removing ${pkg} (${APT_CATALOG[pkg] ?? 'unknown'}) ...`);
+          }
+          return out.join('\n');
+        }
+        case 'search': {
+          const term = pkgs[0];
+          if (!term) return 'apt: usage: apt search <term>';
+          const hits = Object.entries(APT_CATALOG).filter(([name]) => name.includes(term));
+          if (hits.length === 0) {
+            return `Sorting... Done\nFull Text Search... Done\n(no packages found matching '${term}')`;
+          }
+          return hits.map(([name, ver]) => `${name}/stable ${ver} amd64`).join('\n');
+        }
+        case 'list': {
+          if (rest.includes('--installed')) {
+            const dir = dpkgInfoDir(ctx);
+            const names = dir
+              ? Object.keys(dir.children)
+                  .filter((n) => n.endsWith('.list'))
+                  .map((n) => n.slice(0, -'.list'.length))
+              : [];
+            if (names.length === 0) return 'Listing... Done';
+            return [
+              'Listing... Done',
+              ...names.map((n) => `${n}/now ${APT_CATALOG[n] ?? 'unknown'} amd64 [installed]`),
+            ].join('\n');
+          }
+          return Object.entries(APT_CATALOG)
+            .map(([name, ver]) => `${name}/stable ${ver} amd64`)
+            .join('\n');
+        }
+        default:
+          return `apt: unknown command '${sub}'`;
+      }
     },
   },
 
@@ -1731,6 +2040,42 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
     summary: 'run a command immune to hangups (simulated)',
     run: () => 'nohup: (backgrounding not supported in this sandbox)',
   },
+  systemctl: {
+    name: 'systemctl',
+    summary: 'control systemd units (simulated — daemon-reload, enable, start, restart, stop, status)',
+    run: (args) => {
+      if (args.length === 0) return 'systemctl: usage: systemctl <command> [unit]';
+      const sub = args[0];
+      const rawUnit = args.find((a, i) => i > 0 && !a.startsWith('-'));
+      const unit = rawUnit ? rawUnit.replace(/\.service$/, '') : '';
+      switch (sub) {
+        case 'daemon-reload':
+          return null;
+        case 'enable':
+          if (!unit) return 'systemctl: missing unit';
+          return `Created symlink /etc/systemd/system/multi-user.target.wants/${unit}.service → /etc/systemd/system/${unit}.service.`;
+        case 'disable':
+          if (!unit) return 'systemctl: missing unit';
+          return `Removed /etc/systemd/system/multi-user.target.wants/${unit}.service.`;
+        case 'start':
+        case 'restart':
+        case 'stop':
+          if (!unit) return `systemctl: missing unit`;
+          return null;
+        case 'status':
+          if (!unit) return 'systemctl: missing unit';
+          return `● ${unit}.service - ${unit} service
+   Loaded: loaded (/etc/systemd/system/${unit}.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2026-09-27 10:00:00 UTC; 3s ago
+ Main PID: 4821 (${unit})
+    Tasks: 1
+   Memory: 1.2M
+      CPU: 12ms`;
+        default:
+          return `systemctl: unknown command '${sub}'`;
+      }
+    },
+  },
 };
 
 export const COMMAND_NAMES = Object.keys(COMMANDS).sort();
@@ -1785,19 +2130,163 @@ const STDIN_CONSUMERS = new Set([
 ]);
 
 function injectStdin(cmd: string, args: string[], stdin: string): string[] {
-  if (STDIN_CONSUMERS.has(cmd) && args.length === 0) {
+  // A command only needs piped stdin injected when it has no explicit file
+  // operand yet — i.e. every arg so far is a flag (starts with '-'). This
+  // lets flag-only invocations like `ps aux | wc -l` or `history | sort -u`
+  // receive the piped text; commands that already named a real file operand
+  // are left alone so that operand wins, matching real shell precedence.
+  const hasFileOperand = args.some((a) => !a.startsWith('-'));
+  if (STDIN_CONSUMERS.has(cmd) && !hasFileOperand) {
     return [`__STDIN__:${stdin}`, ...args];
   }
   return args;
 }
 
-function runStatement(line: string, ctx: ShellContext): string | string[] | null {
+interface Redirections {
+  /** Everything left after stripping `>`, `>>` and `<` clauses. */
+  cmdLine: string;
+  outFile: string | null;
+  append: boolean;
+  inFile: string | null;
+}
+
+// Scans a single statement (already isolated from `;`, `&&`, `||`) for
+// unquoted `>`, `>>` and `<` redirection operators, extracts their target
+// filenames, and returns the remaining command line with those clauses
+// removed. Redirection targets can themselves be quoted, e.g. `> "my file"`.
+function stripRedirections(line: string): Redirections {
+  let cmdLine = '';
+  let quote: '"' | "'" | null = null;
+  let outFile: string | null = null;
+  let append = false;
+  let inFile: string | null = null;
+
+  function readTarget(startAt: number): { file: string; next: number } {
+    let j = startAt;
+    while (line[j] === ' ') j++;
+    let file = '';
+    let fq: '"' | "'" | null = null;
+    while (j < line.length) {
+      const c = line[j];
+      if (fq) {
+        if (c === fq) {
+          fq = null;
+          j++;
+          continue;
+        }
+        file += c;
+        j++;
+        continue;
+      }
+      if (c === '"' || c === "'") {
+        fq = c;
+        j++;
+        continue;
+      }
+      if (/\s/.test(c)) break;
+      file += c;
+      j++;
+    }
+    return { file, next: j };
+  }
+
+  let i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    if (quote) {
+      cmdLine += ch;
+      if (ch === quote) quote = null;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      cmdLine += ch;
+      i++;
+      continue;
+    }
+    if (ch === '>') {
+      const isAppend = line[i + 1] === '>';
+      const { file, next } = readTarget(i + (isAppend ? 2 : 1));
+      outFile = file || outFile;
+      append = isAppend;
+      i = next;
+      continue;
+    }
+    if (ch === '<') {
+      const { file, next } = readTarget(i + 1);
+      inFile = file || inFile;
+      i = next;
+      continue;
+    }
+    cmdLine += ch;
+    i++;
+  }
+  return { cmdLine: cmdLine.trim(), outFile, append, inFile };
+}
+
+// Expands `$NAME` and `${NAME}` references against `ctx.env`, the same way
+// `export` populates it. Respects quoting like a real shell: expansion is
+// suppressed inside single quotes, but happens unquoted and inside double
+// quotes. An unset variable expands to the empty string.
+function expandVariables(line: string, ctx: ShellContext): string {
+  let out = '';
+  let quote: '"' | "'" | null = null;
+  let i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    if (quote === "'") {
+      out += ch;
+      if (ch === "'") quote = null;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = quote === ch ? null : quote ?? ch;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === '$') {
+      if (line[i + 1] === '{') {
+        const end = line.indexOf('}', i + 2);
+        if (end !== -1) {
+          const name = line.slice(i + 2, end);
+          out += ctx.env[name] ?? '';
+          i = end + 1;
+          continue;
+        }
+      }
+      const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(line.slice(i + 1));
+      if (m) {
+        out += ctx.env[m[0]] ?? '';
+        i += 1 + m[0].length;
+        continue;
+      }
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+function runStatement(rawLine: string, ctx: ShellContext): string | string[] | null {
+  const line = expandVariables(rawLine, ctx);
+  const { cmdLine, outFile, append, inFile } = stripRedirections(line);
+
+  let inputContent = '';
+  if (inFile) {
+    const content = readInput(inFile, ctx);
+    if (content === null) return `${inFile}: No such file or directory`;
+    inputContent = content;
+  }
+
   // Split on unquoted pipes.
   const stages: string[] = [];
   let cur = '';
   let quote: '"' | "'" | null = null;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  for (let i = 0; i < cmdLine.length; i++) {
+    const ch = cmdLine[i];
     if (quote) {
       if (ch === quote) quote = null;
       cur += ch;
@@ -1817,7 +2306,7 @@ function runStatement(line: string, ctx: ShellContext): string | string[] | null
   }
   stages.push(cur.trim());
 
-  let prevOut = '';
+  let prevOut = inFile ? inputContent : '';
   for (let i = 0; i < stages.length; i++) {
     const stage = stages[i];
     const tokens = tokenize(stage);
@@ -1826,12 +2315,19 @@ function runStatement(line: string, ctx: ShellContext): string | string[] | null
     const args = tokens.slice(1);
     const impl = COMMANDS[cmd];
     if (!impl) return `${cmd}: command not found`;
-    const pipedArgs = i > 0 ? injectStdin(cmd, args, prevOut) : args;
-    ctx.__lastStdin = i > 0 ? prevOut : '';
+    const hasStdin = i > 0 || (i === 0 && Boolean(inFile));
+    const pipedArgs = hasStdin ? injectStdin(cmd, args, prevOut) : args;
+    ctx.__lastStdin = hasStdin ? prevOut : '';
     const out = impl.run(pipedArgs, ctx);
     const text = out == null ? '' : Array.isArray(out) ? out.join('\n') : out;
     if (text === '__CLEAR__') return text;
     prevOut = text;
+  }
+
+  if (outFile) {
+    const prevContent = append ? (readInput(outFile, ctx) ?? '') : '';
+    writeFile(ctx, outFile, prevContent + prevOut);
+    return null;
   }
   return prevOut;
 }

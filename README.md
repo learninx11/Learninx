@@ -16,10 +16,10 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 
 ## Highlights
 
-- **Bite-sized lessons** covering the core of the Linux command line.
+- **11 bite-sized lessons** covering the core of the Linux command line: navigation, files, pipes & redirection, environment variables, permissions & ownership, text processing (grep/sed/awk), finding files, processes, archives & compression, and package management. Each ends with a "Further reading" pointer to a specific, well-known book.
 - **In-browser terminal sandbox** (xterm.js) with a POSIX-style shell and an in-memory virtual filesystem — nothing touches the user's real machine.
 - **Auto-graded challenges** and end-of-lesson quizzes with score-based completion.
-- **Boss levels** — multi-step scenarios for learners who finish the regular catalogue (restore a broken service, sort a messy log folder, etc.).
+- **Boss levels** — five multi-step scenarios for learners who finish the regular catalogue: restore a broken service, sort a messy log folder, ship a deploy script (`sed` + `tee` + `chmod` + `install`), bring a systemd service back online, and fix a permissions puzzle (`chown` + `chmod`).
 - **Searchable cheatsheet** of every command the in-browser shell supports.
 - **Typing test** — type real shell commands against the clock, with WPM and accuracy tracking. Earn badges for speed.
 - **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Everything is stored in your browser only.
@@ -260,7 +260,8 @@ The sandbox in `src/lib/shell/evaluator.ts` implements the most common teaching 
 
 - Navigation and inspection: `pwd`, `cd`, `ls` (incl. `-l`, `-a`, `-la`), `cat`, `head`, `wc`.
 - File operations: `mkdir` (incl. `-p`), `touch`, `rm` (incl. `-r`, `-f`), `mv`, `cp`.
-- Permissions and process info: `chmod`, `ps`, `top` (read-only informational output).
+- Permissions and process info: `chmod`, `chown`, `ps`, `top` (read-only informational output).
+- Service management: `systemctl` (simulated `daemon-reload` / `enable` / `disable` / `start` / `stop` / `restart` / `status`).
 - System info: `uname`, `uptime`, `free`, `df`, `whoami`, `hostname`, `date`, `echo`, `clear`, `help`.
 - Simulated editors: `nano`, `vi`, `vim`, `pico`, `emacs` — print a TUI-style view of the file and point the learner to the editing commands that actually mutate the file (`echo >`, `>>`, heredocs, `sed`, `printf`).
 - Shell built-ins: command history (Up/Down arrows), `Ctrl+C` to abort a line, `Ctrl+L` to clear.
