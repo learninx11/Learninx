@@ -1446,16 +1446,16 @@ That last one is the command you'll type most often once you're comfortable - it
 | \`:wq\` or \`ZZ\` | save and quit |
 | \`:q!\` | quit and discard changes |
 
-> This browser sandbox cannot host a real full-screen editor - there's no TTY for vim to draw into. Typing \`vim <file>\` here prints a read-only preview of the file instead, plus the \`echo\`/\`sed\`/\`tee\` commands that actually edit files in this environment. Use those to complete the challenge below, then try the motions above in a real terminal - every Linux system ships a hands-on tutorial: run \`vimtutor\`.
+> Typing \`vim <file>\` (or \`vi <file>\`) on its own line in this sandbox opens a **real, interactive vim session** - the modes and motions above all work for real. Two simplifications versus real vim: Visual mode (\`v\`/\`V\`/\`Ctrl-v\`) always selects whole lines here, like real vim's Visual *Line* mode specifically, and \`.\` (repeat last change) isn't implemented. Piping or chaining \`vim\` with another command falls back to a read-only preview instead, since a full-screen app doesn't compose with pipes in a way that means anything.
 
 ## Try it
 
 \`\`\`bash
 echo "first draft" > notes.txt
 vim notes.txt
-echo "reviewed" >> notes.txt
-cat notes.txt
 \`\`\`
+
+That opens the real editor. From there: press \`i\`, type a sentence, \`Esc\`, then \`:wq\` to save and quit - or work through the motions and editing commands from this lesson directly. Every Linux system also ships a free, interactive, 30-minute tutorial for the real thing: run \`vimtutor\`.
 
 ## Further reading
 
