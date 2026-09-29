@@ -6,6 +6,8 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { createInitialFs, type FsDir } from '@/lib/shell/fs';
 import {
+  COMMAND_NAMES,
+  completePathCandidates,
   readFileForEditor,
   resolveEditorPath,
   runCommand,
@@ -449,6 +451,68 @@ export function Terminal({
       term.write(renderEditorScreen(result.state, term.rows, term.cols));
     }
 
+    /** The longest prefix every string in the list starts with — `''` if the list is empty. */
+    function longestCommonPrefix(items: string[]): string {
+      if (items.length === 0) return '';
+      let prefix = items[0];
+      for (const item of items.slice(1)) {
+        while (prefix && !item.startsWith(prefix)) prefix = prefix.slice(0, -1);
+        if (!prefix) break;
+      }
+      return prefix;
+    }
+
+    /**
+     * Tab completion. First token on the line completes against every
+     * real command name (`COMMAND_NAMES`, kept in sync with the
+     * evaluator automatically); anything after that completes against
+     * files and directories in the virtual filesystem, exactly the way
+     * a real shell splits "complete the command" from "complete a
+     * path." One match completes it in full (plus a trailing space,
+     * unless it's a directory — then the next Tab can go a level
+     * deeper); several matches complete as far as they agree and, if
+     * that's no further than what's already typed, list every
+     * candidate below the prompt, same as bash.
+     */
+    function tabComplete(): void {
+      const buf = bufferRef.current;
+      const lastSpace = buf.lastIndexOf(' ');
+      const isCommandPosition = lastSpace === -1;
+      const partial = isCommandPosition ? buf : buf.slice(lastSpace + 1);
+
+      const matches = isCommandPosition
+        ? COMMAND_NAMES.filter((c) => c.startsWith(partial))
+        : completePathCandidates(ctxRef.current!, partial);
+      if (matches.length === 0) return;
+
+      if (matches.length === 1) {
+        const full = matches[0];
+        const extra = full.slice(partial.length);
+        if (extra) {
+          term.write(extra);
+          bufferRef.current += extra;
+        }
+        if (!full.endsWith('/')) {
+          term.write(' ');
+          bufferRef.current += ' ';
+        }
+        return;
+      }
+
+      const common = longestCommonPrefix(matches);
+      if (common.length > partial.length) {
+        const extra = common.slice(partial.length);
+        term.write(extra);
+        bufferRef.current += extra;
+        return;
+      }
+
+      const c = ctxRef.current!;
+      const path = c.cwd === HOME ? '~' : c.cwd;
+      term.write(`\r\n${matches.join('  ')}\r\n`);
+      term.write(`\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${path}\x1b[0m$ ${bufferRef.current}`);
+    }
+
     /** Normalizes a raw xterm keystroke into the editors module's key event shape. */
     function toEditorKeyEvent(key: string, ev: KeyboardEvent): EditorKeyEvent | null {
       const code = ev.keyCode;
@@ -539,29 +603,8 @@ export function Terminal({
       }
 
       if (code === 9) {
-        // Tab completion (very basic: complete the first token against
-        // known command names).
         ev.preventDefault?.();
-        const KNOWN = [
-          'pwd', 'ls', 'cd', 'cat', 'echo', 'clear', 'help', 'exit',
-          'mkdir', 'touch', 'rm', 'mv', 'cp', 'chmod', 'ps', 'whoami',
-          'date', 'uname', 'history', 'grep', 'find', 'tree', 'man',
-          'wc', 'head', 'tail', 'stat', 'df', 'free', 'uptime', 'env',
-          'export', 'chown', 'chgrp', 'kill', 'top', 'id', 'which',
-          'nano', 'vim', 'vi', 'less', 'more', 'tr', 'sort', 'cut',
-          'sed', 'awk', 'xargs', 'tee', 'du', 'basename', 'dirname',
-          'hostname', 'groups', 'who', 'last', 'ln', 'install', 'mv',
-          'cp', 'rmdir', 'printf', 'yes', 'true', 'false', 'sleep',
-        ];
-        const buf = bufferRef.current;
-        if (!buf.includes(' ')) {
-          const match = KNOWN.find((c) => c.startsWith(buf));
-          if (match && match !== buf) {
-            const extra = match.slice(buf.length);
-            term.write(extra);
-            bufferRef.current += extra;
-          }
-        }
+        tabComplete();
         return;
       }
 
