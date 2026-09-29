@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { ProfileClient } from './_profile-client';
 
 export const metadata: Metadata = {
-  title: 'Profile — Learninx',
+  title: 'Profile',
   description:
     'Your lifetime Learninx stats, plus tools to back up and restore your progress on another device.',
 };

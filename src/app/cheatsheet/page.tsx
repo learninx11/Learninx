@@ -3,7 +3,7 @@ import { TerminalIcon } from '@/components/ui/Icon';
 import { CheatsheetClient } from './_cheatsheet-client';
 
 export const metadata = {
-  title: 'Cheatsheet · Learninx',
+  title: 'Cheatsheet',
   description:
     'A searchable quick-reference for every command the Learninx in-browser shell supports.',
 };

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { TypingTestClient } from './_typing-test-client';
 
 export const metadata: Metadata = {
-  title: 'Typing test — Learninx',
+  title: 'Typing test',
   description:
     'Practice typing real shell commands against the clock. Trains muscle memory for the terminal.',
 };
