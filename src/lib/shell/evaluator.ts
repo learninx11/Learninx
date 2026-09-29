@@ -104,11 +104,14 @@ function hashCode(s: string): number {
   return h;
 }
 
-// Shared body for the simulated `nano` / `vi` / `vim` / `pico` / `emacs`
-// (and pager `less` / `more`) commands. These are *not* real TUIs — the
-// in-browser xterm is line-buffered and cannot host one — so instead we
-// print a TUI-styled view of the file plus a footer that tells the learner
-// which sandbox commands to use to actually edit the file.
+// Shared fallback body for `nano` / `vi` / `vim` / `pico` / `emacs` and the
+// pagers `less` / `more`. `less`/`more` always land here — a pager has no
+// "real" interactive mode in this sandbox. The five editors only land here
+// when they *can't* be a real full-screen session: piped, chained, or
+// missing a filename (Terminal.tsx's openEditor() handles the normal case
+// of a bare `nano file.txt` directly, for real). Either way we print a
+// TUI-styled preview of the file plus a footer pointing at the sandbox
+// commands that actually edit it non-interactively.
 function editorStub(
   editor: 'nano' | 'vi' | 'vim' | 'pico' | 'emacs' | 'less' | 'more',
   args: string[],
@@ -147,11 +150,15 @@ function editorStub(
     });
     out.push('');
     out.push('─'.repeat(width));
+    if (editor === 'less' || editor === 'more') {
+      out.push(`${editor}: this is a safe in-browser sandbox — real ${editor} needs a TTY.`);
+    } else {
+      out.push(
+        `${editor}: run \`${editor} ${target}\` on its own, with nothing piped in or chained after it, for the real editor.`,
+      );
+    }
     out.push(
-      `${editor}: this is a safe in-browser sandbox — real ${editor} needs a TTY.`,
-    );
-    out.push(
-      'To edit this file here, use one of:',
+      'To edit this file without it, use one of:',
     );
     out.push(`  echo "your text" > ${abs}        # overwrite`);
     out.push(`  echo "more" >> ${abs}            # append`);
@@ -189,6 +196,180 @@ function ensureDir(ctx: ShellContext, path: string): FsDir {
     cursor = next;
   }
   return cursor as FsDir;
+}
+
+// ── simulated `git` ──
+// A real (if simplified) version-control model: `.git/` lives in whatever
+// directory `git init` was run in — repo commands only work from that
+// exact directory, the same way real git only works inside a repo (we
+// just skip its parent-directory search for simplicity). Commits store a
+// FULL snapshot of every tracked file rather than a delta/tree/blob
+// object graph — a real simplification, but one that keeps init / add /
+// status / commit / log / branch / checkout / diff all genuinely correct
+// relative to each other, which is what a lesson actually needs.
+interface GitCommit {
+  id: string;
+  parent: string | null;
+  message: string;
+  author: string;
+  date: string;
+  files: Record<string, string>;
+}
+
+function gitDir(ctx: ShellContext): FsDir | null {
+  const node = resolveNode(ctx, '.git');
+  return node && node.type === 'dir' ? node : null;
+}
+
+function gitReadFile(ctx: ShellContext, path: string): string | null {
+  const node = resolveNode(ctx, path);
+  return node && node.type === 'file' ? node.content : null;
+}
+
+function gitCurrentBranch(ctx: ShellContext): string {
+  return (gitReadFile(ctx, '.git/HEAD') ?? 'main').trim();
+}
+
+function gitRefCommit(ctx: ShellContext, branch: string): string | null {
+  const content = gitReadFile(ctx, `.git/refs/${branch}`);
+  const trimmed = content?.trim() ?? '';
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function gitReadIndex(ctx: ShellContext): Record<string, string> {
+  try {
+    return JSON.parse(gitReadFile(ctx, '.git/index') ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+function gitWriteIndex(ctx: ShellContext, index: Record<string, string>): void {
+  writeFile(ctx, '.git/index', JSON.stringify(index));
+}
+
+function gitReadCommit(ctx: ShellContext, id: string): GitCommit | null {
+  try {
+    const raw = gitReadFile(ctx, `.git/commits/${id}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function gitWalkWorkingFiles(node: FsNode, prefix: string): Record<string, string> {
+  if (node.type !== 'dir') return {};
+  let out: Record<string, string> = {};
+  for (const [name, child] of Object.entries(node.children)) {
+    if (name === '.git') continue;
+    const path = prefix ? `${prefix}/${name}` : name;
+    if (child.type === 'file') out[path] = child.content;
+    else out = { ...out, ...gitWalkWorkingFiles(child, path) };
+  }
+  return out;
+}
+
+function pseudoId(seed: string): string {
+  return (djb2(seed) + fnv1a(seed)).slice(0, 7);
+}
+
+// ── simulated `docker` ──
+// A single JSON "daemon state" file under /var/lib/docker/state.json
+// holds images and containers, in docker's own vocabulary — pulled
+// images, and containers created from them. It's a genuine, consistent
+// simplification of the real thing: no actual process isolation or
+// layered filesystem, just the bookkeeping docker itself keeps.
+interface DockerImage {
+  repo: string;
+  tag: string;
+  id: string;
+  size: string;
+}
+interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  command: string;
+  status: 'running' | 'exited';
+  createdAt: number;
+}
+interface DockerState {
+  images: DockerImage[];
+  containers: DockerContainer[];
+}
+
+const DOCKER_HUB_CATALOG: Record<string, { size: string }> = {
+  alpine: { size: '7.8MB' },
+  ubuntu: { size: '77.8MB' },
+  nginx: { size: '187MB' },
+  node: { size: '1.1GB' },
+  python: { size: '1.02GB' },
+  redis: { size: '138MB' },
+  postgres: { size: '412MB' },
+  busybox: { size: '4.3MB' },
+};
+
+const DOCKER_STATE_PATH = '/var/lib/docker/state.json';
+
+function dockerReadState(ctx: ShellContext): DockerState {
+  const node = resolveNode(ctx, DOCKER_STATE_PATH);
+  if (node && node.type === 'file') {
+    try {
+      return JSON.parse(node.content);
+    } catch {
+      /* fall through to a fresh state */
+    }
+  }
+  return { images: [], containers: [] };
+}
+
+function dockerWriteState(ctx: ShellContext, state: DockerState): void {
+  ensureDir(ctx, '/var/lib/docker');
+  writeFile(ctx, DOCKER_STATE_PATH, JSON.stringify(state));
+}
+
+function dockerParseImageRef(ref: string): { repo: string; tag: string } {
+  const [repo, tag] = ref.split(':');
+  return { repo, tag: tag ?? 'latest' };
+}
+
+function dockerPullImage(ctx: ShellContext, ref: string): { image: DockerImage; lines: string[]; alreadyPresent: boolean } | null {
+  const { repo, tag } = dockerParseImageRef(ref);
+  if (!(repo in DOCKER_HUB_CATALOG)) return null;
+  const state = dockerReadState(ctx);
+  const existing = state.images.find((i) => i.repo === repo && i.tag === tag);
+  const lines = [
+    `${tag}: Pulling from library/${repo}`,
+    `${pseudoSha256(repo + tag + 'layer1').slice(0, 12)}: Pull complete`,
+    `${pseudoSha256(repo + tag + 'layer2').slice(0, 12)}: Pull complete`,
+    `Digest: sha256:${pseudoSha256(repo + tag)}`,
+    `Status: Downloaded newer image for ${repo}:${tag}`,
+  ];
+  if (existing) return { image: existing, lines, alreadyPresent: true };
+  const image: DockerImage = {
+    repo,
+    tag,
+    id: pseudoSha256(repo + tag + Date.now()).slice(0, 12),
+    size: DOCKER_HUB_CATALOG[repo].size,
+  };
+  state.images.push(image);
+  dockerWriteState(ctx, state);
+  return { image, lines, alreadyPresent: false };
+}
+
+// ── simulated `zip` archive format ──
+// Same approach as `tar` elsewhere in this file: a real archive format
+// isn't feasible in a browser sandbox with no binary compression
+// library, so entries are stored as a JSON manifest, base64-encoded and
+// tagged so `unzip` can only read archives this sandbox itself created —
+// exactly like the existing LEARNINX_TAR_V1 format.
+function zipWalkEntries(name: string, node: FsNode): { name: string; node: FsNode }[] {
+  if (node.type === 'file') return [{ name, node }];
+  const out: { name: string; node: FsNode }[] = [];
+  for (const [child, cnode] of Object.entries(node.children)) {
+    out.push(...zipWalkEntries(`${name}/${child}`, cnode));
+  }
+  return out;
 }
 
 // ── simulated `apt` package catalogue ──
@@ -252,18 +433,18 @@ const KNOWN_UNSIMULATED_COMMANDS = new Set([
   // sandboxing / low-level debugging
   'chroot', 'unshare', 'nsenter', 'strace', 'ltrace', 'gdb', 'valgrind', 'perf',
   'ldd', 'nm', 'objdump', 'readelf', 'ar', 'strip', 'size', 'addr2line',
-  // archive formats beyond tar/gzip
-  'zip', 'unzip', '7z', '7za', 'rar', 'unrar', 'bzip2', 'bunzip2', 'xz', 'unxz', 'zstd', 'unzstd', 'lz4', 'cpio',
+  // archive formats beyond tar/gzip/zip
+  '7z', '7za', 'rar', 'unrar', 'bzip2', 'bunzip2', 'xz', 'unxz', 'zstd', 'unzstd', 'lz4', 'cpio',
   // networking extras
   'telnet', 'nc', 'netcat', 'ncat', 'rsync', 'scp', 'sftp', 'ftp', 'whois', 'host', 'arp', 'route',
   'iw', 'iwconfig', 'nmcli', 'nmtui', 'resolvectl', 'tcpdump', 'wireshark', 'tshark', 'iperf', 'iperf3', 'mtr', 'arping', 'ethtool',
   // package managers (other distros / ecosystems)
   'yum', 'dnf', 'pacman', 'zypper', 'snap', 'flatpak', 'brew', 'pip', 'pip3', 'gem', 'npm', 'npx', 'yarn', 'pnpm',
-  // dev tools, compilers, and language runtimes
-  'git', 'svn', 'hg', 'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'cc', 'clang',
+  // dev tools, compilers, and language runtimes (git is simulated for real — see COMMANDS.git)
+  'svn', 'hg', 'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'cc', 'clang',
   'make', 'cmake', 'ninja', 'perl', 'ruby', 'php', 'rustc', 'cargo', 'go', 'kotlinc', 'swift', 'dotnet',
-  // containers, orchestration, and cloud CLIs
-  'docker', 'docker-compose', 'podman', 'kubectl', 'helm', 'terraform', 'ansible', 'ansible-playbook', 'vagrant', 'aws', 'gcloud', 'az',
+  // containers, orchestration, and cloud CLIs (docker is simulated for real — see COMMANDS.docker)
+  'docker-compose', 'podman', 'kubectl', 'helm', 'terraform', 'ansible', 'ansible-playbook', 'vagrant', 'aws', 'gcloud', 'az',
   // monitoring & terminal multiplexers
   'htop', 'glances', 'screen', 'tmux', 'byobu', 'iftop', 'nethogs', 'iotop', 'atop',
   // small extras people inevitably try
@@ -587,33 +768,36 @@ const COMMANDS: Record<string, CommandSpec> = {
       return out.join('\n');
     },
   },
-  // The Learninx sandbox is a line-buffered in-browser REPL, not a real TTY.
-  // It cannot host full-screen editors like nano or vi. These commands
-  // acknowledge that, dump the file with a friendly TUI-styled header, and
-  // point the learner to the editing commands that actually work here.
+  // `nano <file>` (and vi/vim/pico/emacs) typed on its own launches a
+  // REAL full-screen editor — see Terminal.tsx's openEditor(), which
+  // intercepts the line before it ever reaches this evaluator. The
+  // fallback here only fires for the cases a full-screen app can't
+  // meaningfully compose with: piped into/from another command, chained
+  // with && / || / ;, or missing a filename — it dumps the file with a
+  // friendly TUI-styled header instead of truly editing it.
   nano: {
     name: 'nano',
-    summary: 'simulated editor — prints the file and suggests editing commands',
+    summary: 'real full-screen editor when run alone; preview-only if piped or chained',
     run: (args, ctx) => editorStub('nano', args, ctx),
   },
   vi: {
     name: 'vi',
-    summary: 'simulated editor — prints the file and suggests editing commands',
+    summary: 'real full-screen editor when run alone; preview-only if piped or chained',
     run: (args, ctx) => editorStub('vi', args, ctx),
   },
   vim: {
     name: 'vim',
-    summary: 'simulated editor — prints the file and suggests editing commands',
+    summary: 'real full-screen editor when run alone; preview-only if piped or chained',
     run: (args, ctx) => editorStub('vim', args, ctx),
   },
   pico: {
     name: 'pico',
-    summary: 'simulated editor — prints the file and suggests editing commands',
+    summary: 'real full-screen editor when run alone; preview-only if piped or chained',
     run: (args, ctx) => editorStub('pico', args, ctx),
   },
   emacs: {
     name: 'emacs',
-    summary: 'simulated editor — prints the file and suggests editing commands',
+    summary: 'real full-screen editor when run alone; preview-only if piped or chained',
     run: (args, ctx) => editorStub('emacs', args, ctx),
   },
   less: {
@@ -2044,7 +2228,7 @@ MiB Swap:   2048.0 total,   2048.0 free
       Object.values(COMMANDS)
         .map((c) => `  ${c.name.padEnd(8)} ${c.summary}`)
         .join('\n') +
-      `\n\n...plus ${KNOWN_UNSIMULATED_COMMANDS.size} more real commands (git, docker, python3, zip, npm, and more) that run but aren't simulated in depth — try one and see.` +
+      `\n\n...plus ${KNOWN_UNSIMULATED_COMMANDS.size} more real commands (python3, npm, kubectl, rsync, and more) that run but aren't simulated in depth — try one and see.` +
       '\n\nTip: this is a teaching sandbox — not a full Linux kernel.\nUse `;`, `&&`, `||` to chain commands and `|` to pipe them.',
   },
 
@@ -2640,6 +2824,417 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
     run: () =>
       'vimtutor: a real Linux command that launches an interactive ~30-minute vim tutorial.\nNot available in this browser sandbox — try it on a real Linux machine or WSL.',
   },
+
+  // ── version control (simulated, but genuinely stateful) ──
+  git: {
+    name: 'git',
+    summary: 'simulated version control — init, add, status, commit, log, branch, checkout, diff',
+    run: (args, ctx) => {
+      if (args.length === 0) return 'usage: git <command> [args]';
+      const [sub, ...rest] = args;
+      const NOT_A_REPO = 'fatal: not a git repository (or any of the parent directories): .git';
+      switch (sub) {
+        case 'init': {
+          if (gitDir(ctx)) return `Reinitialized existing Git repository in ${ctx.cwd}/.git/`;
+          ensureDir(ctx, '.git/refs');
+          ensureDir(ctx, '.git/commits');
+          writeFile(ctx, '.git/HEAD', 'main');
+          writeFile(ctx, '.git/refs/main', '');
+          writeFile(ctx, '.git/index', '{}');
+          return `Initialized empty Git repository in ${ctx.cwd}/.git/`;
+        }
+        case 'status': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const branch = gitCurrentBranch(ctx);
+          const headId = gitRefCommit(ctx, branch);
+          const committed = headId ? gitReadCommit(ctx, headId)?.files ?? {} : {};
+          const index = gitReadIndex(ctx);
+          const cwdNode = resolveNode(ctx, '.');
+          const working = cwdNode ? gitWalkWorkingFiles(cwdNode, '') : {};
+          const staged: string[] = [];
+          for (const [path, content] of Object.entries(index)) {
+            if (!(path in committed)) staged.push(`\tnew file:   ${path}`);
+            else if (committed[path] !== content) staged.push(`\tmodified:   ${path}`);
+          }
+          const notStaged: string[] = [];
+          for (const [path, content] of Object.entries(working)) {
+            if (path in index && index[path] !== content) notStaged.push(`\tmodified:   ${path}`);
+          }
+          const untracked: string[] = [];
+          for (const path of Object.keys(working)) {
+            if (!(path in index) && !(path in committed)) untracked.push(`\t${path}`);
+          }
+          const out: string[] = [`On branch ${branch}`];
+          if (!headId) out.push('', 'No commits yet');
+          if (staged.length) {
+            out.push(
+              '',
+              'Changes to be committed:',
+              '  (use "git restore --staged <file>..." to unstage)',
+              ...staged,
+            );
+          }
+          if (notStaged.length) {
+            out.push(
+              '',
+              'Changes not staged for commit:',
+              '  (use "git add <file>..." to update what will be committed)',
+              ...notStaged,
+            );
+          }
+          if (untracked.length) {
+            out.push(
+              '',
+              'Untracked files:',
+              '  (use "git add <file>..." to include in what will be committed)',
+              ...untracked,
+            );
+          }
+          if (!staged.length && !notStaged.length && !untracked.length && headId) {
+            out.push('', 'nothing to commit, working tree clean');
+          }
+          return out.join('\n');
+        }
+        case 'add': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          if (rest.length === 0) return 'Nothing specified, nothing added.';
+          const index = gitReadIndex(ctx);
+          for (const arg of rest) {
+            if (arg === '.') {
+              const cwdNode = resolveNode(ctx, '.');
+              if (cwdNode) Object.assign(index, gitWalkWorkingFiles(cwdNode, ''));
+              continue;
+            }
+            const node = resolveNode(ctx, arg);
+            if (!node) return `fatal: pathspec '${arg}' did not match any files`;
+            if (node.type === 'file') index[arg] = node.content;
+            else Object.assign(index, gitWalkWorkingFiles(node, arg));
+          }
+          gitWriteIndex(ctx, index);
+          return null;
+        }
+        case 'commit': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const mIdx = rest.findIndex((a) => a === '-m');
+          const message = mIdx >= 0 ? rest[mIdx + 1] : null;
+          if (!message) return "error: switch `m' requires a value — use: git commit -m \"message\"";
+          const index = gitReadIndex(ctx);
+          const branch = gitCurrentBranch(ctx);
+          const parentId = gitRefCommit(ctx, branch);
+          const parentFiles = parentId ? gitReadCommit(ctx, parentId)?.files ?? {} : {};
+          const files = { ...index };
+          const noChanges = parentId !== null && JSON.stringify(files) === JSON.stringify(parentFiles);
+          if (Object.keys(files).length === 0 || noChanges) {
+            return 'nothing to commit, working tree clean';
+          }
+          const id = pseudoId(message + Date.now() + Math.random());
+          const commit: GitCommit = {
+            id,
+            parent: parentId,
+            message,
+            author: 'learner <learner@learninx-sandbox>',
+            date: `${new Date().toDateString()} ${new Date().toTimeString().split(' ')[0]}`,
+            files,
+          };
+          ensureDir(ctx, '.git/commits');
+          writeFile(ctx, `.git/commits/${id}`, JSON.stringify(commit));
+          writeFile(ctx, `.git/refs/${branch}`, id);
+          return `[${branch} ${id}] ${message}\n ${Object.keys(files).length} file(s) changed`;
+        }
+        case 'log': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const branch = gitCurrentBranch(ctx);
+          let id: string | null = gitRefCommit(ctx, branch);
+          if (!id) return `fatal: your current branch '${branch}' does not have any commits yet`;
+          const out: string[] = [];
+          while (id) {
+            const commit = gitReadCommit(ctx, id);
+            if (!commit) break;
+            out.push(`commit ${commit.id}`, `Author: ${commit.author}`, `Date:   ${commit.date}`, '', `    ${commit.message}`, '');
+            id = commit.parent;
+          }
+          return out.join('\n').trimEnd();
+        }
+        case 'branch': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const refsDir = resolveNode(ctx, '.git/refs');
+          const branches = refsDir && refsDir.type === 'dir' ? Object.keys(refsDir.children) : [];
+          if (rest.length === 0) {
+            const current = gitCurrentBranch(ctx);
+            return branches.map((b) => (b === current ? `* ${b}` : `  ${b}`)).join('\n');
+          }
+          const name = rest[0];
+          const current = gitCurrentBranch(ctx);
+          const headId = gitRefCommit(ctx, current);
+          if (!headId) return "fatal: not a valid object name: 'HEAD'.";
+          writeFile(ctx, `.git/refs/${name}`, headId);
+          return null;
+        }
+        case 'checkout': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const createNew = rest[0] === '-b';
+          const name = createNew ? rest[1] : rest[0];
+          if (!name) return 'error: switch requires a value';
+          if (createNew) {
+            const current = gitCurrentBranch(ctx);
+            const headId = gitRefCommit(ctx, current);
+            writeFile(ctx, `.git/refs/${name}`, headId ?? '');
+            writeFile(ctx, '.git/HEAD', name);
+            return `Switched to a new branch '${name}'`;
+          }
+          const refsDir = resolveNode(ctx, '.git/refs');
+          const exists = refsDir && refsDir.type === 'dir' && name in refsDir.children;
+          if (!exists) return `error: pathspec '${name}' did not match any file(s) known to git`;
+          // A real checkout doesn't just write the target branch's files —
+          // it also removes files that were only ever committed on the
+          // branch being left, so the working tree actually matches the
+          // target branch (this is the whole point of branches: switching
+          // makes files appear AND disappear). Untracked files (never
+          // committed on either branch) are left alone either way.
+          const fromId = gitRefCommit(ctx, gitCurrentBranch(ctx));
+          const fromFiles = fromId ? gitReadCommit(ctx, fromId)?.files ?? {} : {};
+          const targetId = gitRefCommit(ctx, name);
+          const toFiles = targetId ? gitReadCommit(ctx, targetId)?.files ?? {} : {};
+          for (const path of Object.keys(fromFiles)) {
+            if (!(path in toFiles)) {
+              const loc = resolveParent(ctx, path);
+              if (loc) delete loc.parent.children[loc.name];
+            }
+          }
+          for (const [path, content] of Object.entries(toFiles)) writeFile(ctx, path, content);
+          writeFile(ctx, '.git/HEAD', name);
+          return `Switched to branch '${name}'`;
+        }
+        case 'diff': {
+          if (!gitDir(ctx)) return NOT_A_REPO;
+          const index = gitReadIndex(ctx);
+          const cwdNode = resolveNode(ctx, '.');
+          const working = cwdNode ? gitWalkWorkingFiles(cwdNode, '') : {};
+          const out: string[] = [];
+          const paths = new Set([...Object.keys(index), ...Object.keys(working)]);
+          for (const path of paths) {
+            const a = index[path] ?? '';
+            const b = working[path] ?? '';
+            if (a === b) continue;
+            out.push(`diff --git a/${path} b/${path}`, `--- a/${path}`, `+++ b/${path}`);
+            const aLines = a.split('\n');
+            const bLines = b.split('\n');
+            const max = Math.max(aLines.length, bLines.length);
+            for (let i = 0; i < max; i++) {
+              if (aLines[i] !== bLines[i]) {
+                if (aLines[i] !== undefined) out.push(`-${aLines[i]}`);
+                if (bLines[i] !== undefined) out.push(`+${bLines[i]}`);
+              }
+            }
+          }
+          return out.length ? out.join('\n') : '';
+        }
+        default:
+          return `git: '${sub}' is not a git command. See 'git --help'.`;
+      }
+    },
+  },
+
+  // ── archives: zip (simulated, same approach as tar) ──
+  zip: {
+    name: 'zip',
+    summary: 'create a zip archive (simulated) — zip [-r] <archive.zip> <file...>',
+    run: (args, ctx) => {
+      const positional = args.filter((a) => !a.startsWith('-'));
+      const archivePath = positional[0];
+      const sources = positional.slice(1);
+      if (!archivePath || sources.length === 0) return 'zip: usage: zip [-r] <archive.zip> <file...>';
+      const entries: { name: string; node: FsNode }[] = [];
+      for (const src of sources) {
+        const node = resolveNode(ctx, src);
+        if (!node) return `zip warning: name not matched: ${src}`;
+        const name = src.replace(/\/+$/, '').split('/').pop() ?? src;
+        entries.push(...zipWalkEntries(name, JSON.parse(JSON.stringify(node))));
+      }
+      const manifest = JSON.stringify(entries);
+      writeFile(ctx, archivePath, `LEARNINX_ZIP_V1\n${btoa(manifest)}`);
+      return [`  adding: ${archivePath}`, ...entries.map((e) => `  adding: ${e.name}`)].join('\n');
+    },
+  },
+  unzip: {
+    name: 'unzip',
+    summary: 'extract a zip archive (simulated) — -l lists contents without extracting',
+    run: (args, ctx) => {
+      const listOnly = args.includes('-l');
+      const archivePath = args.find((a) => !a.startsWith('-'));
+      if (!archivePath) return 'unzip: usage: unzip [-l] <archive.zip>';
+      const raw = readInput(archivePath, ctx);
+      if (raw === null) return `unzip:  cannot find or open ${archivePath}`;
+      if (!raw.startsWith('LEARNINX_ZIP_V1\n')) {
+        return `unzip: ${archivePath}: not a zip archive this sandbox created`;
+      }
+      let entries: { name: string; node: FsNode }[];
+      try {
+        entries = JSON.parse(atob(raw.slice('LEARNINX_ZIP_V1\n'.length)));
+      } catch {
+        return `unzip: ${archivePath}: corrupt archive`;
+      }
+      if (listOnly) {
+        return [
+          `Archive:  ${archivePath}`,
+          '  Length      Name',
+          '  ------      ----',
+          ...entries.map(
+            (e) => `  ${String(e.node.type === 'file' ? e.node.content.length : 0).padStart(8)}  ${e.name}`,
+          ),
+        ].join('\n');
+      }
+      const cwdNode = resolveNode(ctx, '.');
+      if (!cwdNode || cwdNode.type !== 'dir') return `unzip: ${ctx.cwd}: not a directory`;
+      for (const e of entries) {
+        const parts = e.name.split('/');
+        const fileName = parts.pop()!;
+        let dir: FsDir = cwdNode;
+        for (const part of parts) {
+          let next = dir.children[part];
+          if (!next || next.type !== 'dir') {
+            next = { type: 'dir', children: {} };
+            dir.children[part] = next;
+          }
+          dir = next as FsDir;
+        }
+        dir.children[fileName] = JSON.parse(JSON.stringify(e.node));
+      }
+      return [`Archive:  ${archivePath}`, ...entries.map((e) => `  inflating: ${e.name}`)].join('\n');
+    },
+  },
+
+  // ── docker (simplified simulated container engine) ──
+  docker: {
+    name: 'docker',
+    summary: 'simulated container engine — pull, images, run, ps, stop, rm, rmi, build',
+    run: (args, ctx) => {
+      if (args.length === 0) return 'Usage: docker [OPTIONS] COMMAND';
+      const [sub, ...rest] = args;
+      switch (sub) {
+        case 'pull': {
+          const ref = rest[0];
+          if (!ref) return 'docker: "docker pull" requires exactly 1 argument';
+          const result = dockerPullImage(ctx, ref);
+          if (!result) {
+            const { repo } = dockerParseImageRef(ref);
+            return `Error response from daemon: pull access denied for ${repo}, repository does not exist or may require 'docker login'`;
+          }
+          return result.lines.join('\n');
+        }
+        case 'images': {
+          const state = dockerReadState(ctx);
+          const header = 'REPOSITORY          TAG                 IMAGE ID       CREATED         SIZE';
+          if (state.images.length === 0) return header;
+          return [
+            header,
+            ...state.images.map(
+              (i) =>
+                `${i.repo.padEnd(20)}${i.tag.padEnd(20)}${i.id.padEnd(15)}${'Less than a minute ago'.padEnd(24)}${i.size}`,
+            ),
+          ].join('\n');
+        }
+        case 'run': {
+          const detached = rest.includes('-d');
+          const nameIdx = rest.findIndex((a) => a === '--name');
+          const explicitName = nameIdx >= 0 ? rest[nameIdx + 1] : null;
+          const positional = rest.filter((a, i) => !a.startsWith('-') && (nameIdx < 0 || i !== nameIdx + 1));
+          const ref = positional[0];
+          if (!ref) return 'docker: "docker run" requires at least 1 argument';
+          const command = positional.slice(1).join(' ') || '/bin/sh';
+          const { repo, tag } = dockerParseImageRef(ref);
+          if (!(repo in DOCKER_HUB_CATALOG)) {
+            return `Unable to find image '${ref}' locally\ndocker: Error response from daemon: pull access denied for ${repo}, repository does not exist or may require 'docker login'.`;
+          }
+          const pullResult = dockerPullImage(ctx, ref);
+          const state = dockerReadState(ctx);
+          const id = pseudoSha256(ref + Date.now() + Math.random());
+          const name = explicitName ?? `${repo}_${pseudoId(id).slice(0, 5)}`;
+          const container: DockerContainer = {
+            id,
+            name,
+            image: `${repo}:${tag}`,
+            command,
+            status: 'running',
+            createdAt: Date.now(),
+          };
+          state.containers.push(container);
+          dockerWriteState(ctx, state);
+          const pullLines =
+            pullResult && !pullResult.alreadyPresent
+              ? [`Unable to find image '${ref}' locally`, ...pullResult.lines, '']
+              : [];
+          return [...pullLines, detached ? id : `(simulated) running \`${command}\` in container ${id.slice(0, 12)}`].join(
+            '\n',
+          );
+        }
+        case 'ps': {
+          const all = rest.includes('-a') || rest.includes('--all');
+          const state = dockerReadState(ctx);
+          const rows = all ? state.containers : state.containers.filter((c) => c.status === 'running');
+          const header = 'CONTAINER ID   IMAGE          COMMAND           CREATED          STATUS          NAMES';
+          if (rows.length === 0) return header;
+          return [
+            header,
+            ...rows.map(
+              (c) =>
+                `${c.id.slice(0, 12).padEnd(15)}${c.image.padEnd(15)}${`"${c.command}"`.padEnd(18)}${'Less than a minute ago'.padEnd(24)}${(c.status === 'running' ? 'Up Less than a minute' : 'Exited (0)').padEnd(24)}${c.name}`,
+            ),
+          ].join('\n');
+        }
+        case 'stop': {
+          const target = rest[0];
+          if (!target) return 'docker: "docker stop" requires at least 1 argument';
+          const state = dockerReadState(ctx);
+          const c = state.containers.find((x) => x.id.startsWith(target) || x.name === target);
+          if (!c) return `Error response from daemon: No such container: ${target}`;
+          c.status = 'exited';
+          dockerWriteState(ctx, state);
+          return c.name;
+        }
+        case 'rm': {
+          const target = rest[0];
+          if (!target) return 'docker: "docker rm" requires at least 1 argument';
+          const state = dockerReadState(ctx);
+          const idx = state.containers.findIndex((x) => x.id.startsWith(target) || x.name === target);
+          if (idx < 0) return `Error response from daemon: No such container: ${target}`;
+          const [removed] = state.containers.splice(idx, 1);
+          dockerWriteState(ctx, state);
+          return removed.name;
+        }
+        case 'rmi': {
+          const target = rest[0];
+          if (!target) return 'docker: "docker rmi" requires at least 1 argument';
+          const state = dockerReadState(ctx);
+          const { repo, tag } = dockerParseImageRef(target);
+          const idx = state.images.findIndex((i) => i.repo === repo && i.tag === tag);
+          if (idx < 0) return `Error response from daemon: No such image: ${target}`;
+          const [removed] = state.images.splice(idx, 1);
+          dockerWriteState(ctx, state);
+          return `Untagged: ${removed.repo}:${removed.tag}\nDeleted: sha256:${removed.id}`;
+        }
+        case 'build': {
+          const tIdx = rest.findIndex((a) => a === '-t');
+          const tag = tIdx >= 0 ? rest[tIdx + 1] : null;
+          const dockerfile = resolveNode(ctx, 'Dockerfile');
+          if (!dockerfile) {
+            return 'unable to prepare context: unable to evaluate symlinks in Dockerfile path: lstat Dockerfile: no such file or directory';
+          }
+          if (!tag) return "docker: 'docker build' requires -t <name:tag>";
+          const { repo, tag: imgTag } = dockerParseImageRef(tag);
+          const state = dockerReadState(ctx);
+          const id = pseudoId(repo + imgTag + Date.now()).slice(0, 12);
+          state.images.push({ repo, tag: imgTag, id, size: '42.1MB' });
+          dockerWriteState(ctx, state);
+          return ['Step 1/1 : FROM scratch', ' ---> Using cache', `Successfully built ${id}`, `Successfully tagged ${repo}:${imgTag}`].join(
+            '\n',
+          );
+        }
+        default:
+          return `docker: '${sub}' is not a docker command.\nSee 'docker --help'`;
+      }
+    },
+  },
 };
 
 export const COMMAND_NAMES = Object.keys(COMMANDS).sort();
@@ -2914,6 +3509,33 @@ function runStatement(rawLine: string, ctx: ShellContext): string | string[] | n
     return null;
   }
   return prevOut;
+}
+
+/**
+ * Read a file for one of the real in-terminal editors (nano/vim/emacs —
+ * see Terminal.tsx and lib/shell/editors.ts). Unlike `cat`, opening a
+ * path that doesn't exist yet is not an error — every real editor just
+ * starts with an empty buffer, same as `nano newfile.txt` on a real
+ * system.
+ */
+export function readFileForEditor(
+  ctx: ShellContext,
+  path: string,
+): { ok: true; content: string } | { ok: false; error: string } {
+  const node = resolveNode(ctx, path);
+  if (!node) return { ok: true, content: '' };
+  if (node.type === 'dir') return { ok: false, error: `${path}: Is a directory` };
+  return { ok: true, content: node.content };
+}
+
+/** Writes an editor's buffer back to the virtual filesystem, creating the file if it's new. */
+export function writeFileForEditor(ctx: ShellContext, path: string, content: string): boolean {
+  return writeFile(ctx, path, content);
+}
+
+/** Resolves a path exactly the way every shell command does, relative to `ctx.cwd`. */
+export function resolveEditorPath(ctx: ShellContext, path: string): string {
+  return joinPath(ctx.cwd, path);
 }
 
 export function runCommand(input: string, ctx: ShellContext): string | string[] | null {

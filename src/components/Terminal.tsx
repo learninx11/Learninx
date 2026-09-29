@@ -5,8 +5,31 @@ import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { createInitialFs, type FsDir } from '@/lib/shell/fs';
-import { runCommand, type ShellContext } from '@/lib/shell/evaluator';
+import {
+  readFileForEditor,
+  resolveEditorPath,
+  runCommand,
+  writeFileForEditor,
+  type ShellContext,
+} from '@/lib/shell/evaluator';
+import {
+  createEditorState,
+  editorContent,
+  handleEditorKey,
+  renderEditorScreen,
+  type EditorKeyEvent,
+  type EditorKind,
+  type EditorState,
+} from '@/lib/shell/editors';
 import { CopyIcon, HelpIcon, PlayIcon } from '@/components/ui/Icon';
+
+const EDITOR_KIND: Record<string, EditorKind> = {
+  nano: 'nano',
+  pico: 'nano',
+  vi: 'vim',
+  vim: 'vim',
+  emacs: 'emacs',
+};
 
 const HOST = 'learninx';
 const USER = 'learner';
@@ -53,6 +76,7 @@ export function Terminal({
   const histIndexRef = useRef<number>(0);
   const ctxRef = useRef<ShellContext | null>(null);
   const completedRef = useRef(false);
+  const editorRef = useRef<{ state: EditorState; path: string } | null>(null);
 
   const [mounted, setMounted] = useState(false);
 
@@ -194,7 +218,10 @@ export function Terminal({
 
     const ro = new ResizeObserver(() => {
       if (!opened) openAndStart();
-      else safeFit();
+      else {
+        safeFit();
+        if (editorRef.current) redrawEditor();
+      }
     });
     if (containerRef.current) ro.observe(containerRef.current);
     // Fallback in case the container is already sized on first paint
@@ -235,8 +262,36 @@ export function Terminal({
 
     const handleResize = () => {
       safeFit();
+      if (editorRef.current) redrawEditor();
     };
     window.addEventListener('resize', handleResize);
+
+    // xterm 5.3.0's own wheel → scroll → re-render pipeline can end up
+    // silently inert (the scroll position moves internally but the
+    // viewport never repaints) under the same renderer-readiness race
+    // described above — worse, it can vary by browser zoom level, since
+    // zoom shifts exactly when the renderer's dimensions become
+    // available. Rather than chase that further, we drive scrolling
+    // ourselves through xterm's public `scrollLines` API, which always
+    // goes through the normal render pipeline. Listening in the capture
+    // phase on the outer container — ahead of xterm's own listener on
+    // its inner `.xterm-viewport` — and stopping propagation means our
+    // handler is the only one that runs, so there's no double-scroll.
+    const handleWheel = (e: WheelEvent) => {
+      if (disposed) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // deltaMode 1 = DOM_DELTA_LINE (delta is already in lines);
+      // otherwise (usually pixels) approximate one line per ~34px, the
+      // rough cell height most terminal fonts render at.
+      const rawLines = e.deltaMode === 1 ? e.deltaY : e.deltaY / 34;
+      const lines = Math.sign(rawLines) * Math.max(1, Math.round(Math.abs(rawLines)));
+      if (lines !== 0) term.scrollLines(lines);
+    };
+    containerRef.current?.addEventListener('wheel', handleWheel, {
+      capture: true,
+      passive: false,
+    });
 
     const greet = [
       `\x1b[36mLearninx Sandbox v0.1\x1b[0m`,
@@ -263,6 +318,27 @@ export function Terminal({
     }
 
     function submit(line: string): void {
+      // A bare `nano file.txt` / `vim file.txt` / etc. (not part of a
+      // pipe or chain) launches a real, interactive full-screen editor
+      // instead of going through the normal evaluator — see openEditor()
+      // below. Anything more complex (piped, chained, redirected) falls
+      // through to the evaluator's own simulated-preview stub for these
+      // commands, since a real full-screen app doesn't compose with
+      // pipes in a way that makes sense to model here.
+      const editorMatch = /^(nano|pico|vi|vim|emacs)(?:\s+(.+))?$/.exec(line.trim());
+      if (editorMatch) {
+        const kind = EDITOR_KIND[editorMatch[1]];
+        const fileArg = (editorMatch[2] ?? '')
+          .split(/\s+/)
+          .find((a) => a && !a.startsWith('-'));
+        if (fileArg) {
+          bufferRef.current = '';
+          histIndexRef.current = historyRef.current.length;
+          openEditor(kind, fileArg);
+          return;
+        }
+      }
+
       term.write('\r\n');
       const out = runCommand(line, ctxRef.current!);
       bufferRef.current = '';
@@ -308,6 +384,12 @@ export function Terminal({
     function insertText(text: string): void {
       // Normalise line endings and write each char.
       const cleaned = text.replace(/\r\n?/g, '\n');
+      if (editorRef.current) {
+        for (const ch of cleaned) {
+          feedEditorKey(ch === '\n' ? { type: 'enter' } : { type: 'char', char: ch });
+        }
+        return;
+      }
       const parts = cleaned.split('\n');
       parts.forEach((part, i) => {
         if (part) {
@@ -320,9 +402,91 @@ export function Terminal({
       });
     }
 
+    /**
+     * Launches a real nano/pico/vi/vim/emacs session: reads the target
+     * file (starting empty if it doesn't exist yet, same as a real
+     * editor), switches into the terminal's alternate screen buffer (so
+     * exiting cleanly restores the normal scrollback, just like a real
+     * terminal app), and does the first full-screen render.
+     */
+    function openEditor(kind: EditorKind, fileArg: string): void {
+      const ctx = ctxRef.current!;
+      const path = resolveEditorPath(ctx, fileArg);
+      const read = readFileForEditor(ctx, path);
+      if (!read.ok) {
+        term.write(`\r\n${kind}: ${read.error}`);
+        writePrompt();
+        return;
+      }
+      const state = createEditorState(kind, path, read.content);
+      editorRef.current = { state, path };
+      term.write('\x1b[?1049h');
+      term.write(renderEditorScreen(state, term.rows, term.cols));
+    }
+
+    /** Redraws the active editor at the terminal's current size (e.g. after a resize). */
+    function redrawEditor(): void {
+      const active = editorRef.current;
+      if (!active) return;
+      term.write(renderEditorScreen(active.state, term.rows, term.cols));
+    }
+
+    /** Routes one keystroke into the active editor session, if any. */
+    function feedEditorKey(ev: EditorKeyEvent): void {
+      const active = editorRef.current;
+      if (!active) return;
+      const result = handleEditorKey(active.state, ev);
+      if (result.saved) {
+        writeFileForEditor(ctxRef.current!, active.path, editorContent(result.state));
+      }
+      if (result.exit) {
+        editorRef.current = null;
+        term.write('\x1b[?1049l');
+        writePrompt();
+        return;
+      }
+      editorRef.current = { state: result.state, path: active.path };
+      term.write(renderEditorScreen(result.state, term.rows, term.cols));
+    }
+
+    /** Normalizes a raw xterm keystroke into the editors module's key event shape. */
+    function toEditorKeyEvent(key: string, ev: KeyboardEvent): EditorKeyEvent | null {
+      const code = ev.keyCode;
+      if (code === 13) return { type: 'enter' };
+      if (code === 8) return { type: 'backspace' };
+      if (code === 46) return { type: 'delete' };
+      if (code === 9) return { type: 'tab' };
+      if (code === 27) return { type: 'escape' };
+      if (code === 37) return { type: 'arrow', dir: 'left' };
+      if (code === 38) return { type: 'arrow', dir: 'up' };
+      if (code === 39) return { type: 'arrow', dir: 'right' };
+      if (code === 40) return { type: 'arrow', dir: 'down' };
+      if (code === 36) return { type: 'home' };
+      if (code === 35) return { type: 'end' };
+      if (code === 33) return { type: 'pageup' };
+      if (code === 34) return { type: 'pagedown' };
+      if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && code >= 65 && code <= 90) {
+        return { type: 'ctrl', key: String.fromCharCode(code).toLowerCase() };
+      }
+      if (key.length === 1 && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+        return { type: 'char', char: key };
+      }
+      return null;
+    }
+
     term.onKey(({ key, domEvent }) => {
       const ev = domEvent;
       const code = ev.keyCode;
+
+      // While a real editor session is active, every keystroke belongs
+      // to it — none of the normal line-editing/history logic below
+      // applies.
+      if (editorRef.current) {
+        ev.preventDefault?.();
+        const editorEvent = toEditorKeyEvent(key, ev);
+        if (editorEvent) feedEditorKey(editorEvent);
+        return;
+      }
 
       // Ctrl+Shift+V: paste
       if (ev.ctrlKey && ev.shiftKey && (key === 'V' || code === 86)) {
@@ -481,6 +645,7 @@ export function Terminal({
       cancelAnimationFrame(raf);
       window.clearTimeout(initialFit);
       window.removeEventListener('resize', handleResize);
+      containerRef.current?.removeEventListener('wheel', handleWheel, { capture: true });
       ro.disconnect();
       restoreViewportPatch();
       // Detach the custom key event handler first so any further

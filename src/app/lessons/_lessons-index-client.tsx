@@ -71,6 +71,19 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
     [lessons, completedSet, ready, state.bookmarks],
   );
 
+  // `lesson.order` is just an internal sort key (with gaps — e.g. the
+  // history lesson uses 0 to sort first, newer batches start well past
+  // where the last batch left off) and was never meant to be shown to
+  // learners. `lessons` arrives pre-sorted by that key, so a lesson's
+  // position in this array IS its correct 1-based place across the
+  // whole catalogue — the same number the lesson detail page's "Lesson X
+  // of Y" already uses.
+  const lessonPosition = useMemo(() => {
+    const map = new Map<string, number>();
+    lessons.forEach((l, i) => map.set(l.id, i + 1));
+    return map;
+  }, [lessons]);
+
   // Pick a random lesson, preferring ones the user hasn't completed yet.
   // Avoids repeating the same slug twice in a row. No-op when no lessons
   // are available (e.g. during SSR before data hydrates).
@@ -283,6 +296,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
                   <LessonRow
                     key={lesson.id}
                     lesson={lesson}
+                    position={lessonPosition.get(lesson.id) ?? lesson.order}
                     query={query.trim().toLowerCase()}
                   />
                 ))}
@@ -321,9 +335,11 @@ function Chip({
 
 function LessonRow({
   lesson,
+  position,
   query,
 }: {
   lesson: Lesson & { completed: boolean; bookmarked: boolean };
+  position: number;
   query: string;
 }) {
   return (
@@ -341,7 +357,7 @@ function LessonRow({
           }`}
           aria-hidden
         >
-          {lesson.completed ? <CheckIcon size={18} /> : lesson.order}
+          {lesson.completed ? <CheckIcon size={18} /> : position}
         </span>
 
         <div className="min-w-0 flex-1">
