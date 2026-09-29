@@ -3538,6 +3538,28 @@ export function resolveEditorPath(ctx: ShellContext, path: string): string {
   return joinPath(ctx.cwd, path);
 }
 
+/**
+ * Path completion for the terminal's Tab key (see Terminal.tsx). Given
+ * whatever the learner has typed as a path so far — possibly with a
+ * directory portion, e.g. `src/le` — returns every matching entry in
+ * that directory, written back out with the original directory portion
+ * reattached (so the caller can splice it straight into the command
+ * line) and a trailing `/` on directories, exactly like real shell
+ * completion.
+ */
+export function completePathCandidates(ctx: ShellContext, partial: string): string[] {
+  const lastSlash = partial.lastIndexOf('/');
+  const dirPart = lastSlash >= 0 ? partial.slice(0, lastSlash + 1) : '';
+  const namePrefix = lastSlash >= 0 ? partial.slice(lastSlash + 1) : partial;
+  const lookupDir = dirPart === '' ? '.' : dirPart;
+  const node = resolveNode(ctx, lookupDir);
+  if (!node || node.type !== 'dir') return [];
+  return Object.keys(node.children)
+    .filter((name) => name.startsWith(namePrefix))
+    .sort()
+    .map((name) => dirPart + name + (node.children[name].type === 'dir' ? '/' : ''));
+}
+
 export function runCommand(input: string, ctx: ShellContext): string | string[] | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
