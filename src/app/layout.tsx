@@ -9,9 +9,9 @@ import { ProgressProvider } from '@/lib/progress-context';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Learninx — Learn Linux the Easy Way',
+  title: 'Learninx',
   description:
-    'An interactive Linux learning platform with in-browser terminal, lessons, and quizzes. No signup required.',
+    'Learn Linux the easy way — an interactive learning platform with in-browser terminal, lessons, and quizzes. No signup required.',
   // Icons are provided by `src/app/icon.svg` and `src/app/apple-icon.svg`,
   // which Next.js automatically wires up at the correct basePath (e.g.
   // `/Learninx/icon.svg` on GitHub Pages). Do NOT use `icons.icon: '/favicon.svg'`

@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getAllLessons, getQuestionsForLesson } from '@/lib/lessons';
+import { getAllLessons, getLessonBySlug, getQuestionsForLesson } from '@/lib/lessons';
 import { LessonDetailClient } from './_lesson-detail-client';
 
 interface PageProps {
@@ -8,6 +9,12 @@ interface PageProps {
 
 export function generateStaticParams() {
   return getAllLessons().map((l) => ({ slug: l.slug }));
+}
+
+export function generateMetadata({ params }: PageProps): Metadata {
+  const lesson = getLessonBySlug(params.slug);
+  if (!lesson) return { title: 'Lesson' };
+  return { title: lesson.title, description: lesson.description };
 }
 
 export default function LessonPage({ params }: PageProps) {
