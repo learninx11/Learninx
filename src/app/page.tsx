@@ -128,6 +128,12 @@ export default function Home() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <ExploreCard
+            href="/terminal"
+            icon={<TerminalIcon size={20} />}
+            title="Terminal"
+            body="A dedicated sandbox with no lesson and no challenge attached — just a shell to explore, break, and rebuild freely."
+          />
+          <ExploreCard
             href="/cheatsheet"
             icon={<BookIcon size={20} />}
             title="Cheatsheet"

@@ -25,6 +25,7 @@
   --lx-difficulty-beginner: #34d399;
   --lx-difficulty-intermediate: #fbbf24;
   --lx-difficulty-advanced: #f87171;
+  --lx-difficulty-expert: #c4b5fd;
 
   --lx-muted: #94a3b8;
   --lx-code-bg: #0a0f17;
@@ -35,41 +36,6 @@
   --lx-nav-bg: rgba(2, 6, 23, 0.8);
 
   --radius-lx: 0.875rem;
-}
-
-/* Light mode tokens. Activated by adding `light` class on <html>. */
-:root.light,
-html.light {
-  color-scheme: light;
-
-  --lx-bg: #f8fafc;
-  --lx-bg-elevated: #ffffff;
-  --lx-fg: #0f172a;
-
-  --lx-card: rgba(255, 255, 255, 0.85);
-  --lx-card-hover: rgba(255, 255, 255, 1);
-  --lx-border: #e2e8f0;
-  --lx-border-strong: #cbd5e1;
-
-  --lx-accent: #0d9488;
-  --lx-accent-2: #2563eb;
-  --lx-accent-glow: rgba(13, 148, 136, 0.15);
-
-  --lx-success: #059669;
-  --lx-warning: #d97706;
-  --lx-danger: #dc2626;
-
-  --lx-difficulty-beginner: #059669;
-  --lx-difficulty-intermediate: #d97706;
-  --lx-difficulty-advanced: #dc2626;
-
-  --lx-muted: #475569;
-  --lx-code-bg: #0f172a;
-  --lx-grid-line: rgba(15, 23, 42, 0.05);
-  --lx-prose-body: #334155;
-  --lx-prose-strong: #0f172a;
-  --lx-prose-th: #f1f5f9;
-  --lx-nav-bg: rgba(248, 250, 252, 0.85);
 }
 
 html,
@@ -333,6 +299,11 @@ html {
     color: var(--lx-difficulty-advanced);
     background: color-mix(in oklab, var(--lx-difficulty-advanced) 12%, transparent);
     border-color: color-mix(in oklab, var(--lx-difficulty-advanced) 30%, transparent);
+  }
+  .lx-pill-expert {
+    color: var(--lx-difficulty-expert);
+    background: color-mix(in oklab, var(--lx-difficulty-expert) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-difficulty-expert) 30%, transparent);
   }
 
   .lx-btn {

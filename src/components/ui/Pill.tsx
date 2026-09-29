@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 
-type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
 export function Pill({
   children,
@@ -11,7 +11,7 @@ export function Pill({
   className = '',
 }: {
   children: React.ReactNode;
-  tone?: 'default' | 'accent' | 'success' | 'beginner' | 'intermediate' | 'advanced';
+  tone?: 'default' | 'accent' | 'success' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
   className?: string;
 }) {
   const toneClass =
@@ -25,7 +25,9 @@ export function Pill({
             ? 'lx-pill-intermediate'
             : tone === 'advanced'
               ? 'lx-pill-advanced'
-              : '';
+              : tone === 'expert'
+                ? 'lx-pill-expert'
+                : '';
   return <span className={`lx-pill ${toneClass} ${className}`}>{children}</span>;
 }
 

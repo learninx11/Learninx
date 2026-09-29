@@ -16,6 +16,8 @@ export interface ShellContext {
   env: Record<string, string>;
   /** Latest piped stdin from the previous stage of a pipeline. */
   __lastStdin?: string;
+  /** Commands run with a trailing `&`, recorded for `jobs` / `fg` / `bg`. */
+  jobs?: { id: number; pid: number; cmd: string }[];
 }
 
 export interface CommandSpec {
@@ -205,6 +207,89 @@ const APT_CATALOG: Record<string, string> = {
   wget: '1.21.2-2ubuntu1',
   'build-essential': '12.9ubuntu3',
 };
+
+// Deterministic pseudo-IP in the documentation range (203.0.113.0/24) derived
+// from a hostname, so `dig`/`nslookup`/`traceroute` resolve the same host to
+// the same address every time without modeling real DNS.
+function pseudoIp(host: string): string {
+  const h = Math.abs(hashCode(host));
+  return `203.0.113.${h % 256}`;
+}
+
+// A small fixed process table shared by `pgrep`, `pkill`, and `killall` —
+// distinct from `ps aux`'s own canned output, but plausible in the same way.
+const SIM_PROCESSES: { pid: number; user: string; cmd: string }[] = [
+  { pid: 1, user: 'root', cmd: '/sbin/init' },
+  { pid: 1284, user: 'learner', cmd: 'bash' },
+  { pid: 4821, user: 'www-data', cmd: 'nginx: master process' },
+  { pid: 4822, user: 'www-data', cmd: 'nginx: worker process' },
+  { pid: 5310, user: 'learner', cmd: 'node server.js' },
+];
+
+// Real Linux commands this sandbox recognizes by name but does not simulate
+// in behavioral depth — everything from other distros' package managers to
+// compilers, container tooling, and archive formats beyond tar/gzip. Typing
+// one of these still "runs" (see `resolveCommand`/`genericCommandStub`
+// below) instead of failing with "command not found", which is reserved
+// for genuine typos and made-up commands.
+const KNOWN_UNSIMULATED_COMMANDS = new Set([
+  // coreutils / shell builtins not otherwise implemented
+  'seq', 'shuf', 'comm', 'expand', 'unexpand', 'fmt', 'fold', 'column', 'split', 'csplit',
+  'nice', 'renice', 'ionice', 'chgrp', 'umask', 'alias', 'unalias', 'type', 'command', 'hash',
+  'declare', 'local', 'readonly', 'unset', 'shift', 'getopts', 'trap', 'wait', 'test', 'expr', 'bc', 'cal',
+  'timeout', 'watch', 'script', 'tput', 'stty', 'tty', 'reset', 'info', 'apropos', 'whatis',
+  'dirs', 'pushd', 'popd', 'fc', 'printenv', 'dd', 'sync', 'shred',
+  // filesystem attributes / ACLs
+  'chattr', 'lsattr', 'setfacl', 'getfacl',
+  // hardware / low-level system info
+  'lsusb', 'lspci', 'dmidecode', 'hwclock', 'lsmod', 'modprobe', 'insmod', 'rmmod',
+  // systemd companions
+  'timedatectl', 'hostnamectl', 'localectl', 'loginctl', 'machinectl', 'systemd-analyze',
+  // legacy / alternate service management
+  'service', 'chkconfig', 'update-rc.d', 'reboot', 'shutdown', 'poweroff', 'halt', 'init', 'telinit', 'runlevel',
+  // users & sessions
+  'w', 'users', 'finger', 'chsh', 'chfn', 'newgrp', 'gpasswd', 'groupadd', 'groupdel', 'groupmod',
+  // sandboxing / low-level debugging
+  'chroot', 'unshare', 'nsenter', 'strace', 'ltrace', 'gdb', 'valgrind', 'perf',
+  'ldd', 'nm', 'objdump', 'readelf', 'ar', 'strip', 'size', 'addr2line',
+  // archive formats beyond tar/gzip
+  'zip', 'unzip', '7z', '7za', 'rar', 'unrar', 'bzip2', 'bunzip2', 'xz', 'unxz', 'zstd', 'unzstd', 'lz4', 'cpio',
+  // networking extras
+  'telnet', 'nc', 'netcat', 'ncat', 'rsync', 'scp', 'sftp', 'ftp', 'whois', 'host', 'arp', 'route',
+  'iw', 'iwconfig', 'nmcli', 'nmtui', 'resolvectl', 'tcpdump', 'wireshark', 'tshark', 'iperf', 'iperf3', 'mtr', 'arping', 'ethtool',
+  // package managers (other distros / ecosystems)
+  'yum', 'dnf', 'pacman', 'zypper', 'snap', 'flatpak', 'brew', 'pip', 'pip3', 'gem', 'npm', 'npx', 'yarn', 'pnpm',
+  // dev tools, compilers, and language runtimes
+  'git', 'svn', 'hg', 'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'cc', 'clang',
+  'make', 'cmake', 'ninja', 'perl', 'ruby', 'php', 'rustc', 'cargo', 'go', 'kotlinc', 'swift', 'dotnet',
+  // containers, orchestration, and cloud CLIs
+  'docker', 'docker-compose', 'podman', 'kubectl', 'helm', 'terraform', 'ansible', 'ansible-playbook', 'vagrant', 'aws', 'gcloud', 'az',
+  // monitoring & terminal multiplexers
+  'htop', 'glances', 'screen', 'tmux', 'byobu', 'iftop', 'nethogs', 'iotop', 'atop',
+  // small extras people inevitably try
+  'figlet', 'cowsay', 'fortune', 'xdg-open', 'open', 'banner',
+]);
+
+function genericCommandStub(cmd: string, args: string[]): string {
+  const argStr = args.length ? ` ${args.join(' ')}` : '';
+  return (
+    `${cmd}${argStr}\n` +
+    `'${cmd}' is a real Linux command, but this sandbox doesn't simulate its behavior in depth. ` +
+    "Run `help` to see every command with full simulated behavior, or try it on a real Linux machine or WSL to see its actual output."
+  );
+}
+
+// Looks up a command's implementation: a fully simulated one from COMMANDS
+// if it exists, otherwise a generic stub for any name in
+// KNOWN_UNSIMULATED_COMMANDS, otherwise undefined (a genuine "not found").
+function resolveCommand(cmd: string): CommandSpec | undefined {
+  const real = COMMANDS[cmd];
+  if (real) return real;
+  if (KNOWN_UNSIMULATED_COMMANDS.has(cmd)) {
+    return { name: cmd, summary: 'recognized, not deeply simulated', run: (args) => genericCommandStub(cmd, args) };
+  }
+  return undefined;
+}
 
 function dpkgInfoDir(ctx: ShellContext): FsDir | null {
   const node = resolveNode(ctx, '/var/lib/dpkg/info');
@@ -974,7 +1059,7 @@ Modify: ${new Date().toUTCString()}`;
   },
   grep: {
     name: 'grep',
-    summary: 'search text for a pattern (supports -i -v -n)',
+    summary: 'search text with a real regex pattern (supports -i -v -n -E)',
     run: (args, ctx) => {
       if (args.length === 0) return 'grep: missing pattern';
       let ignoreCase = false;
@@ -985,6 +1070,7 @@ Modify: ${new Date().toUTCString()}`;
         if (a === '-i') ignoreCase = true;
         else if (a === '-v') invert = true;
         else if (a === '-n' || a === '-nH') lineNumbers = true;
+        else if (a === '-E' || a === '-e') continue; // regex here is already "extended" by default
         else filtered.push(a);
       }
       const pattern = filtered[0];
@@ -996,7 +1082,12 @@ Modify: ${new Date().toUTCString()}`;
             ? [`__STDIN__:${ctx.__lastStdin}`]
             : [];
       if (targets.length === 0) return 'grep: missing file operand';
-      const re = new RegExp(escapeRegex(pattern), ignoreCase ? 'i' : '');
+      let re: RegExp;
+      try {
+        re = new RegExp(pattern, ignoreCase ? 'i' : '');
+      } catch {
+        return `grep: invalid regular expression: ${pattern}`;
+      }
       const out: string[] = [];
       for (const t of targets) {
         const r = tryReadInput(t, ctx);
@@ -1345,7 +1436,7 @@ Modify: ${new Date().toUTCString()}`;
   },
   sed: {
     name: 'sed',
-    summary: 'stream editor — supports s/find/replace/[g]',
+    summary: 'stream editor — supports s/find/replace/[gi] with a real regex and \\1 backreferences',
     run: (args, ctx) => {
       if (args.length === 0) return 'sed: missing expression or file';
       const expr = args[0];
@@ -1357,18 +1448,25 @@ Modify: ${new Date().toUTCString()}`;
             ? [`__STDIN__:${ctx.__lastStdin}`]
             : [];
       if (targets.length === 0) return 'sed: missing file';
-      const m = expr.match(/^s\/(.+?)\/(.*?)\/([g]*)$/);
+      const m = expr.match(/^s\/(.+?)\/(.*?)\/([gi]*)$/);
       if (!m) {
-        return `sed: unsupported expression '${expr}' (only s/find/replace/[g] supported)`;
+        return `sed: unsupported expression '${expr}' (only s/find/replace/[gi] supported)`;
       }
       const [, find, repl, flags] = m;
-      const global = flags.includes('g');
-      const re = new RegExp(escapeRegex(find), global ? 'g' : '');
+      const jsFlags = (flags.includes('g') ? 'g' : '') + (flags.includes('i') ? 'i' : '');
+      let re: RegExp;
+      try {
+        re = new RegExp(find, jsFlags);
+      } catch {
+        return `sed: invalid regular expression: ${find}`;
+      }
+      // sed backreferences in the replacement are \1, \2, ... — JS uses $1, $2.
+      const jsRepl = repl.replace(/\\(\d)/g, '$$$1');
       const out: string[] = [];
       for (const t of targets) {
         const r = tryReadInput(t, ctx);
         if (!r.ok) return `sed: ${t}: No such file or directory`;
-        out.push(r.content.replace(re, repl));
+        out.push(r.content.replace(re, jsRepl));
       }
       return out.join('\n');
     },
@@ -1474,7 +1572,7 @@ Modify: ${new Date().toUTCString()}`;
       if (args.length === 0) return 'xargs: missing command';
       const cmd = args[0];
       const tail = args.slice(1);
-      const impl = COMMANDS[cmd];
+      const impl = resolveCommand(cmd);
       if (!impl) return `xargs: ${cmd}: command not found`;
       const stdin = ctx.__lastStdin ?? '';
       const tokens = stdin.length > 0 ? stdin.split(/\s+/) : [];
@@ -1923,7 +2021,7 @@ MiB Swap:   2048.0 total,   2048.0 free
     run: (args) => {
       if (args.length === 0) return 'which: missing argument';
       return args
-        .map((a) => (a in COMMANDS ? `/usr/bin/${a}` : `${a} not found`))
+        .map((a) => (resolveCommand(a) ? `/usr/bin/${a}` : `${a} not found`))
         .join('\n');
     },
   },
@@ -1933,9 +2031,10 @@ MiB Swap:   2048.0 total,   2048.0 free
     run: (args) => {
       if (args.length === 0) return 'What manual page do you want?';
       const name = args[0];
-      const c = COMMANDS[name];
+      const c = resolveCommand(name);
       if (!c) return `No manual entry for ${name}`;
-      return `NAME\n  ${c.name} - ${c.summary}\n\nSYNOPSIS\n  ${c.name} [options] [args...]\n\nDESCRIPTION\n  Simulated implementation in the Learninx in-browser sandbox.`;
+      const depth = name in COMMANDS ? 'Simulated implementation' : 'Recognized, but not deeply simulated';
+      return `NAME\n  ${c.name} - ${c.summary}\n\nSYNOPSIS\n  ${c.name} [options] [args...]\n\nDESCRIPTION\n  ${depth} in the Learninx in-browser sandbox.`;
     },
   },
   help: {
@@ -1945,6 +2044,7 @@ MiB Swap:   2048.0 total,   2048.0 free
       Object.values(COMMANDS)
         .map((c) => `  ${c.name.padEnd(8)} ${c.summary}`)
         .join('\n') +
+      `\n\n...plus ${KNOWN_UNSIMULATED_COMMANDS.size} more real commands (git, docker, python3, zip, npm, and more) that run but aren't simulated in depth — try one and see.` +
       '\n\nTip: this is a teaching sandbox — not a full Linux kernel.\nUse `;`, `&&`, `||` to chain commands and `|` to pipe them.',
   },
 
@@ -2037,8 +2137,17 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
   },
   nohup: {
     name: 'nohup',
-    summary: 'run a command immune to hangups (simulated)',
-    run: () => 'nohup: (backgrounding not supported in this sandbox)',
+    summary: 'run a command immune to hangups, appending its output to nohup.out',
+    run: (args, ctx) => {
+      const [cmd, ...rest] = args;
+      const impl = cmd ? COMMANDS[cmd] : undefined;
+      if (!impl) return `nohup: failed to run command '${cmd ?? ''}': No such file or directory`;
+      const out = impl.run(rest, ctx);
+      const text = out == null ? '' : Array.isArray(out) ? out.join('\n') : out;
+      const notice = "nohup: ignoring input and appending output to 'nohup.out'";
+      writeFile(ctx, 'nohup.out', (readInput('nohup.out', ctx) ?? '') + text + '\n');
+      return text ? `${notice}\n${text}` : notice;
+    },
   },
   systemctl: {
     name: 'systemctl',
@@ -2076,6 +2185,461 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
       }
     },
   },
+
+  // ── disks / mounting (simulated) ──
+  mount: {
+    name: 'mount',
+    summary: 'mount a filesystem, or list mounted filesystems (simulated)',
+    run: (args, ctx) => {
+      const positional = args.filter((a) => !a.startsWith('-'));
+      const mountsPath = '/proc/mounts';
+      const DEFAULT = ['/dev/sda1 / ext4 rw,relatime 0 0', 'tmpfs /tmp tmpfs rw,nosuid,nodev 0 0'].join(
+        '\n',
+      ) + '\n';
+      let node = resolveNode(ctx, mountsPath);
+      if (!node || node.type !== 'file') {
+        ensureDir(ctx, '/proc');
+        writeFile(ctx, mountsPath, DEFAULT);
+        node = resolveNode(ctx, mountsPath);
+      }
+      const current = node && node.type === 'file' ? node.content : DEFAULT;
+      if (positional.length === 0) return current.trimEnd();
+      if (positional.length < 2) return 'mount: usage: mount <device> <dir>';
+      const [src, dest] = positional;
+      writeFile(ctx, mountsPath, current + `${src} ${dest} ext4 rw,relatime 0 0\n`);
+      return null;
+    },
+  },
+  umount: {
+    name: 'umount',
+    summary: 'unmount a filesystem (simulated)',
+    run: (args, ctx) => {
+      const target = args.find((a) => !a.startsWith('-'));
+      if (!target) return 'umount: usage: umount <dir>';
+      const node = resolveNode(ctx, '/proc/mounts');
+      const content = node && node.type === 'file' ? node.content : '';
+      const lines = content.split('\n').filter(Boolean);
+      const kept = lines.filter((l) => l.split(' ')[1] !== target);
+      if (kept.length === lines.length) return `umount: ${target}: not mounted`;
+      writeFile(ctx, '/proc/mounts', kept.length ? kept.join('\n') + '\n' : '');
+      return null;
+    },
+  },
+
+  // ── job scheduling (simulated) ──
+  crontab: {
+    name: 'crontab',
+    summary: "manage the current user's scheduled cron jobs (simulated) — <file>, -l, -e, -r",
+    run: (args, ctx) => {
+      const path = `/var/spool/cron/crontabs/${ctx.user}`;
+      if (args.includes('-l')) {
+        const node = resolveNode(ctx, path);
+        if (!node || node.type !== 'file' || !node.content.trim()) return `no crontab for ${ctx.user}`;
+        return node.content.trimEnd();
+      }
+      if (args.includes('-r')) {
+        const loc = resolveParent(ctx, path);
+        if (loc) delete loc.parent.children[loc.name];
+        return null;
+      }
+      if (args.includes('-e')) {
+        return "crontab: this sandbox has no interactive editor — write your schedule to a file, then run `crontab <file>` (see the Job Scheduling lesson).";
+      }
+      const file = args.find((a) => !a.startsWith('-'));
+      if (!file) return 'crontab: usage: crontab <file> | crontab -l | crontab -e | crontab -r';
+      const content = readInput(file, ctx);
+      if (content === null) return `crontab: ${file}: No such file or directory`;
+      ensureDir(ctx, '/var/spool/cron/crontabs');
+      writeFile(ctx, path, content.endsWith('\n') ? content : content + '\n');
+      return null;
+    },
+  },
+  at: {
+    name: 'at',
+    summary: 'schedule a one-off job for later (simulated — pipe the command in: echo "cmd" | at <time>)',
+    run: (args, ctx) => {
+      const time = args.find((a) => !a.startsWith('-'));
+      if (!time) return 'at: usage: echo "<command>" | at <time>';
+      const cmd = (ctx.__lastStdin ?? '').trim();
+      if (!cmd) {
+        return `at: reading commands from stdin — this sandbox has no interactive prompt, so pipe one in: echo "/path/to/job.sh" | at ${time}`;
+      }
+      ensureDir(ctx, '/var/spool/at');
+      const queuePath = '/var/spool/at/queue';
+      const node = resolveNode(ctx, queuePath);
+      const lines = (node && node.type === 'file' ? node.content : '').split('\n').filter(Boolean);
+      const id = lines.length + 1;
+      lines.push(`${id}|${time}|${cmd}`);
+      writeFile(ctx, queuePath, lines.join('\n') + '\n');
+      return `warning: commands will be executed using /bin/sh\njob ${id} at ${time}`;
+    },
+  },
+  atq: {
+    name: 'atq',
+    summary: 'list pending at jobs (simulated)',
+    run: (_a, ctx) => {
+      const node = resolveNode(ctx, '/var/spool/at/queue');
+      const lines = (node && node.type === 'file' ? node.content : '').split('\n').filter(Boolean);
+      return lines
+        .map((l) => {
+          const [id, time] = l.split('|');
+          return `${id}\t${time}\ta ${ctx.user}`;
+        })
+        .join('\n');
+    },
+  },
+  atrm: {
+    name: 'atrm',
+    summary: 'remove a pending at job (simulated)',
+    run: (args, ctx) => {
+      const id = args[0];
+      if (!id) return 'atrm: usage: atrm <job id>';
+      const node = resolveNode(ctx, '/var/spool/at/queue');
+      const lines = (node && node.type === 'file' ? node.content : '').split('\n').filter(Boolean);
+      const kept = lines.filter((l) => l.split('|')[0] !== id);
+      if (kept.length === lines.length) return `atrm: ${id}: no such job`;
+      writeFile(ctx, '/var/spool/at/queue', kept.length ? kept.join('\n') + '\n' : '');
+      return null;
+    },
+  },
+  journalctl: {
+    name: 'journalctl',
+    summary: 'query the systemd journal (simulated) — -u <unit>, -b, -f, -n <count>',
+    run: (args, ctx) => {
+      const uIdx = args.findIndex((a) => a === '-u');
+      const unit = uIdx >= 0 ? args[uIdx + 1] : null;
+      const boot = args.includes('-b');
+      const follow = args.includes('-f');
+      const nIdx = args.findIndex((a) => a === '-n');
+      const n = nIdx >= 0 ? parseInt(args[nIdx + 1] ?? '10', 10) || 10 : 10;
+      const svc = unit ? unit.replace(/\.service$/, '') : 'systemd';
+      const now = Date.now();
+      const stamp = (offsetSec: number) => new Date(now - offsetSec * 1000).toTimeString().slice(0, 8);
+      const lines = [
+        `${stamp(50)} ${ctx.host} systemd[1]: Starting ${svc}...`,
+        `${stamp(48)} ${ctx.host} ${svc}[4821]: listening for connections`,
+        `${stamp(40)} ${ctx.host} ${svc}[4821]: configuration loaded`,
+        `${stamp(30)} ${ctx.host} systemd[1]: Started ${svc}.`,
+        `${stamp(20)} ${ctx.host} ${svc}[4821]: request handled in 4ms`,
+        `${stamp(10)} ${ctx.host} ${svc}[4821]: request handled in 3ms`,
+        `${stamp(2)} ${ctx.host} ${svc}[4821]: request handled in 5ms`,
+      ];
+      const scoped = boot ? [`-- Boot ${new Date(now - 3_600_000).toISOString()} --`, ...lines] : lines;
+      const out = scoped.slice(-n).join('\n');
+      return follow
+        ? `${out}\n-- showing the latest lines; this sandbox can't truly stream new ones --`
+        : out;
+    },
+  },
+
+  // ── user management (simulated) ──
+  useradd: {
+    name: 'useradd',
+    summary: "create a new user (simulated, writes /etc/passwd) — -m also creates a home dir",
+    run: (args, ctx) => {
+      const makeHome = args.includes('-m');
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'useradd: usage: useradd [-m] <name>';
+      const node = resolveNode(ctx, '/etc/passwd');
+      const content = node && node.type === 'file' ? node.content : '';
+      const lines = content.split('\n').filter(Boolean);
+      if (lines.some((l) => l.split(':')[0] === name)) return `useradd: user '${name}' already exists`;
+      const maxUid = lines.reduce((max, l) => Math.max(max, parseInt(l.split(':')[2], 10) || 0), 1000);
+      const uid = maxUid + 1;
+      lines.push(`${name}:x:${uid}:${uid}:${name}:/home/${name}:/bin/bash`);
+      writeFile(ctx, '/etc/passwd', lines.join('\n') + '\n');
+      if (makeHome) ensureDir(ctx, `/home/${name}`);
+      return null;
+    },
+  },
+  adduser: {
+    name: 'adduser',
+    summary: 'friendly front-end to useradd (simulated, Debian/Ubuntu style)',
+    run: (args, ctx) => {
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'adduser: usage: adduser <name>';
+      const result = COMMANDS['useradd'].run(['-m', name], ctx);
+      if (typeof result === 'string' && result.includes('already exists')) return result;
+      return [
+        `Adding user \`${name}' ...`,
+        `Adding new group \`${name}' ...`,
+        `Adding new user \`${name}' with group \`${name}' ...`,
+        `Creating home directory \`/home/${name}' ...`,
+        "Copying files from `/etc/skel' ...",
+        'Done.',
+      ].join('\n');
+    },
+  },
+  userdel: {
+    name: 'userdel',
+    summary: 'delete a user (simulated, edits /etc/passwd) — -r also removes the home dir',
+    run: (args, ctx) => {
+      const removeHome = args.includes('-r');
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'userdel: usage: userdel [-r] <name>';
+      const node = resolveNode(ctx, '/etc/passwd');
+      const content = node && node.type === 'file' ? node.content : '';
+      const lines = content.split('\n').filter(Boolean);
+      const kept = lines.filter((l) => l.split(':')[0] !== name);
+      if (kept.length === lines.length) return `userdel: user '${name}' does not exist`;
+      writeFile(ctx, '/etc/passwd', kept.join('\n') + '\n');
+      if (removeHome) {
+        const loc = resolveParent(ctx, `/home/${name}`);
+        if (loc) delete loc.parent.children[loc.name];
+      }
+      return null;
+    },
+  },
+  passwd: {
+    name: 'passwd',
+    summary: "update a user's password (simulated)",
+    run: (args, ctx) => {
+      const name = args.find((a) => !a.startsWith('-')) ?? ctx.user;
+      return `passwd: password updated successfully for ${name}`;
+    },
+  },
+  su: {
+    name: 'su',
+    summary: 'switch user (simulated — this sandbox keeps one session user)',
+    run: (args, ctx) => {
+      const target = args.find((a) => !a.startsWith('-')) ?? 'root';
+      return `(simulated) switched to ${target}\nNote: this teaching sandbox keeps a single session user (${ctx.user}) — whoami will still report "${ctx.user}".`;
+    },
+  },
+
+  // ── job control (simulated — a trailing `&` backgrounds a command) ──
+  jobs: {
+    name: 'jobs',
+    summary: 'list jobs started in this session with a trailing &',
+    run: (_a, ctx) => {
+      const list = ctx.jobs ?? [];
+      if (list.length === 0) return '(no background jobs)';
+      return list.map((j) => `[${j.id}]+  Done                    ${j.cmd}`).join('\n');
+    },
+  },
+  fg: {
+    name: 'fg',
+    summary: 'bring a background job to the foreground (simulated)',
+    run: (args, ctx) => {
+      const list = ctx.jobs ?? [];
+      if (list.length === 0) return 'fg: no current job';
+      const spec = args[0]?.replace('%', '');
+      const job = spec ? list.find((j) => String(j.id) === spec) : list[list.length - 1];
+      if (!job) return `fg: ${args[0]}: no such job`;
+      return `${job.cmd}\n(already completed — this sandbox runs commands to completion immediately)`;
+    },
+  },
+  bg: {
+    name: 'bg',
+    summary: 'resume a stopped job in the background (simulated)',
+    run: (args, ctx) => {
+      const list = ctx.jobs ?? [];
+      if (list.length === 0) return 'bg: no current job';
+      const spec = args[0]?.replace('%', '');
+      const job = spec ? list.find((j) => String(j.id) === spec) : list[list.length - 1];
+      if (!job) return `bg: ${args[0]}: no such job`;
+      return `bash: bg: job ${job.id} already completed`;
+    },
+  },
+
+  // ── process control by name (simulated) ──
+  pgrep: {
+    name: 'pgrep',
+    summary: 'find process IDs by name (-a also prints the command)',
+    run: (args) => {
+      const showCmd = args.includes('-a') || args.includes('-l');
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'pgrep: usage: pgrep [-a] <name>';
+      const matches = SIM_PROCESSES.filter((p) => p.cmd.includes(name));
+      if (matches.length === 0) return '';
+      return matches.map((p) => (showCmd ? `${p.pid} ${p.cmd}` : String(p.pid))).join('\n');
+    },
+  },
+  pkill: {
+    name: 'pkill',
+    summary: 'kill processes by name (simulated)',
+    run: (args) => {
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'pkill: usage: pkill [-f] <name>';
+      const matches = SIM_PROCESSES.filter((p) => p.cmd.includes(name));
+      if (matches.length === 0) return `pkill: no process found matching '${name}'`;
+      return `(simulated) sent signal to ${matches.map((p) => p.pid).join(', ')} ✓`;
+    },
+  },
+  killall: {
+    name: 'killall',
+    summary: 'kill processes by exact name (simulated)',
+    run: (args) => {
+      const name = args.find((a) => !a.startsWith('-'));
+      if (!name) return 'killall: usage: killall <name>';
+      const matches = SIM_PROCESSES.filter(
+        (p) => p.cmd === name || p.cmd.split(' ')[0].replace(':', '') === name,
+      );
+      if (matches.length === 0) return `killall: ${name}: no process found`;
+      return `(simulated) sent signal to ${matches.map((p) => p.pid).join(', ')} ✓`;
+    },
+  },
+
+  // ── networking diagnostics (simulated) ──
+  netstat: {
+    name: 'netstat',
+    summary: 'show listening ports (simulated)',
+    run: (_a, ctx) => {
+      const rows = [
+        'Proto Recv-Q Send-Q Local Address           Foreign Address         State',
+        'tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN',
+      ];
+      if (isPackageInstalled(ctx, 'nginx')) {
+        rows.push('tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN');
+      }
+      return rows.join('\n');
+    },
+  },
+  ss: {
+    name: 'ss',
+    summary: 'show socket statistics (simulated, the modern netstat replacement)',
+    run: (_a, ctx) => {
+      const rows = [
+        'Netid  State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port',
+        'tcp    LISTEN  0       128      0.0.0.0:22             0.0.0.0:*',
+      ];
+      if (isPackageInstalled(ctx, 'nginx')) {
+        rows.push('tcp    LISTEN  0       511      0.0.0.0:80             0.0.0.0:*');
+      }
+      return rows.join('\n');
+    },
+  },
+  dig: {
+    name: 'dig',
+    summary: 'query DNS for a host (simulated)',
+    run: (args) => {
+      const host = args.find((a) => !a.startsWith('-'));
+      if (!host) return 'dig: usage: dig <host>';
+      const ip = pseudoIp(host);
+      return [
+        `; <<>> DiG 9.18.0 <<>> ${host}`,
+        ';; QUESTION SECTION:',
+        `;${host}.\t\tIN\tA`,
+        '',
+        ';; ANSWER SECTION:',
+        `${host}.\t300\tIN\tA\t${ip}`,
+        '',
+        ';; Query time: 24 msec',
+        ';; SERVER: 127.0.0.53#53(127.0.0.53)',
+      ].join('\n');
+    },
+  },
+  nslookup: {
+    name: 'nslookup',
+    summary: 'query DNS for a host (simulated)',
+    run: (args) => {
+      const host = args.find((a) => !a.startsWith('-'));
+      if (!host) return 'nslookup: usage: nslookup <host>';
+      const ip = pseudoIp(host);
+      return [
+        'Server:\t\t127.0.0.53',
+        'Address:\t127.0.0.53#53',
+        '',
+        'Non-authoritative answer:',
+        `Name:\t${host}`,
+        `Address: ${ip}`,
+      ].join('\n');
+    },
+  },
+  traceroute: {
+    name: 'traceroute',
+    summary: 'show the network hops to a host (simulated)',
+    run: (args) => {
+      const host = args.find((a) => !a.startsWith('-'));
+      if (!host) return 'traceroute: usage: traceroute <host>';
+      const ip = pseudoIp(host);
+      const hops = 6;
+      const lines = [`traceroute to ${host} (${ip}), 30 hops max`];
+      for (let i = 1; i <= hops; i++) {
+        const hopIp = i === hops ? ip : `10.0.${i}.1`;
+        const ms = (i * 4 + (Math.abs(hashCode(host + i)) % 5)).toFixed(3);
+        lines.push(`${i}   ${hopIp}   ${ms} ms`);
+      }
+      return lines.join('\n');
+    },
+  },
+
+  // ── firewall (simulated) ──
+  ufw: {
+    name: 'ufw',
+    summary: 'manage the firewall (simulated Uncomplicated Firewall) — enable, disable, status, allow, deny',
+    run: (args, ctx) => {
+      const statusPath = '/etc/ufw/status';
+      const rulesPath = '/etc/ufw/rules';
+      const [sub, ...rest] = args;
+      switch (sub) {
+        case 'enable':
+          ensureDir(ctx, '/etc/ufw');
+          writeFile(ctx, statusPath, 'active');
+          return 'Firewall is active and enabled on system startup';
+        case 'disable':
+          ensureDir(ctx, '/etc/ufw');
+          writeFile(ctx, statusPath, 'inactive');
+          return 'Firewall stopped and disabled on system startup';
+        case 'status': {
+          const statusNode = resolveNode(ctx, statusPath);
+          const status = statusNode && statusNode.type === 'file' ? statusNode.content.trim() : 'inactive';
+          if (status !== 'active') return 'Status: inactive';
+          const rulesNode = resolveNode(ctx, rulesPath);
+          const rules = rulesNode && rulesNode.type === 'file' ? rulesNode.content.trim() : '';
+          return ['Status: active', '', 'To                         Action      From', '--                         ------      ----', rules]
+            .filter(Boolean)
+            .join('\n');
+        }
+        case 'allow':
+        case 'deny': {
+          const port = rest.find((a) => !a.startsWith('-'));
+          if (!port) return `ufw: usage: ufw ${sub} <port>`;
+          ensureDir(ctx, '/etc/ufw');
+          const rulesNode = resolveNode(ctx, rulesPath);
+          const existing = rulesNode && rulesNode.type === 'file' ? rulesNode.content : '';
+          const label = sub === 'allow' ? 'ALLOW' : 'DENY';
+          writeFile(ctx, rulesPath, existing + `${port.padEnd(27)}${label}       Anywhere\n`);
+          return 'Rule added';
+        }
+        default:
+          return 'ufw: usage: ufw <enable|disable|status|allow|deny> [port]';
+      }
+    },
+  },
+  iptables: {
+    name: 'iptables',
+    summary: 'list default netfilter chains (simulated, read-only in this sandbox)',
+    run: (args) => {
+      if (args.length > 0 && !args.includes('-L')) {
+        return 'iptables: this sandbox only simulates `iptables -L` (read-only)';
+      }
+      return [
+        'Chain INPUT (policy ACCEPT)',
+        'target     prot opt source               destination',
+        '',
+        'Chain FORWARD (policy ACCEPT)',
+        'target     prot opt source               destination',
+        '',
+        'Chain OUTPUT (policy ACCEPT)',
+        'target     prot opt source               destination',
+      ].join('\n');
+    },
+  },
+
+  // ── misc admin stubs ──
+  visudo: {
+    name: 'visudo',
+    summary: 'safely edit /etc/sudoers (simulated)',
+    run: () =>
+      "visudo: opens /etc/sudoers in a syntax-checked editor — this sandbox has no interactive editor.\nUse sudo for one-off elevated commands instead (see the Linux Security Basics lesson).",
+  },
+  vimtutor: {
+    name: 'vimtutor',
+    summary: 'interactive vim tutorial (not available in this sandbox)',
+    run: () =>
+      'vimtutor: a real Linux command that launches an interactive ~30-minute vim tutorial.\nNot available in this browser sandbox — try it on a real Linux machine or WSL.',
+  },
 };
 
 export const COMMAND_NAMES = Object.keys(COMMANDS).sort();
@@ -2089,6 +2653,12 @@ function splitStatements(
   const out: { line: string; op: ';' | '&&' | '||' | null }[] = [];
   let cur = '';
   let quote: '"' | "'" | null = null;
+  // `op` on each entry means "the operator connecting the PREVIOUS statement
+  // to this one" (so the caller can decide whether to run it based on the
+  // previous statement's result) — not "the operator that follows it". That
+  // means the operator we just scanned describes the statement we're about
+  // to start accumulating, not the one we just finished.
+  let pendingOp: ';' | '&&' | '||' | null = null;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (quote) {
@@ -2102,26 +2672,40 @@ function splitStatements(
       continue;
     }
     if (ch === '&' && line[i + 1] === '&') {
-      out.push({ line: cur.trim(), op: '&&' });
+      out.push({ line: cur.trim(), op: pendingOp });
       cur = '';
+      pendingOp = '&&';
       i++;
       continue;
     }
     if (ch === '|' && line[i + 1] === '|') {
-      out.push({ line: cur.trim(), op: '||' });
+      out.push({ line: cur.trim(), op: pendingOp });
       cur = '';
+      pendingOp = '||';
       i++;
       continue;
     }
     if (ch === ';') {
-      out.push({ line: cur.trim(), op: ';' });
+      out.push({ line: cur.trim(), op: pendingOp });
       cur = '';
+      pendingOp = ';';
       continue;
     }
     cur += ch;
   }
-  if (cur.trim()) out.push({ line: cur.trim(), op: null });
+  if (cur.trim()) out.push({ line: cur.trim(), op: pendingOp });
   return out;
+}
+
+// Extracts the command name of the LAST stage of a (possibly piped)
+// statement, e.g. "cat file | grep foo" -> "grep". Used only for the
+// success/failure heuristic above — a lightweight, non-quote-aware split is
+// fine here since it only needs to be right for typical commands, not for
+// pipes containing a literal `|` inside quotes.
+function lastPipelineStageCommand(line: string): string {
+  const stages = line.split('|');
+  const lastStage = stages[stages.length - 1]?.trim() ?? '';
+  return /^(\S+)/.exec(lastStage)?.[1] ?? '';
 }
 
 const STDIN_CONSUMERS = new Set([
@@ -2313,7 +2897,7 @@ function runStatement(rawLine: string, ctx: ShellContext): string | string[] | n
     if (tokens.length === 0) continue;
     const cmd = tokens[0];
     const args = tokens.slice(1);
-    const impl = COMMANDS[cmd];
+    const impl = resolveCommand(cmd);
     if (!impl) return `${cmd}: command not found`;
     const hasStdin = i > 0 || (i === 0 && Boolean(inFile));
     const pipedArgs = hasStdin ? injectStdin(cmd, args, prevOut) : args;
@@ -2337,7 +2921,15 @@ export function runCommand(input: string, ctx: ShellContext): string | string[] 
   if (!trimmed) return null;
   ctx.history.push(trimmed);
 
-  const statements = splitStatements(trimmed);
+  // A single trailing `&` (not `&&`) backgrounds the whole preceding list,
+  // same as a real shell. This sandbox has no true concurrency, so the
+  // command still runs to completion immediately — it's just recorded as a
+  // finished job instead of printing inline, for `jobs` / `fg` / `bg`.
+  const backgrounded = trimmed.endsWith('&') && !trimmed.endsWith('&&');
+  const effective = backgrounded ? trimmed.slice(0, -1).trim() : trimmed;
+  if (backgrounded && !effective) return null;
+
+  const statements = splitStatements(effective);
   let lastExitOk = true;
   let lastOut: string | string[] | null = null;
   for (const { line, op } of statements) {
@@ -2348,8 +2940,28 @@ export function runCommand(input: string, ctx: ShellContext): string | string[] 
     const text =
       lastOut == null ? '' : Array.isArray(lastOut) ? lastOut.join('\n') : lastOut;
     if (text === '__CLEAR__') return lastOut;
-    lastExitOk = text !== '__NUL__' && !/^.+: (command )?not found/.test(text);
+    // No command here returns a real exit code — every implementation just
+    // returns a string. Every error message in this file follows the same
+    // convention real Unix tools use, `<command>: <what went wrong>`, so we
+    // treat output starting with the *actually invoked* command's own name
+    // and a colon as a failure. Matching against the specific command that
+    // ran (not just any leading word) keeps this from misfiring on file
+    // content that happens to start with "word: ".
+    const failedCmd = lastPipelineStageCommand(line);
+    lastExitOk =
+      text !== '__NUL__' && !(failedCmd !== '' && text.startsWith(`${failedCmd}: `));
   }
+
+  if (backgrounded) {
+    ctx.jobs = ctx.jobs ?? [];
+    const id = ctx.jobs.length + 1;
+    const pid = 20000 + (Math.abs(hashCode(effective)) % 9999);
+    ctx.jobs.push({ id, pid, cmd: effective });
+    const text = lastOut == null ? '' : Array.isArray(lastOut) ? lastOut.join('\n') : lastOut;
+    const header = `[${id}] ${pid}`;
+    return text ? `${header}\n${text}` : header;
+  }
+
   return lastOut;
 }
 
