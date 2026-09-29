@@ -5,7 +5,7 @@
  * `./lessons.ts`; the types here describe their shape.
  */
 
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
 export interface Lesson {
   /** Stable id used in the URL, the quiz-question join, and the cookie store. */

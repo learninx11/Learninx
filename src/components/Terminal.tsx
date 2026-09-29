@@ -73,6 +73,7 @@ export function Terminal({
       host: HOST,
       history: [],
       env: { PATH: '/usr/bin:/bin', HOME, USER, SHELL: '/bin/bash' },
+      jobs: [],
     };
     ctxRef.current = ctx;
 

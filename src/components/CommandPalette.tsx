@@ -52,6 +52,14 @@ const STATIC_NAV: Omit<PaletteItem, 'id'>[] = [
     keywords: ['lessons', 'catalogue', 'list'],
   },
   {
+    title: 'Terminal',
+    description: 'A dedicated sandbox for free practice — no lesson attached',
+    group: 'Navigate',
+    href: '/terminal',
+    icon: <TerminalIcon size={14} />,
+    keywords: ['terminal', 'shell', 'sandbox', 'practice', 'console', 'play'],
+  },
+  {
     title: 'Cheatsheet',
     description: 'Searchable command reference',
     group: 'Navigate',

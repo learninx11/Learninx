@@ -17,11 +17,12 @@ import { StreakWidget } from '@/components/StreakWidget';
 import { useProgress } from '@/lib/progress-context';
 import type { Difficulty, Lesson } from '@/lib/types';
 
-const DIFFICULTY_ORDER: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
+const DIFFICULTY_ORDER: Difficulty[] = ['beginner', 'intermediate', 'advanced', 'expert'];
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
+  expert: 'Expert',
 };
 
 type StatusFilter = 'all' | 'completed' | 'todo' | 'bookmarked';
