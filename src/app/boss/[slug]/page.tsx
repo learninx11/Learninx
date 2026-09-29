@@ -12,9 +12,9 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const boss = getBossBySlug(params.slug);
-  if (!boss) return { title: 'Boss level · Learninx' };
+  if (!boss) return { title: 'Boss level' };
   return {
-    title: `${boss.title} · Boss level · Learninx`,
+    title: `${boss.title} · Boss level`,
     description: boss.description,
   };
 }

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { DemoPlayer } from './_demo-player';
 
 export const metadata: Metadata = {
-  title: 'Learninx — Demo',
+  title: 'Demo',
   description:
     'A short autoplaying walkthrough of Learninx: lessons, the in-browser terminal, and the boss-level sandbox.',
 };

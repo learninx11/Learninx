@@ -4,7 +4,7 @@ import { Pill } from '@/components/ui/Pill';
 import { TargetIcon, TerminalIcon } from '@/components/ui/Icon';
 
 export const metadata = {
-  title: 'Boss levels · Learninx',
+  title: 'Boss levels',
   description:
     'Multi-step Linux challenges. Restore a broken service, sort a messy log folder, and more — all in the in-browser sandbox.',
 };

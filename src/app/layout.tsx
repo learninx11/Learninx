@@ -99,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <SearchIcon size={16} className="sm:hidden" />
               </Link>
               <a
-                href="https://github.com/raveendra11/Learninx"
+                href="https://github.com/learninx11/Learninx"
                 target="_blank"
                 rel="noreferrer"
                 className="hidden items-center gap-1.5 rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-flex"
