@@ -153,12 +153,154 @@ You'll often edit files straight from the terminal:
 `,
   },
   {
+    id: 'pipes-and-redirection',
+    slug: 'pipes-and-redirection',
+    title: 'Pipes and Redirection',
+    description: 'Chain commands with pipes, and send output to files with > and >>.',
+    difficulty: 'beginner',
+    order: 4,
+    trackCommand: 'echo',
+    challenge:
+      'Write the text `deploy ready` into a new file called `status.txt` using a single redirected command.',
+    solution: 'echo deploy ready > status.txt',
+    content: `# Pipes and Redirection
+
+Every command you run has three data streams attached to it:
+
+- **stdin** (standard input) - where it reads input from; by default, your keyboard.
+- **stdout** (standard output) - where it writes results; by default, your screen.
+- **stderr** (standard error) - where it writes error messages; also your screen, by default.
+
+Two shell features let you rewire those streams: **redirection** (send a stream to or from a file) and **pipes** (send one command's stdout straight into the next command's stdin).
+
+## Redirecting output to a file
+
+\`\`\`bash
+ls > listing.txt          # overwrite listing.txt with the output of ls
+echo "hello" > note.txt   # overwrite note.txt with "hello"
+\`\`\`
+
+\`>\` always **overwrites** the target file, creating it if it does not exist. Use \`>>\` to **append** instead of overwriting:
+
+\`\`\`bash
+echo "first line" > log.txt
+echo "second line" >> log.txt
+cat log.txt
+\`\`\`
+
+## Redirecting input from a file
+
+\`<\` feeds a file's contents in as a command's stdin - the opposite direction from \`>\`:
+
+\`\`\`bash
+wc -l < log.txt          # count the lines in log.txt
+\`\`\`
+
+## Pipes: connecting commands
+
+A pipe (\`|\`) takes the stdout of the command on its left and feeds it in as the stdin of the command on its right. Instead of one giant command, you chain small, single-purpose tools together:
+
+\`\`\`bash
+ps aux | grep root       # only the process lines mentioning "root"
+ls | wc -l               # count how many entries are in the current directory
+history | grep cd        # find cd commands you've already run
+\`\`\`
+
+You can chain more than two: \`cat access.log | grep ERROR | wc -l\` counts how many lines mention "ERROR".
+
+> This sandbox keeps things approachable and does not separately model stderr (\`2>\`) - everything a command prints goes through the same stream you see redirected with \`>\`.
+
+## Try it
+
+\`\`\`bash
+echo "queued" > status.txt
+cat status.txt
+echo "shipped" >> status.txt
+cat status.txt
+wc -l < status.txt
+\`\`\`
+
+## Further reading
+
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - its chapter on redirection is the clearest treatment of this topic you'll find, and covers file descriptors and \`2>\` in full.
+- **"How Linux Works"** by Brian Ward (No Starch Press) - explains the same ideas from the kernel's point of view, including how file descriptors actually work under the hood.
+`,
+  },
+  {
+    id: 'environment-variables',
+    slug: 'environment-variables',
+    title: 'Environment Variables and PATH',
+    description: 'Read and set variables with $VAR, export, and understand PATH.',
+    difficulty: 'beginner',
+    order: 5,
+    trackCommand: 'export',
+    challenge:
+      'Create an environment variable named `BUILD_ENV` with the value `staging`, then print it back with `echo`. Do both in one line.',
+    solution: 'export BUILD_ENV=staging && echo $BUILD_ENV',
+    content: `# Environment Variables and PATH
+
+Every running process, including your shell, keeps a table of **environment variables** - named strings like \`HOME\`, \`USER\`, or \`PATH\` that configure how programs behave.
+
+## Reading a variable
+
+Put a \`$\` in front of a variable's name and the shell substitutes its value before running the command:
+
+\`\`\`bash
+echo $HOME
+echo "Logged in as $USER"
+\`\`\`
+
+Wrap the name in \`\${ }\` when you need to be explicit about where the name ends, which matters right before more text:
+
+\`\`\`bash
+echo "\${USER}_backup.tar"
+\`\`\`
+
+Variables only expand when **unquoted** or inside **double quotes**. Single quotes turn expansion off - \`echo '$HOME'\` prints the literal text \`$HOME\`, not its value.
+
+## Setting a variable
+
+\`\`\`bash
+export STAGE=production   # define STAGE for this shell and any command it starts
+echo $STAGE
+env                        # list every variable currently exported
+\`\`\`
+
+Any process you start after \`export\` inherits a copy of these variables - that is what "environment" means: it travels with the process, not just the current line.
+
+## PATH: how the shell finds commands
+
+\`PATH\` is the most important environment variable of all. It is a colon-separated list of directories the shell searches, in order, whenever you type a bare command name like \`ls\` instead of a full path like \`/bin/ls\`. A typical value looks like:
+
+\`\`\`
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+\`\`\`
+
+If a command reports "not found" even though the file exists, it is almost always because the directory holding it is missing from \`PATH\`.
+
+## Try it
+
+\`\`\`bash
+export BUILD_ENV=staging
+echo $BUILD_ENV
+export BUILD_ENV=production
+echo "now building for $BUILD_ENV"
+env
+\`\`\`
+
+## Further reading
+
+- **"Learning the bash Shell"** by Cameron Newham (O'Reilly) - the definitive guide to shell variables, quoting rules, and the startup files (\`.bashrc\`, \`.bash_profile\`) that set them up for you automatically.
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - the "Environment" chapter in Part II walks through exactly this material with more real-world examples.
+`,
+  },
+  {
     id: 'users-and-permissions',
     slug: 'users-and-permissions',
     title: 'Users and Permissions',
     description: 'Understand users, groups, and the chmod / chown commands.',
     difficulty: 'intermediate',
-    order: 4,
+    order: 6,
     trackCommand: 'chmod',
     challenge:
       'Make `script.sh` executable for the owner only (no permissions for group or others).',
@@ -199,9 +341,151 @@ The numbers are octal:
 | 5     | yes |     | yes |
 | 4     | yes |     |     |
 
+## Changing ownership
+
+Permissions are only half the story - each file also has an **owner** (a user) and a **group**. \`chown\` changes one or both:
+
+\`\`\`bash
+chown alice script.sh          # give ownership to alice
+chown alice:devs script.sh     # set owner AND group in one go
+chown :devs script.sh          # change only the group
+\`\`\`
+
+A common real pattern: put teammates in a shared group, then \`chown :teamgroup\` a project's files and \`chmod g+rwx\` the directory so everyone in that group can collaborate without being the file's owner.
+
 ## Why this matters
 
 Servers get hacked because files are too permissive. When in doubt, *least privilege* - grant only what is needed.
+`,
+  },
+  {
+    id: 'text-processing',
+    slug: 'text-processing',
+    title: 'Text Processing with grep, sed, and awk',
+    description: 'Search, transform, and extract fields from text on the command line.',
+    difficulty: 'intermediate',
+    order: 7,
+    trackCommand: 'grep',
+    challenge:
+      'In `report.txt`, replace every occurrence of `TODO` with `DONE` and print the result. Do it in one command.',
+    solution: "sed 's/TODO/DONE/g' report.txt",
+    content: `# Text Processing with grep, sed, and awk
+
+Three small tools handle almost every text-processing job you will run into on the command line: **grep** finds lines, **sed** transforms them, and **awk** extracts fields out of them. Learn these three and you can process logs, configs, and CSVs without ever opening an editor.
+
+## grep: finding lines that match
+
+\`\`\`bash
+grep ERROR app.log          # lines containing "ERROR"
+grep -i error app.log       # case-insensitive
+grep -v INFO app.log        # invert: lines that do NOT match
+grep -n ERROR app.log       # show line numbers
+\`\`\`
+
+grep reads from a file *or* from a pipe, which is how it is most often used in practice:
+
+\`\`\`bash
+ps aux | grep nginx
+\`\`\`
+
+## sed: transforming text
+
+\`sed\` is a **stream editor** - it reads text, applies an edit, and prints the result. The classic edit is substitution, \`s/find/replace/\`:
+
+\`\`\`bash
+sed 's/TODO/DONE/' report.txt      # replaces the FIRST match on each line
+sed 's/TODO/DONE/g' report.txt     # the g flag replaces EVERY match on each line
+\`\`\`
+
+By itself, \`sed\` only prints the changed text - it does not touch the file. To keep the result, pipe it into \`tee\` and write back to the same filename:
+
+\`\`\`bash
+sed 's/TODO/DONE/g' report.txt | tee report.txt
+\`\`\`
+
+## awk: extracting fields
+
+Text is often organized into whitespace-separated fields - a process list, a log line, a CSV row. \`awk\` refers to them as \`$1\`, \`$2\`, and so on (\`$0\` is the whole line):
+
+\`\`\`bash
+echo "alice 27 engineer" | awk '{print $1}'   # -> alice
+echo "alice 27 engineer" | awk '{print $2}'   # -> 27
+\`\`\`
+
+\`cut\` does a simpler version of the same job when your data has an explicit delimiter, like a colon or comma:
+
+\`\`\`bash
+echo "alice:27:engineer" | cut -d ":" -f 2    # -> 27
+\`\`\`
+
+## Try it
+
+\`\`\`bash
+echo "TODO fix the login bug" > report.txt
+echo "TODO write the changelog" >> report.txt
+cat report.txt
+sed 's/TODO/DONE/g' report.txt
+grep -c TODO report.txt
+\`\`\`
+
+## Further reading
+
+- **"sed & awk"** by Dale Dougherty and Arnold Robbins (O'Reilly) - the definitive, classic reference for both tools, still relevant decades after publication.
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - its text-processing chapters cover \`grep\`, \`sed\`, and \`awk\` together with plenty of realistic examples, plus an introduction to regular expressions.
+`,
+  },
+  {
+    id: 'finding-files',
+    slug: 'finding-files',
+    title: 'Finding Files with find and xargs',
+    description: 'Locate files by name or pattern, then act on all of them at once.',
+    difficulty: 'intermediate',
+    order: 8,
+    trackCommand: 'find',
+    challenge:
+      'Find every `.log` file under `/var` and delete them all in one command, using `find` piped into `xargs`.',
+    solution: 'find /var -name "*.log" | xargs rm',
+    content: `# Finding Files with find and xargs
+
+\`ls\` only shows you what is in one directory. When you need to search an entire tree - "every \`.log\` file anywhere under \`/var\`" - that is a job for \`find\`.
+
+## find: searching by name
+
+\`\`\`bash
+find /var -name "*.log"        # every .log file under /var, at any depth
+find . -name "*.txt"           # every .txt file under the current directory
+\`\`\`
+
+\`find\` prints one path per line, which makes it perfect for feeding into another command.
+
+## xargs: turning a list into a command
+
+Piping a list of paths into a command like \`rm\` does not work directly, because \`rm\` expects paths as *arguments*, not as piped-in text. \`xargs\` bridges that gap: it reads whitespace-separated tokens from stdin and runs a command once for each one, appending the token as an argument.
+
+\`\`\`bash
+find /var -name "*.log" | xargs rm     # delete every match
+find . -name "*.tmp" | xargs cat       # print the contents of every match
+\`\`\`
+
+This "find it, then xargs it" pattern is one of the most useful idioms in the entire command line - it turns a search into a bulk operation with almost no code.
+
+## Try it
+
+\`\`\`bash
+mkdir -p /var/log/app
+echo "boot ok" > /var/log/app/one.log
+echo "boot ok" > /var/log/app/two.log
+find /var -name "*.log"
+find /var -name "*.log" | xargs rm
+find /var -name "*.log"
+\`\`\`
+
+The list is empty on the last line - every match was deleted in one step.
+
+## Further reading
+
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - its chapter on finding files walks through \`find\`'s many test expressions (by size, by age, by permissions) well beyond \`-name\`.
+- **"UNIX and Linux System Administration Handbook"** by Nemeth, Snyder, Hein, Whaley, and Mackin (Pearson) - shows this exact \`find | xargs\` idiom used for real sysadmin cleanup and auditing tasks.
 `,
   },
   {
@@ -210,7 +494,7 @@ Servers get hacked because files are too permissive. When in doubt, *least privi
     title: 'Processes and the System',
     description: 'ps, top, kill, and how to find what is running.',
     difficulty: 'intermediate',
-    order: 5,
+    order: 9,
     trackCommand: 'ps',
     challenge:
       'Show the top of the `ps aux` output filtered to lines containing the word `root`.',
@@ -251,6 +535,134 @@ df -h                  # disk space
 - Bring back to foreground: \`fg\`
 
 These tools are your first stop when something is wrong on a server.
+`,
+  },
+  {
+    id: 'archives-and-compression',
+    slug: 'archives-and-compression',
+    title: 'Archives and Compression',
+    description: 'Bundle files with tar, and shrink them with gzip.',
+    difficulty: 'intermediate',
+    order: 10,
+    trackCommand: 'tar',
+    challenge: 'Bundle the `site` directory into a single archive called `site.tar` using tar.',
+    solution: 'tar -cf site.tar site',
+    content: `# Archives and Compression
+
+Two separate ideas get bundled together so often that people mix them up: **archiving** (combining many files into one) and **compression** (shrinking the size of a file). \`tar\` does the first, \`gzip\` does the second, and together they produce the \`.tar.gz\` files you have almost certainly downloaded before.
+
+## tar: packing many files into one
+
+The name is short for "tape archive" - it dates back to literal magnetic tape backups, which is why the flags feel a bit old-fashioned. Three flags cover most of what you need:
+
+\`\`\`bash
+tar -cf site.tar site/        # create an archive from the site/ directory
+tar -tf site.tar               # list what's inside, without extracting
+tar -xf site.tar               # extract into the current directory
+\`\`\`
+
+Read the letters as: \`c\`reate, e\`x\`tract, \`t\`able-of-contents, and \`f\`ile (always followed by the archive's name).
+
+## Adding compression
+
+\`tar\` bundles files but does not shrink them by itself. Add \`-z\` to also gzip-compress the result, which is where the familiar \`.tar.gz\` (or \`.tgz\`) extension comes from:
+
+\`\`\`bash
+tar -czf site.tar.gz site/     # create AND compress in one step
+tar -xzf site.tar.gz            # decompress AND extract in one step
+\`\`\`
+
+## gzip and gunzip on their own
+
+You do not need \`tar\` to compress a single file:
+
+\`\`\`bash
+gzip access.log          # replaces access.log with access.log.gz
+gunzip access.log.gz     # reverses it, restoring access.log
+gzip -k access.log       # -k keeps the original instead of replacing it
+\`\`\`
+
+## Try it
+
+\`\`\`bash
+mkdir -p site/css
+echo "<h1>hi</h1>" > site/index.html
+echo "body { color: navy; }" > site/css/style.css
+tar -czf site.tar.gz site
+tar -tzf site.tar.gz
+rm -r site
+tar -xzf site.tar.gz
+cat site/index.html
+\`\`\`
+
+Everything comes back exactly as it was, even though \`site/\` itself was deleted in between.
+
+## Further reading
+
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - its chapter on archiving and backup covers \`tar\`, \`gzip\`, and their relatives (\`bzip2\`, \`xz\`, \`zip\`) side by side, including when to reach for each one.
+- **"How Linux Works"** by Brian Ward (No Starch Press) - explains what compression is actually doing to the bytes, which demystifies why some file types (already-compressed video or images) barely shrink at all.
+`,
+  },
+  {
+    id: 'package-management',
+    slug: 'package-management',
+    title: 'Package Management',
+    description: 'Install, remove, and search for software with apt.',
+    difficulty: 'intermediate',
+    order: 11,
+    trackCommand: 'apt',
+    challenge:
+      'Install the `tree` package with apt, in a single command that also refreshes the package index first.',
+    solution: 'apt update && apt install tree',
+    content: `# Package Management
+
+Every Linux distribution ships a **package manager**: a tool that installs software along with everything it depends on, tracks exactly which files belong to which program, and can cleanly remove it all again later. This is the single biggest reason Linux servers rarely end up with the tangled, half-installed software that plagues systems without one.
+
+## apt: Debian and Ubuntu's package manager
+
+\`apt\` is the tool you will meet on Debian, Ubuntu, and their many derivatives.
+
+\`\`\`bash
+apt update                # refresh the local index of what's available
+apt install tree          # install a package (and its dependencies)
+apt remove tree           # remove it again
+apt search editor         # search the index for a term
+apt list --installed      # show everything currently installed
+\`\`\`
+
+\`apt update\` does not install or upgrade anything by itself - it just refreshes apt's *knowledge* of what versions are available from your configured repositories. Get in the habit of running it before an \`install\`, so you are not installing a version that's already out of date.
+
+## dpkg: what apt is built on
+
+Underneath \`apt\` is \`dpkg\`, the lower-level tool that actually unpacks \`.deb\` files and records which files belong to which package (traditionally under \`/var/lib/dpkg\`). You will rarely need it directly, but it explains why apt can tell you precisely what is installed: it is reading that same bookkeeping.
+
+## Other distributions, other tools
+
+The concept is universal even though the command names differ:
+
+| Distribution family      | Package manager        |
+| ------------------------ | ----------------------- |
+| Debian, Ubuntu, Mint      | \`apt\` (built on \`dpkg\`)   |
+| Fedora, RHEL, CentOS      | \`dnf\` (formerly \`yum\`, built on \`rpm\`) |
+| Arch Linux, Manjaro       | \`pacman\`                |
+
+Once you understand one of them - update the index, install a name, remove a name, search a term - the others are just a different vocabulary for the same four ideas.
+
+## Try it
+
+\`\`\`bash
+apt update
+apt search git
+apt install git
+apt list --installed
+apt remove git
+\`\`\`
+
+## Further reading
+
+- **"The Linux Command Line"** by William Shotts (No Starch Press) - its package management chapter covers both the Debian (\`apt\`/\`dpkg\`) and Red Hat (\`dnf\`/\`rpm\`) families in detail.
+- **"How Linux Works"** by Brian Ward (No Starch Press) - explains what a package actually contains and how dependency resolution works under the hood.
+- **"UNIX and Linux System Administration Handbook"** by Nemeth, Snyder, Hein, Whaley, and Mackin (Pearson) - covers package management as part of real production server administration, including keeping systems patched and up to date.
 `,
   },
 ];
@@ -314,6 +726,13 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     answer: 'true',
   },
   {
+    id: 'q-up-3',
+    lessonId: 'users-and-permissions',
+    order: 2,
+    prompt: 'Which command changes a file\'s owner and/or group?',
+    answer: 'chown',
+  },
+  {
     id: 'q-ps-1',
     lessonId: 'processes-and-system',
     order: 0,
@@ -326,6 +745,90 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     order: 1,
     prompt: 'Which signal number forces a kill?',
     answer: '9',
+  },
+  {
+    id: 'q-pr-1',
+    lessonId: 'pipes-and-redirection',
+    order: 0,
+    prompt: 'Which operator appends output to a file instead of overwriting it?',
+    answer: '>>',
+  },
+  {
+    id: 'q-pr-2',
+    lessonId: 'pipes-and-redirection',
+    order: 1,
+    prompt: "Which character connects one command's output to the next command's input?",
+    answer: '|',
+  },
+  {
+    id: 'q-ev-1',
+    lessonId: 'environment-variables',
+    order: 0,
+    prompt: 'Which command prints every currently exported environment variable?',
+    answer: 'env',
+  },
+  {
+    id: 'q-ev-2',
+    lessonId: 'environment-variables',
+    order: 1,
+    prompt: "Which character do you put before a variable's name to read its value?",
+    answer: '$',
+  },
+  {
+    id: 'q-tp-1',
+    lessonId: 'text-processing',
+    order: 0,
+    prompt: "Which sed flag makes a substitution apply to every match on a line, not just the first?",
+    answer: 'g',
+  },
+  {
+    id: 'q-tp-2',
+    lessonId: 'text-processing',
+    order: 1,
+    prompt: 'Which command prints one field of delimited text, such as a CSV column?',
+    answer: 'cut',
+  },
+  {
+    id: 'q-ff-1',
+    lessonId: 'finding-files',
+    order: 0,
+    prompt: 'Which flag on `find` matches files by name pattern?',
+    answer: '-name',
+  },
+  {
+    id: 'q-ff-2',
+    lessonId: 'finding-files',
+    order: 1,
+    prompt: 'Which command builds and runs a command line for each item read from stdin?',
+    answer: 'xargs',
+  },
+  {
+    id: 'q-ac-1',
+    lessonId: 'archives-and-compression',
+    order: 0,
+    prompt: 'Which tar flag lists an archive\'s contents without extracting it?',
+    answer: '-t',
+  },
+  {
+    id: 'q-ac-2',
+    lessonId: 'archives-and-compression',
+    order: 1,
+    prompt: 'Which command reverses gzip, restoring the original file?',
+    answer: 'gunzip',
+  },
+  {
+    id: 'q-pm-1',
+    lessonId: 'package-management',
+    order: 0,
+    prompt: 'Which apt subcommand refreshes the local package index from the repositories?',
+    answer: 'update',
+  },
+  {
+    id: 'q-pm-2',
+    lessonId: 'package-management',
+    order: 1,
+    prompt: 'On Debian/Ubuntu, which lower-level tool does apt use to actually unpack packages?',
+    answer: 'dpkg',
   },
 ];
 

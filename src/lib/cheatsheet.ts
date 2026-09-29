@@ -632,6 +632,18 @@ export const CHEATSHEET: CheatEntry[] = [
     keywords: ['nohup', 'background', 'hangup', 'detach'],
   },
   {
+    cmd: 'systemctl',
+    short: 'Control systemd services (simulated)',
+    long: 'Manages systemd units. `daemon-reload` picks up unit file edits, `enable` wires a service into the boot targets, `start`/`stop`/`restart` control it right now, and `status` shows whether it is active.',
+    examples: [
+      'systemctl daemon-reload',
+      'systemctl enable --now webapp',
+      'systemctl status webapp',
+    ],
+    category: 'System',
+    keywords: ['systemd', 'service', 'daemon', 'unit', 'enable', 'start', 'status'],
+  },
+  {
     cmd: 'ifconfig',
     short: 'Show network interfaces',
     long: 'Older but still-common tool for inspecting IP addresses, MAC addresses and packet counts per interface. (`ip addr` is the modern equivalent.)',
@@ -753,6 +765,14 @@ export const CHEATSHEET: CheatEntry[] = [
     examples: ['chmod +x script.sh', 'chmod 755 script.sh', 'chmod 600 secret.txt'],
     category: 'Permissions',
     keywords: ['permissions', 'mode', 'rwx', 'octal'],
+  },
+  {
+    cmd: 'chown',
+    short: 'Change file owner and group',
+    long: 'Changes which user and/or group owns a file. `chown user:group file` sets both; `chown :group file` changes only the group.',
+    examples: ['chown deploy:deploy run.sh', 'chown :deploy run.sh', 'chown root secrets.env'],
+    category: 'Permissions',
+    keywords: ['owner', 'group', 'permissions'],
   },
   {
     cmd: 'ps',
@@ -895,14 +915,6 @@ export const CHEATSHEET: CheatEntry[] = [
     examples: ['rename "s/.txt/.md/" *.txt', 'rename "y/a-z/A-Z/" *.txt'],
     category: 'Files',
     keywords: ['rename', 'prename', 'bulk', 'rename', 'regex'],
-  },
-  {
-    cmd: 'chown',
-    short: 'Change file owner and group',
-    long: 'Sets the user and (optionally) the group of a file. `chown user:group file` sets both at once. Requires root in a real shell — sandbox is informational.',
-    examples: ['chown learner notes.txt', 'chown learner:staff notes.txt', 'chown -R root /etc/app'],
-    category: 'Permissions',
-    keywords: ['chown', 'owner', 'group', 'permissions', 'root'],
   },
   {
     cmd: 'chgrp',
@@ -1302,16 +1314,42 @@ export const CHEATSHEET: CheatEntry[] = [
 
   // ──────────────────────────────────────────────────────── More System
   {
-    cmd: 'systemctl',
-    short: 'Control systemd services (start/stop/enable/status)',
-    long: 'Modern way to manage services. `systemctl status nginx` shows logs and state, `systemctl enable --now nginx` starts it and turns it on at boot. Not available in the sandbox.',
+    cmd: 'apt',
+    short: 'Debian/Ubuntu package manager (simulated)',
+    long: '`apt update` refreshes the package index, `apt install X` pulls X in (and reports missing packages), `apt remove X` takes it out again, `apt search TERM` finds candidates, and `apt list --installed` shows what is on the system. This sandbox tracks a small real catalogue and installed-state, mirroring how real Debian/Ubuntu systems record installs under `/var/lib/dpkg`.',
     examples: [
-      'systemctl status nginx',
-      'sudo systemctl restart sshd',
-      'systemctl enable --now cron',
+      'apt update',
+      'apt install tree',
+      'apt list --installed',
+      'apt remove tree',
+      'apt search git',
     ],
     category: 'System',
-    keywords: ['systemctl', 'systemd', 'service', 'unit', 'daemon'],
+    keywords: ['apt', 'apt-get', 'package', 'install', 'debian', 'ubuntu', 'dependency'],
+  },
+  {
+    cmd: 'dpkg',
+    short: 'Low-level Debian package tool (underneath apt)',
+    long: '`apt` is the friendly front end; `dpkg` does the actual unpacking and bookkeeping. `dpkg -l` lists installed packages, `dpkg -L pkg` lists the files it owns, `dpkg -i file.deb` installs a local .deb. Sandbox informational.',
+    examples: ['dpkg -l', 'dpkg -L nginx', 'sudo dpkg -i app.deb'],
+    category: 'System',
+    keywords: ['dpkg', 'deb', 'debian', 'package', 'low-level'],
+  },
+  {
+    cmd: 'dnf / yum',
+    short: 'Red Hat / Fedora / CentOS package manager',
+    long: 'The `apt` equivalent on the Red Hat family. `dnf` replaced the older `yum` but keeps the same subcommands: `install`, `remove`, `search`, `list installed`, `update`. Sandbox informational.',
+    examples: ['sudo dnf install htop', 'dnf search editor', 'dnf list installed'],
+    category: 'System',
+    keywords: ['dnf', 'yum', 'rpm', 'fedora', 'redhat', 'centos', 'package'],
+  },
+  {
+    cmd: 'pacman',
+    short: 'Arch Linux package manager',
+    long: 'Arch’s package tool. `-S` installs (`pacman -S git`), `-R` removes, `-Ss` searches, `-Syu` syncs the index and upgrades everything in one step. Sandbox informational.',
+    examples: ['sudo pacman -S neovim', 'pacman -Ss editor', 'sudo pacman -Syu'],
+    category: 'System',
+    keywords: ['pacman', 'arch', 'package', 'syu'],
   },
   {
     cmd: 'service',

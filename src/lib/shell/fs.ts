@@ -54,7 +54,12 @@ export function createInitialFs(): FsDir {
         type: 'dir',
         children: {
           bin: { type: 'dir', children: {} },
-          local: { type: 'dir', children: {} },
+          local: {
+            type: 'dir',
+            children: {
+              bin: { type: 'dir', children: {} },
+            },
+          },
         },
       },
     },
