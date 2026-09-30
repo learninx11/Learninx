@@ -365,11 +365,17 @@ export function TypingTestClient() {
 
     setTyped(value);
     if (value === snippet.text) {
+      // Matches the shell itself: finishing the line doesn't run it —
+      // Enter does. See onInputKeyDown below.
       playTone(720, 0.06, 0.05);
-      // Defer so the final character paints before we react to it.
-      if (mode === 'practice') setTimeout(commitPractice, 0);
-      else setTimeout(advanceTestSnippet, 0);
     }
+  }
+
+  function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter' || status !== 'running' || typed !== snippet.text) return;
+    e.preventDefault();
+    if (mode === 'practice') commitPractice();
+    else advanceTestSnippet();
   }
 
   return (
@@ -540,6 +546,7 @@ export function TypingTestClient() {
             type="text"
             value={typed}
             onChange={onChange}
+            onKeyDown={onInputKeyDown}
             spellCheck={false}
             autoComplete="off"
             autoCorrect="off"
@@ -558,8 +565,12 @@ export function TypingTestClient() {
 
           <p className="text-xs text-slate-500">
             {mode === 'practice' && status === 'idle' && 'Press a key to start the timer.'}
+            {mode === 'practice' && status === 'running' && typed === snippet.text && (
+              <>Press <kbd className="lx-kbd">Enter</kbd> to submit.</>
+            )}
             {mode === 'practice' &&
               status === 'running' &&
+              typed !== snippet.text &&
               `${remaining} character${remaining === 1 ? '' : 's'} left.`}
             {mode === 'practice' && status === 'finished' && lastScore && (
               <>
@@ -568,9 +579,13 @@ export function TypingTestClient() {
               </>
             )}
             {mode === 'test' && status === 'idle' && 'Press a key to start the 3-minute test.'}
+            {mode === 'test' && status === 'running' && typed === snippet.text && (
+              <>Press <kbd className="lx-kbd">Enter</kbd> for the next snippet.</>
+            )}
             {mode === 'test' &&
               status === 'running' &&
-              `${remaining} character${remaining === 1 ? '' : 's'} left in this snippet — the next one loads automatically.`}
+              typed !== snippet.text &&
+              `${remaining} character${remaining === 1 ? '' : 's'} left in this snippet.`}
             {mode === 'test' && status === 'finished' && testResult && (
               <>
                 Time&apos;s up: <strong>{testResult.wpm} WPM</strong> at{' '}
