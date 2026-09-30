@@ -12,9 +12,13 @@ import {
   ArrowRightIcon,
   ClockIcon,
   GamepadIcon,
+  MaximizeIcon,
+  MinimizeIcon,
   ResetIcon,
   TargetIcon,
   TrophyIcon,
+  VolumeIcon,
+  VolumeOffIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { TYPING_SNIPPETS, type TypingSnippet } from '@/lib/typing-snippets';
@@ -64,7 +68,17 @@ export function TypingTestClient() {
   const { state, ready, recordTyping } = useProgress();
   const [mode, setMode] = useState<Mode>('practice');
 
-  const [snippet, setSnippet] = useState<TypingSnippet>(() => pickSnippet());
+  // Deterministic on first render (server and client agree), then
+  // randomized once mounted — picking randomly during the initial render
+  // would differ between the server and client passes and trip a
+  // hydration mismatch.
+  const [snippet, setSnippet] = useState<TypingSnippet>(
+    () => TYPING_SNIPPETS[0] ?? FALLBACK_SNIPPET,
+  );
+  useEffect(() => {
+    setSnippet(pickSnippet());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [typed, setTyped] = useState<string>('');
   const [status, setStatus] = useState<Status>('idle');
 
@@ -72,6 +86,11 @@ export function TypingTestClient() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [lastScore, setLastScore] = useState<TypingScore | null>(null);
+  // How many practice snippets have been completed this session — shown
+  // as "Round N" so the counter means something (and, unlike the
+  // Math.random() flavor text this replaced, matches on server and
+  // client so it doesn't trip a hydration mismatch).
+  const [practiceRoundsDone, setPracticeRoundsDone] = useState(0);
 
   // Take Test mode: a fixed 3-minute clock counting down, snippets advance
   // automatically as each is finished, and stats accumulate across all of them.
@@ -91,6 +110,68 @@ export function TypingTestClient() {
   // Guards against double-firing the end of whichever mode is active —
   // only one mode is ever running at a time, so one flag is enough.
   const finishedRef = useRef<boolean>(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const [soundOn, setSoundOn] = useState(false);
+  const [isZen, setIsZen] = useState(false);
+
+  // Restore the keystroke-sound preference (persisted per browser).
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('lx-typing-sound') === '1') setSoundOn(true);
+    } catch {
+      /* localStorage blocked (private mode, etc.) — default stays off */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('lx-typing-sound', soundOn ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [soundOn]);
+
+  // Escape exits zen mode. A plain <input> (unlike the xterm-based
+  // terminal) never swallows the keydown, so a window listener is enough.
+  useEffect(() => {
+    if (!isZen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsZen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isZen]);
+  useEffect(() => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [isZen]);
+
+  /** A soft, short oscillator blip for keystroke feedback. No-op when muted or blocked by autoplay policy. */
+  function playTone(freq: number, duration = 0.03, volume = 0.05): void {
+    if (!soundOn) return;
+    try {
+      if (!audioCtxRef.current) {
+        const Ctor =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext;
+        if (!Ctor) return;
+        audioCtxRef.current = new Ctor();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      /* ignore — autoplay policies may block audio until user gesture */
+    }
+  }
 
   // Practice-mode ticker: elapsed time, counting up.
   useEffect(() => {
@@ -231,6 +312,7 @@ export function TypingTestClient() {
     };
     setLastScore(score);
     setStatus('finished');
+    setPracticeRoundsDone((n) => n + 1);
     if (ready) recordTyping(score);
   }
 
@@ -272,8 +354,18 @@ export function TypingTestClient() {
       else startTest();
     }
     if (status === 'running' && value.length > snippet.text.length) return;
+
+    if (value.length > typed.length) {
+      const idx = value.length - 1;
+      const correct = value[idx] === snippet.text[idx];
+      playTone(correct ? 460 : 150, correct ? 0.02 : 0.05, correct ? 0.03 : 0.045);
+    } else if (value.length < typed.length) {
+      playTone(220, 0.02, 0.02);
+    }
+
     setTyped(value);
     if (value === snippet.text) {
+      playTone(720, 0.06, 0.05);
       // Defer so the final character paints before we react to it.
       if (mode === 'practice') setTimeout(commitPractice, 0);
       else setTimeout(advanceTestSnippet, 0);
@@ -281,195 +373,254 @@ export function TypingTestClient() {
   }
 
   return (
-    <div className="space-y-12">
-      <header className="space-y-3 pt-6 text-center sm:pt-10">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 font-mono text-xs text-[var(--lx-accent)]">
-          <GamepadIcon size={12} /> ~/typing $ time bash
-        </div>
-        <h1 className="text-balance text-3xl font-bold sm:text-4xl">Typing test</h1>
-        <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
-          Type the command exactly as shown, as fast and as accurately as you can.
-          <strong className="text-slate-300"> Practice</strong> is one snippet at a time,
-          no pressure. <strong className="text-slate-300">Take Test</strong> is a focused
-          3-minute sprint across as many snippets as you can get through. Hitting 30 WPM
-          unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
-          either mode counts.
-        </p>
-      </header>
+    <>
+      {isZen && (
+        <div
+          className="fixed inset-0 z-[199] bg-slate-950/90 backdrop-blur-sm"
+          onClick={() => setIsZen(false)}
+          aria-hidden
+        />
+      )}
+      <div className="space-y-12">
+        <header className="space-y-3 pt-6 text-center sm:pt-10">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 font-mono text-xs text-[var(--lx-accent)]">
+            <GamepadIcon size={12} /> ~/typing $ time bash
+          </div>
+          <h1 className="text-balance text-3xl font-bold sm:text-4xl">Typing test</h1>
+          <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
+            Type the command exactly as shown, as fast and as accurately as you can.
+            <strong className="text-slate-300"> Practice</strong> is one snippet at a time,
+            no pressure. <strong className="text-slate-300">Take Test</strong> is a focused
+            3-minute sprint across as many snippets as you can get through. Hitting 30 WPM
+            unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
+            either mode counts.
+          </p>
+        </header>
 
-      <div className="mx-auto flex w-fit gap-1 rounded-full border border-[var(--lx-border)] bg-slate-900/40 p-1">
-        <button
-          type="button"
-          onClick={() => switchMode('practice')}
-          className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-            mode === 'practice'
-              ? 'bg-[var(--lx-accent)] text-slate-950'
-              : 'text-slate-400 hover:text-[var(--lx-fg)]'
-          }`}
-        >
-          Practice
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode('test')}
-          className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-            mode === 'test'
-              ? 'bg-[var(--lx-accent)] text-slate-950'
-              : 'text-slate-400 hover:text-[var(--lx-fg)]'
-          }`}
-        >
-          Take Test · 3 min
-        </button>
-      </div>
-
-      <section className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Stat label="WPM" value={liveWpm} />
-          <Stat label="Accuracy" value={`${accuracy}%`} />
-          <Stat
-            label={mode === 'test' ? 'Time left' : 'Time'}
-            value={formatSeconds(mode === 'test' ? testRemainingMs : elapsedMs)}
-          />
-        </div>
-      </section>
-
-      <section className="lx-card space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {mode === 'practice' ? (
-            <Pill tone="accent">
-              <TargetIcon size={12} /> Round {Math.floor(Math.random() * 999) + 1}
-            </Pill>
-          ) : (
-            <Pill tone="accent">
-              <ClockIcon size={12} /> {testSnippetsDone} snippet{testSnippetsDone === 1 ? '' : 's'} completed
-            </Pill>
-          )}
+        <div className="mx-auto flex w-fit gap-1 rounded-full border border-[var(--lx-border)] bg-slate-900/40 p-1">
           <button
             type="button"
-            onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
-            className="lx-btn lx-btn-ghost lx-btn-sm"
-            title={mode === 'practice' ? 'Pick a new snippet' : 'Restart the 3-minute test'}
+            onClick={() => switchMode('practice')}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              mode === 'practice'
+                ? 'bg-[var(--lx-accent)] text-slate-950'
+                : 'text-slate-400 hover:text-[var(--lx-fg)]'
+            }`}
           >
-            <ResetIcon size={12} /> {mode === 'practice' ? 'New snippet' : 'Restart test'}
+            Practice
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('test')}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              mode === 'test'
+                ? 'bg-[var(--lx-accent)] text-slate-950'
+                : 'text-slate-400 hover:text-[var(--lx-fg)]'
+            }`}
+          >
+            Take Test · 3 min
           </button>
         </div>
 
-        <p
-          className="font-mono text-lg leading-relaxed sm:text-2xl"
-          aria-hidden
-        >
-          {snippet.text.split('').map((ch, idx) => {
-            const userChar = typed[idx];
-            const state =
-              userChar == null
-                ? 'pending'
-                : userChar === ch
-                  ? 'correct'
-                  : 'wrong';
-            return (
-              <span
-                key={idx}
-                className={
-                  state === 'correct'
-                    ? 'text-emerald-300'
-                    : state === 'wrong'
-                      ? 'text-rose-400 underline decoration-rose-500/60 underline-offset-2'
-                      : 'text-slate-500'
-                }
-              >
-                {ch}
-              </span>
-            );
-          })}
-        </p>
+        <section className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stat label="WPM" value={liveWpm} />
+            <Stat label="Accuracy" value={`${accuracy}%`} />
+            <Stat
+              label={mode === 'test' ? 'Time left' : 'Time'}
+              value={formatSeconds(mode === 'test' ? testRemainingMs : elapsedMs)}
+            />
+          </div>
+        </section>
 
-        <p className="text-sm text-slate-400">{snippet.usage}</p>
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={typed}
-          onChange={onChange}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          placeholder={
-            status === 'idle'
-              ? mode === 'practice'
-                ? 'Start typing to begin…'
-                : 'Start typing to begin the 3-minute test…'
-              : ''
+        <section
+          className={
+            isZen
+              ? 'lx-card fixed inset-3 z-[200] flex flex-col justify-center space-y-4 overflow-auto p-5 shadow-2xl sm:inset-6 sm:p-8'
+              : 'lx-card space-y-4 p-5 sm:p-6'
           }
-          aria-label="Type the command"
-          className="lx-input w-full font-mono"
-          disabled={status === 'finished'}
-        />
-
-        <p className="text-xs text-slate-500">
-          {mode === 'practice' && status === 'idle' && 'Press a key to start the timer.'}
-          {mode === 'practice' &&
-            status === 'running' &&
-            `${remaining} character${remaining === 1 ? '' : 's'} left.`}
-          {mode === 'practice' && status === 'finished' && lastScore && (
-            <>
-              Round over: <strong>{lastScore.wpm} WPM</strong> at{' '}
-              <strong>{lastScore.accuracy}%</strong> accuracy.
-            </>
-          )}
-          {mode === 'test' && status === 'idle' && 'Press a key to start the 3-minute test.'}
-          {mode === 'test' &&
-            status === 'running' &&
-            `${remaining} character${remaining === 1 ? '' : 's'} left in this snippet — the next one loads automatically.`}
-          {mode === 'test' && status === 'finished' && testResult && (
-            <>
-              Time&apos;s up: <strong>{testResult.wpm} WPM</strong> at{' '}
-              <strong>{testResult.accuracy}%</strong> accuracy across{' '}
-              <strong>{testResult.snippets}</strong> snippet{testResult.snippets === 1 ? '' : 's'}.
-            </>
-          )}
-        </p>
-
-        {status === 'finished' && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
-              className="lx-btn lx-btn-primary"
-            >
-              <ArrowRightIcon size={14} /> {mode === 'practice' ? 'Try another' : 'Take test again'}
-            </button>
-            <Link href="/achievements" className="lx-btn lx-btn-secondary">
-              <TrophyIcon size={14} /> See your badges
-            </Link>
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-end justify-between">
-          <div>
-            <Pill tone="default">
-              <ClockIcon size={12} /> Best on this browser
-            </Pill>
-            <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Personal best</h2>
-          </div>
-        </div>
-        <div className="lx-card p-5 sm:p-6">
-          {ready && state.bestTyping ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label="Best WPM" value={state.bestTyping.wpm} />
-              <Stat label="Best accuracy" value={`${state.bestTyping.accuracy}%`} />
-              <Stat label="Characters typed" value={state.bestTyping.length} />
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {mode === 'practice' ? (
+              <Pill tone="accent">
+                <TargetIcon size={12} /> Round {practiceRoundsDone + 1}
+              </Pill>
+            ) : (
+              <Pill tone="accent">
+                <ClockIcon size={12} /> {testSnippetsDone} snippet{testSnippetsDone === 1 ? '' : 's'} completed
+              </Pill>
+            )}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSoundOn((v) => !v)}
+                className="lx-btn lx-btn-ghost lx-btn-sm px-2"
+                title={soundOn ? 'Mute keystroke sounds' : 'Enable keystroke sounds'}
+                aria-label="Toggle keystroke sounds"
+                aria-pressed={soundOn}
+              >
+                {soundOn ? <VolumeIcon size={13} /> : <VolumeOffIcon size={13} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsZen((v) => !v)}
+                className="lx-btn lx-btn-ghost lx-btn-sm px-2"
+                title={isZen ? 'Exit zen mode (Esc)' : 'Zen mode — distraction-free fullscreen'}
+                aria-label="Toggle zen mode"
+                aria-pressed={isZen}
+              >
+                {isZen ? <MinimizeIcon size={13} /> : <MaximizeIcon size={13} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
+                className="lx-btn lx-btn-ghost lx-btn-sm"
+                title={mode === 'practice' ? 'Pick a new snippet' : 'Restart the 3-minute test'}
+              >
+                <ResetIcon size={12} /> {mode === 'practice' ? 'New snippet' : 'Restart test'}
+              </button>
             </div>
-          ) : (
-            <p className="text-sm text-slate-400">
-              No runs yet on this browser. Finish a snippet (or a full test) to set a baseline.
-            </p>
+          </div>
+
+          {isZen && (
+            <div className="flex flex-wrap items-center gap-4 font-mono text-xs text-slate-400">
+              <span>{liveWpm} WPM</span>
+              <span>{accuracy}% accuracy</span>
+              <span>{formatSeconds(mode === 'test' ? testRemainingMs : elapsedMs)}</span>
+            </div>
           )}
-        </div>
-      </section>
-    </div>
+
+          <p
+            className="font-mono text-lg leading-relaxed sm:text-2xl"
+            aria-hidden
+          >
+            {snippet.text.split('').map((ch, idx) => {
+              const userChar = typed[idx];
+              const state =
+                userChar == null
+                  ? 'pending'
+                  : userChar === ch
+                    ? 'correct'
+                    : 'wrong';
+              const showCaret = status === 'running' && idx === typed.length;
+              return (
+                <span key={idx} className={showCaret ? 'relative' : undefined}>
+                  {showCaret && (
+                    <span
+                      className="absolute -left-px top-0 h-full w-[2px] animate-pulse bg-[var(--lx-accent)]"
+                      aria-hidden
+                    />
+                  )}
+                  <span
+                    className={
+                      state === 'correct'
+                        ? 'text-emerald-300'
+                        : state === 'wrong'
+                          ? 'text-rose-400 underline decoration-rose-500/60 underline-offset-2'
+                          : 'text-slate-500'
+                    }
+                  >
+                    {ch}
+                  </span>
+                </span>
+              );
+            })}
+            {status === 'running' && typed.length === snippet.text.length && (
+              <span
+                className="ml-px inline-block h-[1em] w-[2px] translate-y-[0.15em] animate-pulse bg-[var(--lx-accent)]"
+                aria-hidden
+              />
+            )}
+          </p>
+
+          <p className="text-sm text-slate-400">{snippet.usage}</p>
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={typed}
+            onChange={onChange}
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            placeholder={
+              status === 'idle'
+                ? mode === 'practice'
+                  ? 'Start typing to begin…'
+                  : 'Start typing to begin the 3-minute test…'
+                : ''
+            }
+            aria-label="Type the command"
+            className="lx-input w-full font-mono"
+            disabled={status === 'finished'}
+          />
+
+          <p className="text-xs text-slate-500">
+            {mode === 'practice' && status === 'idle' && 'Press a key to start the timer.'}
+            {mode === 'practice' &&
+              status === 'running' &&
+              `${remaining} character${remaining === 1 ? '' : 's'} left.`}
+            {mode === 'practice' && status === 'finished' && lastScore && (
+              <>
+                Round over: <strong>{lastScore.wpm} WPM</strong> at{' '}
+                <strong>{lastScore.accuracy}%</strong> accuracy.
+              </>
+            )}
+            {mode === 'test' && status === 'idle' && 'Press a key to start the 3-minute test.'}
+            {mode === 'test' &&
+              status === 'running' &&
+              `${remaining} character${remaining === 1 ? '' : 's'} left in this snippet — the next one loads automatically.`}
+            {mode === 'test' && status === 'finished' && testResult && (
+              <>
+                Time&apos;s up: <strong>{testResult.wpm} WPM</strong> at{' '}
+                <strong>{testResult.accuracy}%</strong> accuracy across{' '}
+                <strong>{testResult.snippets}</strong> snippet{testResult.snippets === 1 ? '' : 's'}.
+              </>
+            )}
+          </p>
+
+          {status === 'finished' && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => (mode === 'practice' ? resetPractice() : resetTest())}
+                className="lx-btn lx-btn-primary"
+              >
+                <ArrowRightIcon size={14} /> {mode === 'practice' ? 'Try another' : 'Take test again'}
+              </button>
+              <Link href="/achievements" className="lx-btn lx-btn-secondary">
+                <TrophyIcon size={14} /> See your badges
+              </Link>
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <Pill tone="default">
+                <ClockIcon size={12} /> Best on this browser
+              </Pill>
+              <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Personal best</h2>
+            </div>
+          </div>
+          <div className="lx-card p-5 sm:p-6">
+            {ready && state.bestTyping ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Stat label="Best WPM" value={state.bestTyping.wpm} />
+                <Stat label="Best accuracy" value={`${state.bestTyping.accuracy}%`} />
+                <Stat label="Characters typed" value={state.bestTyping.length} />
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">
+                No runs yet on this browser. Finish a snippet (or a full test) to set a baseline.
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
