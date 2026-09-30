@@ -23,7 +23,15 @@ import {
   type EditorKind,
   type EditorState,
 } from '@/lib/shell/editors';
-import { CopyIcon, HelpIcon, PlayIcon } from '@/components/ui/Icon';
+import {
+  CopyIcon,
+  HelpIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  PlayIcon,
+  VolumeIcon,
+  VolumeOffIcon,
+} from '@/components/ui/Icon';
 
 const EDITOR_KIND: Record<string, EditorKind> = {
   nano: 'nano',
@@ -50,6 +58,7 @@ const HELP_TEXT = [
   '',
   'Keyboard shortcuts:',
   '  \u2191 / \u2193    cycle through command history',
+  '  \u2192 / End  accept the dimmed history suggestion',
   '  Tab      autocomplete command name (basic)',
   '  Ctrl+L   clear the screen',
   '  Ctrl+C   abandon the current line',
@@ -58,6 +67,10 @@ const HELP_TEXT = [
   '  Ctrl+E   jump to end of line',
   '  Ctrl+W   delete previous word',
   '  Ctrl+Shift+V  paste from clipboard',
+  '  Esc      exit fullscreen',
+  '',
+  'Toolbar:',
+  '  Fullscreen and sound-effect toggles live in the top-right corner.',
 ].join('\r\n');
 
 export function Terminal({
@@ -79,8 +92,92 @@ export function Terminal({
   const ctxRef = useRef<ShellContext | null>(null);
   const completedRef = useRef(false);
   const editorRef = useRef<{ state: EditorState; path: string } | null>(null);
+  const ghostRef = useRef('');
+  const soundOnRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const isFullscreenRef = useRef(false);
 
   const [mounted, setMounted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+
+  // Restore the keystroke-sound preference (persisted per browser).
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('lx-terminal-sound') === '1') {
+        setSoundOn(true);
+      }
+    } catch {
+      /* localStorage blocked (private mode, etc.) — default stays off */
+    }
+  }, []);
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+    try {
+      window.localStorage.setItem('lx-terminal-sound', soundOn ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [soundOn]);
+
+  // Keep a ref in sync so the xterm key handler (registered once on mount)
+  // can read the current fullscreen state without re-subscribing.
+  useEffect(() => {
+    isFullscreenRef.current = isFullscreen;
+  }, [isFullscreen]);
+
+  // Escape exits fullscreen when focus is outside xterm (e.g. on the
+  // backdrop or toolbar) — unless a full-screen editor session (nano,
+  // vim, …) is capturing keystrokes, in which case Escape belongs to it.
+  // xterm's own textarea swallows keydown before it reaches `window`, so
+  // this is a fallback; the primary path is inside term.onKey below.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !editorRef.current) {
+        setIsFullscreen(false);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
+
+  // Re-fit xterm to its container once the fullscreen layout has settled.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      fitRef.current?.fit();
+      xtermRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isFullscreen]);
+
+  /** A soft, short oscillator blip for keystroke/enter feedback. No-op when muted or blocked by autoplay policy. */
+  function playTone(freq: number, duration = 0.03, volume = 0.05): void {
+    if (!soundOnRef.current) return;
+    try {
+      if (!audioCtxRef.current) {
+        const Ctor =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext;
+        if (!Ctor) return;
+        audioCtxRef.current = new Ctor();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      /* ignore — autoplay policies may block audio until user gesture */
+    }
+  }
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -306,17 +403,42 @@ export function Terminal({
     writePrompt();
     setMounted(true);
 
-    function writePrompt(): void {
+    function promptPrefix(): string {
       const c = ctxRef.current!;
       const path = c.cwd === HOME ? '~' : c.cwd;
-      term.write(`\r\n\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${path}\x1b[0m$ `);
+      return `\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${path}\x1b[0m$ `;
     }
 
-    function clearLine(): void {
-      term.write('\r\x1b[2K');
-      const c = ctxRef.current!;
-      const path = c.cwd === HOME ? '~' : c.cwd;
-      term.write(`\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${path}\x1b[0m$ ${bufferRef.current}`);
+    function writePrompt(): void {
+      term.write(`\r\n${promptPrefix()}`);
+    }
+
+    /**
+     * Fish/zsh-style history autosuggestion: the remainder of the most
+     * recent history entry that starts with the current buffer, or ''
+     * if nothing matches. Shown dimmed after the cursor; accepted with
+     * Right Arrow or End.
+     */
+    function computeGhost(buf: string): string {
+      if (!buf) return '';
+      const hist = historyRef.current;
+      for (let i = hist.length - 1; i >= 0; i--) {
+        const h = hist[i];
+        if (h.length > buf.length && h.startsWith(buf)) return h.slice(buf.length);
+      }
+      return '';
+    }
+
+    /** Redraws the current line: prompt, typed buffer, and any dimmed ghost suggestion, cursor left where typing left off. */
+    function redrawLine(): void {
+      const buf = bufferRef.current;
+      const ghost = computeGhost(buf);
+      ghostRef.current = ghost;
+      let out = '\r\x1b[2K' + promptPrefix() + buf;
+      if (ghost) {
+        out += `\x1b[2m${ghost}\x1b[0m\x1b[${ghost.length}D`;
+      }
+      term.write(out);
     }
 
     function submit(line: string): void {
@@ -344,6 +466,7 @@ export function Terminal({
       term.write('\r\n');
       const out = runCommand(line, ctxRef.current!);
       bufferRef.current = '';
+      ghostRef.current = '';
       histIndexRef.current = historyRef.current.length;
 
       if (Array.isArray(out)) {
@@ -395,8 +518,8 @@ export function Terminal({
       const parts = cleaned.split('\n');
       parts.forEach((part, i) => {
         if (part) {
-          term.write(part);
           bufferRef.current += part;
+          redrawLine();
         }
         if (i < parts.length - 1) {
           submit(bufferRef.current);
@@ -552,6 +675,13 @@ export function Terminal({
         return;
       }
 
+      // Escape exits fullscreen (xterm owns focus/keydown while typing,
+      // so this is the reliable path — see the window-level fallback above).
+      if (code === 27 && isFullscreenRef.current) {
+        setIsFullscreen(false);
+        return;
+      }
+
       // Ctrl+Shift+V: paste
       if (ev.ctrlKey && ev.shiftKey && (key === 'V' || code === 86)) {
         ev.preventDefault();
@@ -566,6 +696,7 @@ export function Terminal({
       }
 
       if (code === 13) {
+        playTone(520, 0.045, 0.05);
         const line = bufferRef.current;
         if (line.trim()) {
           historyRef.current.push(line);
@@ -578,8 +709,17 @@ export function Terminal({
       if (code === 8) {
         if (bufferRef.current.length > 0) {
           bufferRef.current = bufferRef.current.slice(0, -1);
-          term.write('\b \b');
+          redrawLine();
+          playTone(200, 0.02, 0.03);
         }
+        return;
+      }
+
+      // Right Arrow / End: accept the dimmed history suggestion, if any.
+      if ((code === 39 || code === 35) && ghostRef.current) {
+        ev.preventDefault?.();
+        bufferRef.current += ghostRef.current;
+        redrawLine();
         return;
       }
 
@@ -587,7 +727,7 @@ export function Terminal({
         if (historyRef.current.length === 0) return;
         histIndexRef.current = Math.max(0, histIndexRef.current - 1);
         bufferRef.current = historyRef.current[histIndexRef.current] ?? '';
-        clearLine();
+        redrawLine();
         return;
       }
 
@@ -598,7 +738,7 @@ export function Terminal({
           histIndexRef.current + 1,
         );
         bufferRef.current = historyRef.current[histIndexRef.current] ?? '';
-        clearLine();
+        redrawLine();
         return;
       }
 
@@ -612,6 +752,7 @@ export function Terminal({
       if (code === 67 && ev.ctrlKey && !ev.shiftKey) {
         term.write('^C');
         bufferRef.current = '';
+        ghostRef.current = '';
         writePrompt();
         return;
       }
@@ -626,7 +767,7 @@ export function Terminal({
       // Ctrl+U — erase line
       if (code === 85 && ev.ctrlKey) {
         bufferRef.current = '';
-        clearLine();
+        redrawLine();
         return;
       }
 
@@ -640,7 +781,7 @@ export function Terminal({
       // Ctrl+E — end of line
       if (code === 69 && ev.ctrlKey) {
         // We always redraw at end-of-line after writes, so just re-draw.
-        clearLine();
+        redrawLine();
         return;
       }
 
@@ -652,15 +793,16 @@ export function Terminal({
           lastSpace === -1 ? '' : trimmed.slice(0, lastSpace + 1);
         const removed = bufferRef.current.length - newBuf.length;
         if (removed > 0) {
-          term.write(`\r\x1b[2K\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${ctxRef.current!.cwd === HOME ? '~' : ctxRef.current!.cwd}\x1b[0m$ ${newBuf}`);
           bufferRef.current = newBuf;
+          redrawLine();
         }
         return;
       }
 
       if (key.length === 1 && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
         bufferRef.current += key;
-        term.write(key);
+        redrawLine();
+        playTone(340 + Math.random() * 60, 0.02, 0.035);
       }
     });
 
@@ -729,82 +871,113 @@ export function Terminal({
     });
   }
 
+  const containerClasses = isFullscreen
+    ? 'lx-card fixed inset-3 z-[200] flex flex-col overflow-hidden border-slate-800/80 shadow-2xl sm:inset-6'
+    : `lx-card flex h-full flex-col overflow-hidden border-slate-800/80 ${className}`;
+
   return (
-    <div
-      className={`lx-card flex h-full flex-col overflow-hidden border-slate-800/80 ${className}`}
-      role="group"
-      aria-label="Linux terminal sandbox"
-    >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/70 px-3 py-2 text-xs">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 rounded-full bg-red-500/80"
-            aria-hidden
-          />
-          <span
-            className="h-2.5 w-2.5 rounded-full bg-yellow-500/80"
-            aria-hidden
-          />
-          <span
-            className="h-2.5 w-2.5 rounded-full bg-green-500/80"
-            aria-hidden
-          />
-          <span className="ml-3 truncate font-mono text-slate-400">
-            learner@learninx:~
-          </span>
-          {mounted && (
-            <span
-              className="ml-2 hidden h-1.5 w-1.5 rounded-full bg-[var(--lx-success)] sm:inline-block"
-              title="Sandbox ready"
-              aria-label="Sandbox ready"
-            />
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            onClick={showHelpText}
-            className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
-            title="Show help"
-            aria-label="Show help"
-          >
-            <HelpIcon size={14} />
-            <span className="hidden sm:inline">Help</span>
-          </button>
-          {suggestion && (
-            <button
-              onClick={runSuggestion}
-              className="lx-btn lx-btn-secondary lx-btn-sm border-[var(--lx-success)]/30 bg-[var(--lx-success)]/10 text-[var(--lx-success)] hover:bg-[var(--lx-success)]/20 hover:text-[var(--lx-success)]"
-              title={`Run: ${suggestion.command}`}
-            >
-              <PlayIcon size={12} />
-              <span className="hidden sm:inline">Run</span>
-              <code className="font-mono text-[0.8em] opacity-90">
-                {suggestion.command}
-              </code>
-            </button>
-          )}
-        </div>
-      </div>
+    <>
+      {isFullscreen && (
+        <div
+          className="fixed inset-0 z-[199] bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setIsFullscreen(false)}
+          aria-hidden
+        />
+      )}
       <div
-        ref={containerRef}
-        className="min-h-0 flex-1 bg-[var(--lx-bg)] p-2"
-        onClick={() => xtermRef.current?.focus()}
-      />
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-800/80 bg-slate-900/50 px-3 py-1.5 text-[0.7rem] text-slate-500">
-        <span>
-          <CopyIcon size={11} className="-mt-0.5 mr-1 inline" />
-          Sandbox is isolated. Type{' '}
-          <code className="rounded bg-slate-800/80 px-1 py-0.5 font-mono text-[0.75em] text-slate-300">
-            help
-          </code>{' '}
-          for commands.
-        </span>
-        <span className="hidden font-mono sm:inline">
-          <kbd className="lx-kbd">Ctrl</kbd>+<kbd className="lx-kbd">Shift</kbd>+
-          <kbd className="lx-kbd">V</kbd> to paste
-        </span>
+        className={containerClasses}
+        role="group"
+        aria-label="Linux terminal sandbox"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/70 px-3 py-2 text-xs">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
+              className="h-2.5 w-2.5 rounded-full bg-red-500/80"
+              aria-hidden
+            />
+            <span
+              className="h-2.5 w-2.5 rounded-full bg-yellow-500/80"
+              aria-hidden
+            />
+            <span
+              className="h-2.5 w-2.5 rounded-full bg-green-500/80"
+              aria-hidden
+            />
+            <span className="ml-3 truncate font-mono text-slate-400">
+              learner@learninx:~
+            </span>
+            {mounted && (
+              <span
+                className="ml-2 hidden h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--lx-success)] sm:inline-block"
+                title="Sandbox ready"
+                aria-label="Sandbox ready"
+              />
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              onClick={() => setSoundOn((v) => !v)}
+              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
+              title={soundOn ? 'Mute keystroke sounds' : 'Enable keystroke sounds'}
+              aria-label="Toggle keystroke sounds"
+              aria-pressed={soundOn}
+            >
+              {soundOn ? <VolumeIcon size={14} /> : <VolumeOffIcon size={14} />}
+            </button>
+            <button
+              onClick={() => setIsFullscreen((v) => !v)}
+              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
+              title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
+              aria-label="Toggle fullscreen"
+              aria-pressed={isFullscreen}
+            >
+              {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+            </button>
+            <button
+              onClick={showHelpText}
+              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
+              title="Show help"
+              aria-label="Show help"
+            >
+              <HelpIcon size={14} />
+              <span className="hidden sm:inline">Help</span>
+            </button>
+            {suggestion && (
+              <button
+                onClick={runSuggestion}
+                className="lx-btn lx-btn-secondary lx-btn-sm border-[var(--lx-success)]/30 bg-[var(--lx-success)]/10 text-[var(--lx-success)] hover:bg-[var(--lx-success)]/20 hover:text-[var(--lx-success)]"
+                title={`Run: ${suggestion.command}`}
+              >
+                <PlayIcon size={12} />
+                <span className="hidden sm:inline">Run</span>
+                <code className="font-mono text-[0.8em] opacity-90">
+                  {suggestion.command}
+                </code>
+              </button>
+            )}
+          </div>
+        </div>
+        <div
+          ref={containerRef}
+          className="min-h-0 flex-1 bg-[var(--lx-bg)] p-2"
+          onClick={() => xtermRef.current?.focus()}
+        />
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-800/80 bg-slate-900/50 px-3 py-1.5 text-[0.7rem] text-slate-500">
+          <span>
+            <CopyIcon size={11} className="-mt-0.5 mr-1 inline" />
+            Sandbox is isolated. Type{' '}
+            <code className="rounded bg-slate-800/80 px-1 py-0.5 font-mono text-[0.75em] text-slate-300">
+              help
+            </code>{' '}
+            for commands.
+          </span>
+          <span className="hidden font-mono sm:inline">
+            <kbd className="lx-kbd">Ctrl</kbd>+<kbd className="lx-kbd">Shift</kbd>+
+            <kbd className="lx-kbd">V</kbd> to paste
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
