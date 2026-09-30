@@ -58,7 +58,9 @@ const HELP_TEXT = [
   '',
   'Keyboard shortcuts:',
   '  \u2191 / \u2193    cycle through command history',
-  '  \u2192 / End  accept the dimmed history suggestion',
+  '  \u2190 / \u2192    move the cursor within the line',
+  '  End      move to end of line \u2014 accepts the dimmed suggestion, if any',
+  '  Home     move to start of line',
   '  Tab      autocomplete command name (basic)',
   '  Ctrl+L   clear the screen',
   '  Ctrl+C   abandon the current line',
@@ -87,6 +89,7 @@ export function Terminal({
   const xtermRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const bufferRef = useRef('');
+  const cursorRef = useRef(0);
   const historyRef = useRef<string[]>([]);
   const histIndexRef = useRef<number>(0);
   const ctxRef = useRef<ShellContext | null>(null);
@@ -429,15 +432,25 @@ export function Terminal({
       return '';
     }
 
-    /** Redraws the current line: prompt, typed buffer, and any dimmed ghost suggestion, cursor left where typing left off. */
+    /**
+     * Redraws the current line: prompt, typed buffer, and — only when the
+     * cursor sits at the end of the buffer — a dimmed ghost suggestion.
+     * The real terminal cursor is left at `cursorRef.current`, so Left/
+     * Right arrow navigation and mid-line inserts/deletes render correctly.
+     */
     function redrawLine(): void {
       const buf = bufferRef.current;
-      const ghost = computeGhost(buf);
+      const cursor = Math.max(0, Math.min(cursorRef.current, buf.length));
+      cursorRef.current = cursor;
+      const atEnd = cursor === buf.length;
+      const ghost = atEnd ? computeGhost(buf) : '';
       ghostRef.current = ghost;
       let out = '\r\x1b[2K' + promptPrefix() + buf;
       if (ghost) {
-        out += `\x1b[2m${ghost}\x1b[0m\x1b[${ghost.length}D`;
+        out += `\x1b[2m${ghost}\x1b[0m\x1b[0m`;
       }
+      const back = buf.length - cursor + ghost.length;
+      if (back > 0) out += `\x1b[${back}D`;
       term.write(out);
     }
 
@@ -457,6 +470,7 @@ export function Terminal({
           .find((a) => a && !a.startsWith('-'));
         if (fileArg) {
           bufferRef.current = '';
+          cursorRef.current = 0;
           histIndexRef.current = historyRef.current.length;
           openEditor(kind, fileArg);
           return;
@@ -466,6 +480,7 @@ export function Terminal({
       term.write('\r\n');
       const out = runCommand(line, ctxRef.current!);
       bufferRef.current = '';
+      cursorRef.current = 0;
       ghostRef.current = '';
       histIndexRef.current = historyRef.current.length;
 
@@ -518,7 +533,10 @@ export function Terminal({
       const parts = cleaned.split('\n');
       parts.forEach((part, i) => {
         if (part) {
-          bufferRef.current += part;
+          const buf = bufferRef.current;
+          const cursor = cursorRef.current;
+          bufferRef.current = buf.slice(0, cursor) + part + buf.slice(cursor);
+          cursorRef.current = cursor + part.length;
           redrawLine();
         }
         if (i < parts.length - 1) {
@@ -599,9 +617,12 @@ export function Terminal({
      */
     function tabComplete(): void {
       const buf = bufferRef.current;
-      const lastSpace = buf.lastIndexOf(' ');
+      const cursor = cursorRef.current;
+      const before = buf.slice(0, cursor);
+      const after = buf.slice(cursor);
+      const lastSpace = before.lastIndexOf(' ');
       const isCommandPosition = lastSpace === -1;
-      const partial = isCommandPosition ? buf : buf.slice(lastSpace + 1);
+      const partial = isCommandPosition ? before : before.slice(lastSpace + 1);
 
       const matches = isCommandPosition
         ? COMMAND_NAMES.filter((c) => c.startsWith(partial))
@@ -610,30 +631,27 @@ export function Terminal({
 
       if (matches.length === 1) {
         const full = matches[0];
-        const extra = full.slice(partial.length);
-        if (extra) {
-          term.write(extra);
-          bufferRef.current += extra;
-        }
-        if (!full.endsWith('/')) {
-          term.write(' ');
-          bufferRef.current += ' ';
-        }
+        let newBefore = before + full.slice(partial.length);
+        if (!full.endsWith('/')) newBefore += ' ';
+        bufferRef.current = newBefore + after;
+        cursorRef.current = newBefore.length;
+        redrawLine();
         return;
       }
 
       const common = longestCommonPrefix(matches);
       if (common.length > partial.length) {
-        const extra = common.slice(partial.length);
-        term.write(extra);
-        bufferRef.current += extra;
+        const newBefore = before + common.slice(partial.length);
+        bufferRef.current = newBefore + after;
+        cursorRef.current = newBefore.length;
+        redrawLine();
         return;
       }
 
-      const c = ctxRef.current!;
-      const path = c.cwd === HOME ? '~' : c.cwd;
       term.write(`\r\n${matches.join('  ')}\r\n`);
-      term.write(`\x1b[32m${USER}@${HOST}\x1b[0m:\x1b[34m${path}\x1b[0m$ ${bufferRef.current}`);
+      term.write(promptPrefix() + buf);
+      const back = buf.length - cursor;
+      if (back > 0) term.write(`\x1b[${back}D`);
     }
 
     /** Normalizes a raw xterm keystroke into the editors module's key event shape. */
@@ -707,18 +725,65 @@ export function Terminal({
       }
 
       if (code === 8) {
-        if (bufferRef.current.length > 0) {
-          bufferRef.current = bufferRef.current.slice(0, -1);
+        const buf = bufferRef.current;
+        const cursor = cursorRef.current;
+        if (cursor > 0) {
+          bufferRef.current = buf.slice(0, cursor - 1) + buf.slice(cursor);
+          cursorRef.current = cursor - 1;
           redrawLine();
           playTone(200, 0.02, 0.03);
         }
         return;
       }
 
-      // Right Arrow / End: accept the dimmed history suggestion, if any.
-      if ((code === 39 || code === 35) && ghostRef.current) {
-        ev.preventDefault?.();
-        bufferRef.current += ghostRef.current;
+      // Delete — forward-delete the character under the cursor.
+      if (code === 46) {
+        const buf = bufferRef.current;
+        const cursor = cursorRef.current;
+        if (cursor < buf.length) {
+          bufferRef.current = buf.slice(0, cursor) + buf.slice(cursor + 1);
+          redrawLine();
+        }
+        return;
+      }
+
+      // Left Arrow — move the cursor back one character.
+      if (code === 37) {
+        if (cursorRef.current > 0) {
+          cursorRef.current -= 1;
+          redrawLine();
+        }
+        return;
+      }
+
+      // Right Arrow — move forward one character, or (only once the
+      // cursor is already at the end) accept the dimmed suggestion.
+      if (code === 39) {
+        const buf = bufferRef.current;
+        if (cursorRef.current < buf.length) {
+          cursorRef.current += 1;
+          redrawLine();
+        } else if (ghostRef.current) {
+          bufferRef.current = buf + ghostRef.current;
+          cursorRef.current = bufferRef.current.length;
+          redrawLine();
+        }
+        return;
+      }
+
+      // Home — start of line.
+      if (code === 36) {
+        cursorRef.current = 0;
+        redrawLine();
+        return;
+      }
+
+      // End — end of line, accepting the dimmed suggestion, if any.
+      if (code === 35) {
+        if (ghostRef.current && cursorRef.current === bufferRef.current.length) {
+          bufferRef.current += ghostRef.current;
+        }
+        cursorRef.current = bufferRef.current.length;
         redrawLine();
         return;
       }
@@ -727,6 +792,7 @@ export function Terminal({
         if (historyRef.current.length === 0) return;
         histIndexRef.current = Math.max(0, histIndexRef.current - 1);
         bufferRef.current = historyRef.current[histIndexRef.current] ?? '';
+        cursorRef.current = bufferRef.current.length;
         redrawLine();
         return;
       }
@@ -738,6 +804,7 @@ export function Terminal({
           histIndexRef.current + 1,
         );
         bufferRef.current = historyRef.current[histIndexRef.current] ?? '';
+        cursorRef.current = bufferRef.current.length;
         redrawLine();
         return;
       }
@@ -752,6 +819,7 @@ export function Terminal({
       if (code === 67 && ev.ctrlKey && !ev.shiftKey) {
         term.write('^C');
         bufferRef.current = '';
+        cursorRef.current = 0;
         ghostRef.current = '';
         writePrompt();
         return;
@@ -767,40 +835,47 @@ export function Terminal({
       // Ctrl+U — erase line
       if (code === 85 && ev.ctrlKey) {
         bufferRef.current = '';
+        cursorRef.current = 0;
         redrawLine();
         return;
       }
 
       // Ctrl+A — start of line
       if (code === 65 && ev.ctrlKey) {
-        const len = bufferRef.current.length;
-        if (len > 0) term.write(`\r\x1b[${len}C`);
+        cursorRef.current = 0;
+        redrawLine();
         return;
       }
 
       // Ctrl+E — end of line
       if (code === 69 && ev.ctrlKey) {
-        // We always redraw at end-of-line after writes, so just re-draw.
+        cursorRef.current = bufferRef.current.length;
         redrawLine();
         return;
       }
 
-      // Ctrl+W — delete previous word
+      // Ctrl+W — delete the word immediately before the cursor
       if (code === 87 && ev.ctrlKey) {
-        const trimmed = bufferRef.current.replace(/\s+$/, '');
+        const buf = bufferRef.current;
+        const cursor = cursorRef.current;
+        const before = buf.slice(0, cursor);
+        const after = buf.slice(cursor);
+        const trimmed = before.replace(/\s+$/, '');
         const lastSpace = trimmed.lastIndexOf(' ');
-        const newBuf =
-          lastSpace === -1 ? '' : trimmed.slice(0, lastSpace + 1);
-        const removed = bufferRef.current.length - newBuf.length;
-        if (removed > 0) {
-          bufferRef.current = newBuf;
+        const newBefore = lastSpace === -1 ? '' : trimmed.slice(0, lastSpace + 1);
+        if (newBefore.length !== before.length) {
+          bufferRef.current = newBefore + after;
+          cursorRef.current = newBefore.length;
           redrawLine();
         }
         return;
       }
 
       if (key.length === 1 && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
-        bufferRef.current += key;
+        const buf = bufferRef.current;
+        const cursor = cursorRef.current;
+        bufferRef.current = buf.slice(0, cursor) + key + buf.slice(cursor);
+        cursorRef.current = cursor + 1;
         redrawLine();
         playTone(340 + Math.random() * 60, 0.02, 0.035);
       }
