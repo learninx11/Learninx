@@ -4,10 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIcon,
   ArrowRightIcon,
+  BoltIcon,
   BookmarkIcon,
   CheckIcon,
+  CloudIcon,
   FilterIcon,
+  LayersIcon,
   SearchIcon,
   SparklesIcon,
   TerminalIcon,
@@ -15,7 +19,7 @@ import {
 import { Pill, ProgressBar } from '@/components/ui/Pill';
 import { StreakWidget } from '@/components/StreakWidget';
 import { useProgress } from '@/lib/progress-context';
-import type { Difficulty, Lesson } from '@/lib/types';
+import type { Difficulty, Lesson, LessonTrack } from '@/lib/types';
 
 const DIFFICULTY_ORDER: Difficulty[] = ['beginner', 'intermediate', 'advanced', 'expert'];
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
@@ -23,6 +27,29 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   intermediate: 'Intermediate',
   advanced: 'Advanced',
   expert: 'Expert',
+};
+
+const TRACK_ORDER: LessonTrack[] = ['linux', 'cicd', 'cloud', 'observability', 'containers'];
+const TRACK_LABELS: Record<LessonTrack, string> = {
+  linux: 'Linux Fundamentals',
+  cicd: 'CI/CD & Jenkins',
+  cloud: 'Cloud',
+  observability: 'Observability',
+  containers: 'Containers & Kubernetes',
+};
+const TRACK_ICONS: Record<LessonTrack, React.ReactNode> = {
+  linux: <TerminalIcon size={11} />,
+  cicd: <BoltIcon size={11} />,
+  cloud: <CloudIcon size={11} />,
+  observability: <ActivityIcon size={11} />,
+  containers: <LayersIcon size={11} />,
+};
+const TRACK_SHORT_LABELS: Record<LessonTrack, string> = {
+  linux: 'Linux',
+  cicd: 'CI/CD',
+  cloud: 'Cloud',
+  observability: 'Observability',
+  containers: 'Containers',
 };
 
 type StatusFilter = 'all' | 'completed' | 'todo' | 'bookmarked';
@@ -38,6 +65,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
   const { completedSet, state, ready } = useProgress();
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
+  const [track, setTrack] = useState<LessonTrack | 'all'>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -107,6 +135,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
     const q = query.trim().toLowerCase();
     return lessonsWithStatus.filter((l) => {
       if (difficulty !== 'all' && l.difficulty !== difficulty) return false;
+      if (track !== 'all' && l.track !== track) return false;
       if (status === 'completed' && !l.completed) return false;
       if (status === 'todo' && l.completed) return false;
       if (status === 'bookmarked' && !l.bookmarked) return false;
@@ -118,6 +147,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
           l.slug,
           l.trackCommand ?? '',
           l.difficulty,
+          TRACK_LABELS[l.track],
           l.content.slice(0, 200),
         ]
           .join(' ')
@@ -126,7 +156,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
       }
       return true;
     });
-  }, [lessonsWithStatus, query, difficulty, status]);
+  }, [lessonsWithStatus, query, difficulty, track, status]);
 
   const grouped = useMemo(
     () =>
@@ -147,7 +177,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
   const displayCompleted = ready ? completed : 0;
   const displayQuizCount = ready ? quizAttempts : 0;
   const totalMatching = filtered.length;
-  const showResultsHint = query || difficulty !== 'all' || status !== 'all';
+  const showResultsHint = query || difficulty !== 'all' || track !== 'all' || status !== 'all';
 
   return (
     <div className="space-y-10">
@@ -160,7 +190,9 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
         </h1>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-2xl text-[var(--lx-muted)]">
-            Work through the chapters in order. Each lesson ends with a small
+            Work through the chapters in order. Linux fundamentals, then a full
+            DevOps track - CI/CD &amp; Jenkins, Cloud, Observability, and
+            Containers &amp; Kubernetes. Each lesson ends with a small
             challenge. Your progress is saved on this browser.
           </p>
           <button
@@ -215,6 +247,24 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 text-xs text-[var(--lx-muted)]">
+            <FilterIcon size={12} /> Track
+          </span>
+          <Chip
+            label="All"
+            active={track === 'all'}
+            onClick={() => setTrack('all')}
+          />
+          {TRACK_ORDER.map((t) => (
+            <Chip
+              key={t}
+              label={TRACK_LABELS[t]}
+              active={track === t}
+              onClick={() => setTrack(t)}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs text-[var(--lx-muted)]">
             <FilterIcon size={12} /> Difficulty
           </span>
           <Chip
@@ -256,7 +306,8 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
           <p className="text-xs text-[var(--lx-muted)]">
             Showing {totalMatching} of {lessons.length} lessons
             {query ? ` matching “${query}”` : ''}
-            {difficulty !== 'all' ? ` in ${DIFFICULTY_LABELS[difficulty]}` : ''}
+            {track !== 'all' ? ` in ${TRACK_LABELS[track]}` : ''}
+            {difficulty !== 'all' ? ` at ${DIFFICULTY_LABELS[difficulty]}` : ''}
             {status !== 'all' ? ` · ${statusLabel(status)}` : ''}
             {' · '}
             <button
@@ -264,6 +315,7 @@ export function LessonsIndexClient({ lessons }: { lessons: Lesson[] }) {
               onClick={() => {
                 setQuery('');
                 setDifficulty('all');
+                setTrack('all');
                 setStatus('all');
               }}
               className="text-[var(--lx-accent)] hover:underline"
@@ -365,6 +417,9 @@ function LessonRow({
             <h2 className="truncate font-semibold text-[var(--lx-fg)]">
               <Highlighted text={lesson.title} query={query} />
             </h2>
+            <Pill tone="default" className="!text-[0.65rem]">
+              {TRACK_ICONS[lesson.track]} {TRACK_SHORT_LABELS[lesson.track]}
+            </Pill>
             {lesson.completed && <Pill tone="success">Completed</Pill>}
             {lesson.bookmarked && (
               <Pill tone="accent">

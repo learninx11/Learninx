@@ -20,6 +20,7 @@ export const LESSONS: Lesson[] = [
     title: 'Getting Started with Linux',
     description: 'What Linux is, the shell, and your first commands.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 1,
     trackCommand: 'whoami',
     challenge: 'Use a single command to print the word `linux` to the screen.',
@@ -62,6 +63,7 @@ When you're ready, hit **Mark complete** and move to the next lesson.
     title: 'Filesystem Navigation',
     description: 'Move around the filesystem with `pwd`, `ls`, and `cd`.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 2,
     trackCommand: 'ls',
     challenge: 'From `/home/learner`, change into the `projects` directory.',
@@ -107,6 +109,7 @@ cd ~               # back home
     title: 'Creating and Manipulating Files',
     description: 'touch, mkdir, cp, mv, rm - the core file operations.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 3,
     trackCommand: 'mkdir',
     challenge:
@@ -158,6 +161,7 @@ You'll often edit files straight from the terminal:
     title: 'Pipes and Redirection',
     description: 'Chain commands with pipes, and send output to files with > and >>.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 4,
     trackCommand: 'echo',
     challenge:
@@ -232,6 +236,7 @@ wc -l < status.txt
     title: 'Environment Variables and PATH',
     description: 'Read and set variables with $VAR, export, and understand PATH.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 5,
     trackCommand: 'export',
     challenge:
@@ -300,6 +305,7 @@ env
     title: 'Users and Permissions',
     description: 'Understand users, groups, and the chmod / chown commands.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 6,
     trackCommand: 'chmod',
     challenge:
@@ -364,6 +370,7 @@ Servers get hacked because files are too permissive. When in doubt, *least privi
     title: 'Text Processing with grep, sed, and awk',
     description: 'Search, transform, and extract fields from text on the command line.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 7,
     trackCommand: 'grep',
     challenge:
@@ -440,6 +447,7 @@ grep -c TODO report.txt
     title: 'Finding Files with find and xargs',
     description: 'Locate files by name or pattern, then act on all of them at once.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 8,
     trackCommand: 'find',
     challenge:
@@ -494,6 +502,7 @@ The list is empty on the last line - every match was deleted in one step.
     title: 'Processes and the System',
     description: 'ps, top, kill, and how to find what is running.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 9,
     trackCommand: 'ps',
     challenge:
@@ -543,6 +552,7 @@ These tools are your first stop when something is wrong on a server.
     title: 'Archives and Compression',
     description: 'Bundle files with tar, and shrink them with gzip.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 10,
     trackCommand: 'tar',
     challenge: 'Bundle the `site` directory into a single archive called `site.tar` using tar.',
@@ -609,6 +619,7 @@ Everything comes back exactly as it was, even though \`site/\` itself was delete
     title: 'Package Management',
     description: 'Install, remove, and search for software with apt.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 11,
     trackCommand: 'apt',
     challenge:
@@ -671,6 +682,7 @@ apt remove git
     title: 'The History of Linux',
     description: 'From Unix at Bell Labs to the kernel that runs the cloud, decade by decade.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 0,
     content: `# The History of Linux
 
@@ -757,6 +769,7 @@ From a hobby project announced almost apologetically on Usenet in 1991, Linux ha
     title: 'Shell Scripting Basics',
     description: 'Turn a sequence of commands into a reusable script: variables, conditionals, loops, and functions.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 12,
     trackCommand: 'chmod',
     challenge:
@@ -895,6 +908,7 @@ chmod +x greet.sh
     title: 'Networking Basics',
     description: 'How Linux machines talk to each other: ping, curl, wget, ssh, and interfaces.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 13,
     trackCommand: 'ping',
     challenge:
@@ -990,6 +1004,7 @@ ssh learner@example.com
     title: 'systemd and Services',
     description: 'How modern Linux starts, supervises, and logs background services with systemctl.',
     difficulty: 'advanced',
+    track: 'linux',
     order: 14,
     trackCommand: 'systemctl',
     challenge:
@@ -1080,6 +1095,7 @@ systemctl disable nginx
     title: 'Linux Security Basics',
     description: 'sudo, least privilege, SSH keys, and the habits that keep a server from getting hacked.',
     difficulty: 'advanced',
+    track: 'linux',
     order: 15,
     trackCommand: 'sudo',
     challenge: 'Use sudo to refresh the package index with a single elevated command.',
@@ -1161,6 +1177,7 @@ Notice the \`-rw-------\` on the key file in the listing - owner read/write, not
     title: 'Job Scheduling',
     description: 'Run commands automatically with cron, at, and their modern systemd-timer replacement.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 16,
     trackCommand: 'echo',
     challenge:
@@ -1272,6 +1289,7 @@ atq
     title: 'Disks and Filesystems',
     description: 'Block devices, partitions, mount points, df vs du, inodes, and hard vs symbolic links.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 17,
     trackCommand: 'lsblk',
     challenge:
@@ -1377,6 +1395,7 @@ umount /mnt/data
     title: 'Vim Editor Mastery',
     description: 'Modes, motions, and the editing workflow behind the editor on almost every Linux box.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 18,
     trackCommand: 'vim',
     challenge:
@@ -1469,6 +1488,7 @@ That opens the real editor. From there: press \`i\`, type a sentence, \`Esc\`, t
     title: 'Getting Help: man, help, and Reading Docs',
     description: 'man pages, --help, apropos, and the habit of looking things up instead of memorizing them.',
     difficulty: 'beginner',
+    track: 'linux',
     order: 19,
     trackCommand: 'man',
     challenge:
@@ -1550,6 +1570,7 @@ Notice \`man nosuchcommand\` fails cleanly with "No manual entry" - that's the c
     title: 'Regular Expressions',
     description: 'Anchors, character classes, quantifiers, and alternation - pattern matching with grep and sed.',
     difficulty: 'intermediate',
+    track: 'linux',
     order: 20,
     trackCommand: 'grep',
     challenge:
@@ -1646,6 +1667,7 @@ sed 's/([A-Z][a-z]+) ([A-Z][a-z]+)/\\2 \\1/' name.txt
     title: 'Advanced Networking & Diagnostics',
     description: 'Reading netstat/ss output, DNS with dig, and tracing a route hop by hop.',
     difficulty: 'advanced',
+    track: 'linux',
     order: 21,
     trackCommand: 'ss',
     challenge:
@@ -1745,6 +1767,7 @@ traceroute example.com
     title: 'Process Signals & Job Control',
     description: 'What kill actually sends, the signals worth knowing, and running work in the background.',
     difficulty: 'advanced',
+    track: 'linux',
     order: 22,
     trackCommand: 'jobs',
     challenge: 'Start `sleep 30` as a background job with a single command.',
@@ -1826,6 +1849,7 @@ nohup ping example.com
     title: 'Firewalls & Network Security',
     description: 'Default-deny thinking, ufw in practice, and how it relates to iptables underneath.',
     difficulty: 'advanced',
+    track: 'linux',
     order: 23,
     trackCommand: 'ufw',
     challenge: 'Enable the firewall, then allow SSH traffic through it. Do both in one line joined with `&&`.',
@@ -1919,6 +1943,7 @@ iptables -L
     title: 'The Linux Boot Process & Kernel',
     description: 'From power-on to a login prompt: firmware, bootloader, kernel, initramfs, and PID 1.',
     difficulty: 'expert',
+    track: 'linux',
     order: 24,
     trackCommand: 'dmesg',
     challenge: 'Print detailed kernel version information, then view the kernel\'s boot log. Do both in one line joined with `&&`.',
@@ -2002,6 +2027,7 @@ modprobe nonexistent-driver
     title: 'Containers From First Principles',
     description: 'The kernel features - namespaces and cgroups - that Docker and Kubernetes are built on.',
     difficulty: 'expert',
+    track: 'linux',
     order: 25,
     trackCommand: 'ps',
     challenge: 'Print the current kernel version, then list every running process - the two things a container runtime checks before it starts anything. Do both in one line joined with `&&`.',
@@ -2075,6 +2101,7 @@ docker run alpine
     title: 'Performance Troubleshooting',
     description: 'Reading load average, top, and vmstat to find whether CPU, memory, or I/O is the bottleneck.',
     difficulty: 'expert',
+    track: 'linux',
     order: 26,
     trackCommand: 'top',
     challenge:
@@ -2180,6 +2207,1108 @@ strace -p 1234
 
 - **"Systems Performance"** by Brendan Gregg (Addison-Wesley) - the definitive book on this entire topic, written by the engineer who popularized the USE method.
 - **"How Linux Works"** by Brian Ward (No Starch Press) - explains what the kernel is actually tracking behind \`top\`, \`free\`, and \`vmstat\`'s numbers.
+`,
+  },
+
+  // ─────────────────────────── CI/CD & Jenkins ───────────────────────────
+  {
+    id: 'cicd-fundamentals',
+    slug: 'cicd-fundamentals',
+    title: 'CI/CD Fundamentals',
+    description: 'What continuous integration and continuous delivery actually mean, and why teams automate the path from commit to running software.',
+    difficulty: 'beginner',
+    track: 'cicd',
+    order: 27,
+    trackCommand: 'git init',
+    challenge: 'Initialize a brand-new git repository in the current directory.',
+    solution: 'git init',
+    content: `# CI/CD Fundamentals
+
+Every commit a developer makes eventually has to become running software. **CI/CD** is the set of practices that automates that journey instead of leaving it to someone remembering to run the right commands in the right order.
+
+## Continuous Integration (CI)
+
+**CI** means every developer merges their changes into a shared branch frequently - often several times a day - and a machine automatically **builds** the project and **runs the test suite** on every merge.
+
+The payoff: if two people's changes conflict, or someone breaks a test, you find out in minutes, not weeks later when it's tangled up with a dozen other changes.
+
+## Continuous Delivery vs. Continuous Deployment
+
+These two terms get used interchangeably, but they're not the same:
+
+| Term                   | What happens after tests pass                          |
+| ---------------------- | -------------------------------------------------------- |
+| Continuous **Delivery** | A release is built and ready to ship - a human clicks "deploy". |
+| Continuous **Deployment** | It ships to production automatically, no human in the loop.  |
+
+Most teams start with delivery (a safety net of human judgment before production) and graduate to full deployment once their test suite is trustworthy enough.
+
+## The pipeline shape
+
+Nearly every CI/CD pipeline, regardless of the tool running it, boils down to the same stages:
+
+\`\`\`
+checkout → build → test → package → deploy
+\`\`\`
+
+Every stage after \`checkout\` only runs if the one before it succeeded - that's the whole point. A failing test should stop a bad build from ever reaching a deploy step.
+
+## Why bother automating it?
+
+- **Fast feedback** - a broken build is caught in minutes, while the change is still fresh in the author's head.
+- **Consistency** - the exact same steps run every time, with no "works on my machine" variance.
+- **Confidence** - a green pipeline is a receipt that the thing you're about to ship actually builds and passes its tests.
+
+Every pipeline needs somewhere to track changes before it can build anything from them - that's **git**, which you'll use constantly across this track.
+
+Try it in the sandbox:
+
+\`\`\`bash
+git init
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'jenkins-intro',
+    slug: 'jenkins-intro',
+    title: 'Introduction to Jenkins',
+    description: 'What Jenkins is, how its controller/agent model works, and the difference between a freestyle job and a pipeline.',
+    difficulty: 'beginner',
+    track: 'cicd',
+    order: 28,
+    trackCommand: 'systemctl status jenkins',
+    challenge: 'Check whether the jenkins service is currently active on this machine.',
+    solution: 'systemctl status jenkins',
+    content: `# Introduction to Jenkins
+
+**Jenkins** is an open-source automation server, and for a long time the default answer to "how do we run CI/CD here." It's free, endlessly extensible via plugins, and still runs the pipelines of a huge share of the software industry.
+
+## Controller and agents
+
+Jenkins splits its work across two roles:
+
+- The **controller** (historically called the "master") - the brain. It holds configuration, schedules work, and serves the web UI.
+- **Agents** (historically "slaves") - the machines that actually run your builds. A controller can farm work out to dozens of agents, each with different tools installed (a Node agent, a Java agent, a GPU agent for ML builds, and so on).
+
+This split matters because it lets Jenkins scale: the controller stays lightweight, and you add agents when you need more build capacity.
+
+## Jobs vs. Pipelines
+
+Jenkins has two very different ways to define "what to run":
+
+- A **Freestyle job** - a set of build steps configured by clicking through a web form. Quick to set up, hard to review or version.
+- A **Pipeline** - the modern approach: the steps live in code (a \`Jenkinsfile\`), checked into your repository right alongside the application it builds.
+
+Almost every team writing new automation today reaches for Pipelines - you'll build one in the next lesson.
+
+## Checking on a service
+
+Jenkins itself typically runs as a background service, managed the same way any other long-running Linux service is - with \`systemctl\`:
+
+\`\`\`bash
+systemctl status jenkins
+\`\`\`
+
+A healthy Jenkins controller shows up as \`active (running)\`, the exact same way nginx or any other daemon would.
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'jenkinsfile-basics',
+    slug: 'jenkinsfile-basics',
+    title: 'Writing a Jenkinsfile',
+    description: 'Declarative pipeline syntax: stages, steps, and keeping your pipeline checked into source control.',
+    difficulty: 'intermediate',
+    track: 'cicd',
+    order: 29,
+    trackCommand: 'touch Jenkinsfile',
+    challenge: 'Create an empty file named `Jenkinsfile` in the current directory - the first step toward pipeline-as-code.',
+    solution: 'touch Jenkinsfile',
+    content: `# Writing a Jenkinsfile
+
+A \`Jenkinsfile\` is a text file, committed to your repository, that describes your entire pipeline. This is **pipeline as code**: the build process gets reviewed in pull requests, versioned alongside the app, and never lives only in someone's memory of how the Jenkins UI was clicked through.
+
+## Declarative pipeline shape
+
+The most common style is the **declarative pipeline** - a structured block that reads almost like a checklist:
+
+\`\`\`groovy
+pipeline {
+  agent any
+
+  stages {
+    stage('Build') {
+      steps {
+        sh 'npm install'
+        sh 'npm run build'
+      }
+    }
+    stage('Test') {
+      steps {
+        sh 'npm test'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        sh './deploy.sh'
+      }
+    }
+  }
+
+  post {
+    failure {
+      echo 'Pipeline failed - notify the team'
+    }
+  }
+}
+\`\`\`
+
+## Reading it piece by piece
+
+- \`agent any\` - run this pipeline on whichever available agent Jenkins picks.
+- \`stages\` - the ordered list of phases. Each \`stage\` shows up as its own box in the Jenkins UI, so you can see exactly which one failed.
+- \`steps\` - the actual shell commands (\`sh '...'\`) that do the work inside a stage.
+- \`post\` - runs after everything else, regardless of outcome - the natural place for notifications, cleanup, or artifact archiving.
+
+## Why the file lives in your repo
+
+Because the \`Jenkinsfile\` travels with the code, a pull request that changes the test command, or adds a new deployment step, is reviewed exactly like any other code change - no separate "go click this setting in Jenkins" step that someone inevitably forgets to do.
+
+Create one now:
+
+\`\`\`bash
+touch Jenkinsfile
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'jenkins-triggers',
+    slug: 'jenkins-triggers',
+    title: 'Build Triggers & Webhooks',
+    description: 'Polling SCM, GitHub webhooks, and scheduled builds - what actually kicks off a Jenkins pipeline.',
+    difficulty: 'advanced',
+    track: 'cicd',
+    order: 30,
+    trackCommand: 'echo',
+    challenge:
+      'Write a crontab line into a file called `nightly-build` that runs `/usr/local/bin/run-pipeline.sh` every night at 1:00 AM, using a single redirected `echo`.',
+    solution: "echo '0 1 * * * /usr/local/bin/run-pipeline.sh' > nightly-build",
+    content: `# Build Triggers & Webhooks
+
+A pipeline sitting in a \`Jenkinsfile\` does nothing until something tells Jenkins to run it. There are three common ways that happens.
+
+## 1. Webhooks (push-triggered)
+
+Your git host (GitHub, GitLab, Bitbucket) calls a URL on your Jenkins controller the instant someone pushes a commit. Jenkins starts the build within seconds, with zero delay and zero wasted checks when nothing has changed.
+
+This is the gold standard for responsiveness, but it requires your Jenkins controller to be reachable from the internet (or at least from your git host) - not always true for a controller sitting deep inside a private network.
+
+## 2. Polling SCM
+
+If a webhook isn't possible, Jenkins can instead check the repository on a schedule - "every 5 minutes, has anything changed? If so, build." It's less instant and wastes a small amount of work on every check that finds nothing new, but it works from anywhere Jenkins can reach the repo, no inbound connection required.
+
+## 3. Scheduled builds (cron syntax)
+
+Some builds don't wait on a code change at all - a nightly full-suite run, a weekly dependency-update check. These use the exact same five-field cron syntax you'd put in a real crontab:
+
+\`\`\`
+minute hour day-of-month month day-of-week
+0      1    *             *     *
+\`\`\`
+
+Jenkins adds one twist: an \`H\` in place of a number (\`H 1 * * *\`) tells it to pick a consistent-but-spread-out minute itself, so a thousand jobs scheduled for "1 AM" don't all slam the build farm in the exact same 60 seconds.
+
+## Try it
+
+Real cron, outside of Jenkins, works the same way - a line in a file, loaded with \`crontab\`:
+
+\`\`\`bash
+echo '0 1 * * * /usr/local/bin/run-pipeline.sh' > nightly-build
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'jenkins-deploy',
+    slug: 'jenkins-deploy',
+    title: 'Deploying from a Pipeline',
+    description: "Turning a green build into a release: artifacts, environments, and shipping code out over SSH.",
+    difficulty: 'expert',
+    track: 'cicd',
+    order: 31,
+    trackCommand: 'ssh deploy@prod-server',
+    challenge: 'Connect to the production deploy target over SSH as the `deploy` user.',
+    solution: 'ssh deploy@prod-server',
+    content: `# Deploying from a Pipeline
+
+Build and test stages prove the code works. The **deploy** stage is where it actually starts running somewhere real - and where mistakes are the most expensive, so it deserves its own habits.
+
+## Build once, promote everywhere
+
+A common mistake: rebuilding the application separately for dev, staging, and production. That means three different builds, and no real guarantee they're identical.
+
+The fix: build **one** artifact (a jar, a Docker image, a zip of static assets), and promote that *exact same* artifact through each environment:
+
+\`\`\`
+build → artifact.zip → deploy to dev → deploy to staging → deploy to prod
+\`\`\`
+
+If it passed staging, production is getting the literal bytes that were tested - not a "should be the same" rebuild.
+
+## Common deploy steps
+
+A deploy stage in a Jenkinsfile is usually just shell commands wired up to move that artifact somewhere and restart a service:
+
+\`\`\`groovy
+stage('Deploy') {
+  steps {
+    sh 'scp build/app.jar deploy@prod-server:/opt/app/'
+    sh 'ssh deploy@prod-server "systemctl restart app"'
+  }
+}
+\`\`\`
+
+\`rsync\` is a frequent upgrade over plain \`scp\` for anything bigger than a single file, since it only transfers what actually changed.
+
+## Rollback is part of the plan, not an afterthought
+
+The deploy stage that matters most is the one that *hasn't failed yet*. Keep the previous artifact around, and know exactly how you'd restore it:
+
+- Re-deploy the last-known-good artifact.
+- Or keep two environments ("blue" and "green") and just flip which one receives traffic.
+
+A deploy step without a rollback plan isn't really a safety net - it's a bet.
+
+## Try it
+
+\`\`\`bash
+ssh deploy@prod-server
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+
+  // ─────────────────────────── Cloud fundamentals ───────────────────────────
+  {
+    id: 'cloud-computing-basics',
+    slug: 'cloud-computing-basics',
+    title: 'Cloud Computing Basics',
+    description: 'IaaS, PaaS, and SaaS, and why renting compute changed how software gets built.',
+    difficulty: 'beginner',
+    track: 'cloud',
+    order: 32,
+    trackCommand: 'curl -I https://api.example-cloud.com',
+    challenge:
+      "Send a HEAD request to `https://api.example-cloud.com` to check the cloud provider's API is reachable, without downloading the body.",
+    solution: 'curl -I https://api.example-cloud.com',
+    content: `# Cloud Computing Basics
+
+**Cloud computing** means renting someone else's computers - over the internet, by the hour or by the second - instead of buying and racking your own hardware.
+
+## The three service models
+
+| Model | What the provider manages | What you still manage | Example |
+| ----- | -------------------------- | ---------------------- | ------- |
+| **IaaS** (Infrastructure) | Physical servers, networking, virtualization | OS, runtime, your app | A virtual machine |
+| **PaaS** (Platform) | + the OS and runtime | Just your application code | A managed app platform |
+| **SaaS** (Software) | Everything, including the app | Just your data and settings | Gmail, Slack |
+
+Each layer up the stack trades flexibility for less to manage. DevOps work tends to live mostly in the IaaS layer and the tooling that sits just above it.
+
+## Why it changed everything
+
+Before the cloud, getting a new server meant ordering hardware, waiting days or weeks for it to arrive, and racking it yourself. Three properties flipped that:
+
+- **On-demand** - a new server exists in seconds, not weeks.
+- **Elastic** - scale from one instance to a thousand and back, automatically, as load changes.
+- **Pay-as-you-go** - pay for what you used this hour, not what you guessed you'd need this year.
+
+## Regions and Availability Zones
+
+Every major provider splits the world into **regions** (e.g. "US East", "EU West"), and each region into multiple **Availability Zones** - physically separate data centers with independent power and networking.
+
+Spreading a service across AZs within a region is the cheapest insurance against "one data center had a bad day" taking your whole application down with it.
+
+## Shared responsibility
+
+The provider secures the cloud itself (physical security, the hypervisor, their network). You're still responsible for securing what you put *in* the cloud - your data, your access controls, your configuration. A misconfigured storage bucket is on you, not them.
+
+## Try it
+
+\`\`\`bash
+curl -I https://api.example-cloud.com
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'cloud-compute',
+    slug: 'cloud-compute',
+    title: 'Compute in the Cloud',
+    description: 'Virtual machines, auto-scaling groups, and load balancers - the building blocks behind "just add more servers."',
+    difficulty: 'intermediate',
+    track: 'cloud',
+    order: 33,
+    trackCommand: 'ps aux',
+    challenge: "A cloud instance is really just a Linux box underneath - list every running process to see what's using its CPU.",
+    solution: 'ps aux',
+    content: `# Compute in the Cloud
+
+Strip away the marketing names, and a cloud "instance" is a virtual machine running on someone else's hardware - everything you already know about Linux processes, memory, and disk applies directly.
+
+## Instance types and sizing
+
+Providers sell VMs in fixed "shapes" - a combination of vCPUs, memory, and sometimes GPU or local disk, bundled into a named size (small, medium, large, and dozens of finer-grained tiers). Picking the right size is mostly about matching your workload's actual CPU and memory profile instead of guessing high "to be safe," which just burns money.
+
+## Auto-scaling
+
+An **auto-scaling group** keeps a fleet of identical instances running, and adjusts the count automatically based on a metric - almost always CPU usage or request count:
+
+\`\`\`
+if average CPU > 70% for 5 minutes:
+    add an instance
+if average CPU < 20% for 15 minutes:
+    remove an instance
+\`\`\`
+
+This is the mechanism behind "the site scaled up for the traffic spike and back down afterward" - no human watching a dashboard and deciding in the moment.
+
+## Load balancers
+
+A **load balancer** sits in front of that fleet and spreads incoming traffic across every healthy instance. It also does continuous health checks, and quietly stops sending traffic to any instance that stops responding - so one bad instance doesn't become one bad outage.
+
+## Ephemeral vs. persistent
+
+A cloud instance should be treated as **disposable** - auto-scaling can terminate it at any time, and a crashed instance might simply get replaced rather than repaired. Anything that needs to survive that (a database, uploaded files) belongs on persistent, separately-managed storage - never on the instance's own local disk.
+
+## Try it
+
+Every instance is still just a Linux machine you can inspect the normal way:
+
+\`\`\`bash
+ps aux
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'cloud-storage',
+    slug: 'cloud-storage',
+    title: 'Cloud Storage & Databases',
+    description: 'Object storage, block storage, and managed databases - and when to reach for each.',
+    difficulty: 'intermediate',
+    track: 'cloud',
+    order: 34,
+    trackCommand: 'df -h',
+    challenge: 'Check how much disk space is used and free on this machine, in human-readable units.',
+    solution: 'df -h',
+    content: `# Cloud Storage & Databases
+
+Not all cloud storage is the same shape. Picking the wrong one is a common - and expensive to fix later - early mistake.
+
+## Object storage
+
+Think of **object storage** (the pattern popularized by Amazon S3) as a flat, practically-infinite bucket of files, each addressed by a key:
+
+\`\`\`
+bucket-name/path/to/file.jpg
+\`\`\`
+
+There's no real filesystem underneath - no directories you can \`cd\` into - just keys and the bytes behind them, served over HTTP. It's built for durability (your data is replicated across multiple drives and facilities automatically) and for serving large volumes of static files - images, backups, logs, data lake exports.
+
+## Block storage
+
+**Block storage** behaves like a regular hard drive attached to a VM - you format it, mount it, and read/write files on it the normal Linux way. It's what backs a VM's root disk, and what you'd attach for a database that needs real, low-latency filesystem semantics - something object storage was never designed to provide.
+
+## Managed databases
+
+Running your own database means you own the backups, the patching, the replication, the 3 AM page when disk fills up. A **managed database** service hands all of that operational weight to the provider - you get an endpoint to connect to, and they handle the rest.
+
+The trade-off is control: you give up some low-level tuning in exchange for far less to operate. For most teams, that trade is an easy yes.
+
+## Picking the right one
+
+| Need | Reach for |
+| ---- | --------- |
+| Millions of files, served over HTTP | Object storage |
+| A disk for a VM or self-run database | Block storage |
+| A relational or document database, with someone else on call for it | Managed database |
+
+## Try it
+
+\`\`\`bash
+df -h
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'cloud-iam',
+    slug: 'cloud-iam',
+    title: 'IAM & Cloud Security Basics',
+    description: 'Users, roles, and policies - applying least privilege to who (and what) can touch your cloud resources.',
+    difficulty: 'advanced',
+    track: 'cloud',
+    order: 35,
+    trackCommand: 'chmod 600 cloud-credentials.json',
+    challenge: "Lock down `cloud-credentials.json` so only its owner can read or write it - exactly the permissions real cloud credential files need.",
+    solution: 'chmod 600 cloud-credentials.json',
+    content: `# IAM & Cloud Security Basics
+
+**IAM** (Identity and Access Management) is how a cloud provider answers one question, for every single request: *who is this, and are they allowed to do that?*
+
+## Users, roles, and policies
+
+- A **user** is a person or application with its own long-lived credentials.
+- A **role** is a set of permissions that something can *assume* temporarily - no permanent credentials required.
+- A **policy** is the actual document spelling out what's allowed: which actions, on which resources.
+
+A policy might read, in plain English: "allow reading objects from the \`app-uploads\` bucket, and nothing else." Attach that policy to a role, and anything that assumes the role can read that bucket - and only that bucket.
+
+## Least privilege
+
+The **principle of least privilege**: grant exactly the access something needs to do its job, and not one permission more. A deploy script that only ever reads from one storage bucket should never hold permissions to delete databases - not because it's expected to misuse them, but because a leaked credential or a bug can only do as much damage as the permissions it has.
+
+## Roles over long-lived keys
+
+A long-lived access key, sitting in a config file or an environment variable, is a standing risk - if it leaks, it works until someone notices and revokes it. An **instance role** or **service account** instead grants temporary, auto-rotating credentials to a specific VM or service - nothing permanent to leak in the first place, because nothing permanent exists.
+
+## MFA
+
+Multi-factor authentication adds a second proof of identity beyond a password - a code from a phone, a hardware key. For any account with meaningful permissions, it should be considered mandatory, not optional: a leaked password alone should never be enough to get in.
+
+## Try it
+
+Credential files need the same discipline on disk that IAM aims for in the cloud - readable by nobody except their owner:
+
+\`\`\`bash
+chmod 600 cloud-credentials.json
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'cloud-networking',
+    slug: 'cloud-networking',
+    title: 'Cloud Networking',
+    description: 'VPCs, subnets, and security groups - the virtual network every cloud resource lives inside.',
+    difficulty: 'expert',
+    track: 'cloud',
+    order: 36,
+    trackCommand: 'ufw status',
+    challenge: "A security group is just a firewall in disguise - check whether this host's firewall is currently active.",
+    solution: 'ufw status',
+    content: `# Cloud Networking
+
+Every cloud resource lives inside a private, software-defined network that you design yourself - nothing is just floating on the open internet by default.
+
+## VPCs and subnets
+
+A **VPC** (Virtual Private Cloud) is your own isolated slice of the provider's network - your own private IP address range, that nothing outside it can see into uninvited.
+
+Inside a VPC, you carve out **subnets** - smaller ranges, usually split by purpose and availability zone:
+
+\`\`\`
+VPC: 10.0.0.0/16
+  ├── public subnet:  10.0.1.0/24   (load balancers, bastion hosts)
+  └── private subnet: 10.0.2.0/24   (app servers, databases)
+\`\`\`
+
+## Public vs. private subnets
+
+The difference isn't the IP range - it's the routing:
+
+- A **public subnet** has a route to an internet gateway, so its resources can be reached from (and reach) the internet directly.
+- A **private subnet** has no such route - nothing outside the VPC can initiate a connection to it.
+
+The standard shape: put only what truly needs to face the internet (load balancers) in public subnets, and keep everything else - app servers, databases - private.
+
+## NAT gateways
+
+A private subnet's instances still often need **outbound** access - to pull a package update, call an external API. A **NAT gateway**, sitting in a public subnet, lets private instances reach *out* to the internet while still blocking anything from initiating a connection *in*. One-way glass.
+
+## Security groups
+
+A **security group** is a stateful firewall attached directly to an instance (not the subnet) - it's the cloud-native equivalent of a tool like \`ufw\` running locally: a list of allowed ports and source addresses, everything else implicitly denied.
+
+## Try it
+
+\`\`\`bash
+ufw status
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+
+  // ─────────────────────── Observability & monitoring ───────────────────────
+  {
+    id: 'observability-fundamentals',
+    slug: 'observability-fundamentals',
+    title: 'Observability Fundamentals',
+    description: "Logs, metrics, and traces - the three pillars that let you understand a system you didn't build yourself.",
+    difficulty: 'beginner',
+    track: 'observability',
+    order: 37,
+    trackCommand: 'uptime',
+    challenge: 'Check how long this machine has been running and its current load average.',
+    solution: 'uptime',
+    content: `# Observability Fundamentals
+
+**Monitoring** tells you *that* something is wrong - a dashboard goes red, an alert fires. **Observability** is the deeper property that lets you figure out *why*, even for a question nobody thought to ask in advance.
+
+## The three pillars
+
+| Pillar | What it captures | Good for |
+| ------ | ------------------ | -------- |
+| **Logs** | Discrete, timestamped events ("user 42 logged in") | The detailed story of exactly what happened |
+| **Metrics** | Numbers over time (CPU %, requests/sec) | Spotting trends, triggering alerts |
+| **Traces** | The path one request takes across services | Finding *where* in a chain of calls time went |
+
+No single pillar tells the whole story alone - a metric tells you requests got slow at 2:14 PM, a trace tells you which downstream service in the chain was the slow one, and a log tells you the exact error it hit.
+
+## Can you answer a question you didn't anticipate?
+
+That's the real test of observability. A system with only a handful of pre-built dashboards can answer the questions its author thought of in advance. A genuinely observable system lets you ask something brand new - "which customers hit this rare error path last Tuesday?" - and actually get an answer, because the underlying data was captured richly enough to slice in ways nobody planned for ahead of time.
+
+## Where to start
+
+You don't need all three pillars perfectly wired up on day one. A sensible order:
+
+1. **Logs** first - cheapest to get started with, and the most detail per event.
+2. **Metrics** next - for trends and alerting on sustained problems.
+3. **Traces** once you have more than a couple of services calling each other.
+
+## Try it
+
+A single number already tells you something about a system's health:
+
+\`\`\`bash
+uptime
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'observability-logs',
+    slug: 'observability-logs',
+    title: 'Working with Logs',
+    description: 'Structured logging, log levels, and centralizing logs with journald and friends.',
+    difficulty: 'intermediate',
+    track: 'observability',
+    order: 38,
+    trackCommand: 'journalctl -u nginx -n 20',
+    challenge: 'Show the last 20 log lines for the `nginx` unit using journalctl.',
+    solution: 'journalctl -u nginx -n 20',
+    content: `# Working with Logs
+
+A log line is the smallest useful unit of observability: a timestamp, and what happened at that moment.
+
+## Log levels
+
+Almost every logging library supports the same rough hierarchy, from least to most severe:
+
+\`\`\`
+DEBUG  → INFO  → WARN  → ERROR → FATAL
+\`\`\`
+
+In production, \`DEBUG\` is usually turned off entirely (too much noise, too much cost to store), \`INFO\` records normal operation worth keeping, and \`WARN\`/\`ERROR\` are what actually deserve a human's attention.
+
+## Structured logging
+
+Compare these two lines:
+
+\`\`\`
+User 42 logged in from 10.0.0.5 at 2026-01-04T10:02:00Z
+
+{"event":"login","user_id":42,"ip":"10.0.0.5","ts":"2026-01-04T10:02:00Z"}
+\`\`\`
+
+The second is **structured** (JSON): a machine can filter "every login from this IP" without fragile text parsing. Structured logging is slightly more ceremony to produce, but it's what makes centralized log search actually fast and reliable at any real scale.
+
+## Centralizing logs
+
+A single server's logs are easy - just read the file. A hundred servers, each with their own local logs, is a different problem: you need every log shipped somewhere **centralized**, so "show me every error across the whole fleet in the last hour" is one query instead of a hundred SSH sessions.
+
+Common stacks: the **ELK** stack (Elasticsearch, Logstash, Kibana) and **Grafana Loki** are two of the most widely used.
+
+## journald - the local starting point
+
+On any systemd-based Linux host, \`journalctl\` is already capturing logs for every service, with no setup required - the natural first stop before anything gets shipped off to a centralized system:
+
+\`\`\`bash
+journalctl -u nginx -n 20   # last 20 lines for the nginx unit
+journalctl -u nginx -f      # follow new lines live
+\`\`\`
+
+## Try it
+
+\`\`\`bash
+journalctl -u nginx -n 20
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'observability-metrics',
+    slug: 'observability-metrics',
+    title: 'Metrics & Dashboards',
+    description: 'The handful of metrics that matter, and why Prometheus scrapes instead of waiting to be told.',
+    difficulty: 'intermediate',
+    track: 'observability',
+    order: 39,
+    trackCommand: 'free -h',
+    challenge: 'Check how much memory is free versus in use, in human-readable units - a metric worth graphing over time.',
+    solution: 'free -h',
+    content: `# Metrics & Dashboards
+
+A **metric** is a number, sampled repeatedly over time - CPU percent, requests per second, queue depth. Graph enough of the right ones, and a system's health becomes visible at a glance instead of something you have to go dig for.
+
+## Three shapes of metric
+
+- **Counter** - only ever goes up (total requests served since start). Useful as a *rate* - "requests per second" is really "how fast is this counter climbing."
+- **Gauge** - goes up and down freely (current memory usage, current queue length).
+- **Histogram** - buckets of values, usually for latency ("how many requests finished in under 100ms? Under 500ms?").
+
+## Pull vs. push
+
+Two philosophies for getting a metric from an application into a monitoring system:
+
+- **Push** - the application sends its metrics to a central collector on its own schedule.
+- **Pull** (the model **Prometheus** popularized) - the monitoring system reaches out and *scrapes* a known HTTP endpoint on each application, on its own schedule.
+
+Pull has a quietly useful property: if a scrape ever fails, the monitoring system knows immediately that something is wrong with that target - with push, a server going silent from a crash looks identical to a server with simply nothing new to report.
+
+## What to actually graph
+
+For almost any service, four numbers go a very long way - sometimes called the **RED method**:
+
+- **R**ate - requests per second.
+- **E**rrors - how many of those are failing.
+- **D**uration - how long they take.
+
+For the underlying machine itself, the **USE method** (from the earlier Linux performance lesson) covers the rest: Utilization, Saturation, Errors, for CPU/memory/disk/network.
+
+## Dashboards
+
+**Grafana** is the most common layer sitting on top of a metrics store like Prometheus - turning raw numbers into the graphs a human actually scans during an incident.
+
+## Try it
+
+\`\`\`bash
+free -h
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'observability-alerting',
+    slug: 'observability-alerting',
+    title: "Alerting That Doesn't Cry Wolf",
+    description: "Thresholds, alert fatigue, and the difference between something worth paging a human for and something that can wait.",
+    difficulty: 'advanced',
+    track: 'observability',
+    order: 40,
+    trackCommand: 'ps aux | grep java',
+    challenge: 'An alert just fired saying a Java process is eating memory - list every process and filter it down to the ones mentioning java.',
+    solution: 'ps aux | grep java',
+    content: `# Alerting That Doesn't Cry Wolf
+
+Metrics and logs are only useful if someone - or something - actually looks at them. **Alerting** is what turns "the data shows a problem" into "a human was told about the problem."
+
+## Symptom-based, not cause-based
+
+The most durable alerting rule: **page on symptoms users would notice, not every possible internal cause.**
+
+- Cause-based: "disk is at 85%." Maybe fine, maybe not - depends entirely on context.
+- Symptom-based: "error rate is above 5% for 5 minutes" or "p99 latency exceeds 2 seconds." This is something a real user is feeling, right now.
+
+A disk slowly filling isn't automatically an emergency. A spike in failed checkouts always is.
+
+## Alert fatigue
+
+If an on-call engineer gets paged every night for something that turns out to be fine, they learn - correctly, if irrationally - to tune out pages. The night it's real, that instinct costs you. Every alert that fires and *isn't* actionable is a small withdrawal from a trust account that's expensive to refill.
+
+The fix isn't fewer metrics - it's fewer **pages**. Keep collecting everything; only page on what's both severe and something a human can actually do something about right now.
+
+## Severity tiers
+
+Not everything deserves the same response:
+
+| Tier | Response |
+| ---- | -------- |
+| **Critical** | Page someone immediately, any time of day |
+| **Warning** | Visible on a dashboard, reviewed during business hours |
+| **Info** | Logged, no notification at all |
+
+## Runbooks
+
+A good alert links straight to a **runbook** - a short, specific document: "when this fires, check X, then Y; if that doesn't fix it, escalate to Z." The goal is for the *first* responder, possibly half-asleep at 3 AM, to have a clear next step instead of starting from zero.
+
+## Try it
+
+\`\`\`bash
+ps aux | grep java
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'observability-tracing',
+    slug: 'observability-tracing',
+    title: 'Distributed Tracing',
+    description: 'Following one request across a dozen microservices with trace IDs and spans.',
+    difficulty: 'expert',
+    track: 'observability',
+    order: 41,
+    trackCommand: 'curl -I https://api.internal/checkout',
+    challenge: "Probe the checkout service's headers with a HEAD request - in a real system, this response would carry the trace ID tying every downstream span together.",
+    solution: 'curl -I https://api.internal/checkout',
+    content: `# Distributed Tracing
+
+A single user request to "place an order" might touch a dozen separate services - auth, inventory, payments, notifications - each with its own logs and metrics. When that request is slow, logs and metrics alone can tell you *a* service was slow. **Tracing** tells you *which one, in this specific request*.
+
+## Traces and spans
+
+A **trace** represents one request's entire journey. It's made up of **spans** - one per unit of work, each with a start time, duration, and a parent:
+
+\`\`\`
+Trace: place-order (420ms total)
+├── span: auth-check        (10ms)
+├── span: inventory-check   (30ms)
+├── span: payment-charge    (350ms)  ← the slow one
+└── span: send-confirmation (15ms)
+\`\`\`
+
+Laid out like this, the slow span is obvious at a glance - something logs scattered across four different services would never show you nearly as directly.
+
+## Propagating the trace ID
+
+The mechanism that stitches all those spans back into one trace: every service, when it calls the next one downstream, passes along a **trace ID** in the request headers. Every span generated anywhere in that call chain gets tagged with the same ID, so a tracing backend can later reassemble the full picture from spans that were emitted by entirely separate services.
+
+## Why logs and metrics alone fall short here
+
+- A **metric** tells you "payment-charge's p99 latency went up." It can't tell you if *this specific* slow request also happened to hit a slow inventory check.
+- A **log** from the payment service tells you about the payment service. It has no idea what happened in auth or inventory for that same request.
+- A **trace** ties all of it to one request ID, across every service it touched.
+
+## Tools
+
+**OpenTelemetry** has become the standard way applications emit trace data; **Jaeger** and **Zipkin** are two of the most common backends for storing and visualizing it.
+
+## Try it
+
+\`\`\`bash
+curl -I https://api.internal/checkout
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+
+  // ─────────────────────── Containers & Kubernetes ───────────────────────
+  {
+    id: 'docker-deep-dive',
+    slug: 'docker-deep-dive',
+    title: 'Docker Deep Dive',
+    description: 'Images versus containers, layers, and what actually happens when you run `docker run`.',
+    difficulty: 'intermediate',
+    track: 'containers',
+    order: 42,
+    trackCommand: 'docker run -d --name web nginx',
+    challenge: 'Start an nginx container in the background, named `web`.',
+    solution: 'docker run -d --name web nginx',
+    content: `# Docker Deep Dive
+
+An **image** is a read-only template - application code, a runtime, and every dependency, frozen in place. A **container** is a running instance of that image. The relationship is the same as a class and an object: one image, as many running containers from it as you like.
+
+## Layers
+
+A Docker image is built from stacked, cacheable **layers** - each instruction in a \`Dockerfile\` produces one:
+
+\`\`\`dockerfile
+FROM node:20-alpine        # base layer
+COPY package.json .        # a layer
+RUN npm install            # a layer
+COPY . .                   # a layer
+CMD ["node", "server.js"]  # metadata, not a layer
+\`\`\`
+
+If only your application code changes, Docker reuses the cached \`npm install\` layer from before instead of redoing it - which is exactly why \`COPY package.json\` and \`npm install\` are deliberately placed *before* copying the rest of the source: dependencies change far less often than application code, so that expensive layer gets reused far more often too.
+
+## Reading a Dockerfile
+
+- \`FROM\` - the base image to build on top of.
+- \`RUN\` - executes a command *while building* the image (installing packages, compiling).
+- \`COPY\` - copies files from your machine into the image.
+- \`CMD\` - the command that runs when a container *starts* from this image.
+
+## What \`docker run\` actually does
+
+\`\`\`bash
+docker run -d --name web nginx
+\`\`\`
+
+Pulls the \`nginx\` image if it isn't already local, creates a new container from it, names it \`web\`, and (\`-d\`) runs it detached - in the background, handing you your prompt straight back instead of attaching to its output.
+
+## Try it
+
+\`\`\`bash
+docker run -d --name web nginx
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'docker-compose-basics',
+    slug: 'docker-compose-basics',
+    title: 'Docker Compose',
+    description: 'Describing a multi-container app - web server, app, and database - in one YAML file.',
+    difficulty: 'intermediate',
+    track: 'containers',
+    order: 43,
+    trackCommand: 'touch docker-compose.yml',
+    challenge: 'Create an empty `docker-compose.yml` - the file where a multi-container app gets described in one place.',
+    solution: 'touch docker-compose.yml',
+    content: `# Docker Compose
+
+Almost nothing real is just one container. A typical app is a web server, an application process, and a database, all talking to each other. **Docker Compose** lets you describe all of them, and how they connect, in a single YAML file.
+
+## Anatomy of a compose file
+
+\`\`\`yaml
+services:
+  web:
+    image: nginx
+    ports:
+      - "80:80"
+  app:
+    build: .
+    depends_on:
+      - db
+  db:
+    image: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+\`\`\`
+
+- **services** - one entry per container: which image to run (or build), ports to expose, what it depends on.
+- **depends_on** - start order; \`app\` won't start until \`db\` has.
+- **volumes** - named, persistent storage that survives a container being recreated - essential for a database, which should never lose its data just because its container got rebuilt.
+
+## One command instead of many
+
+Without Compose, standing up that same three-container app means three separate \`docker run\` commands, each with the right flags, in the right order, every single time. With a compose file written once:
+
+\`\`\`bash
+docker compose up -d     # start everything
+docker compose down      # stop and remove everything
+docker compose logs -f   # follow logs from every service at once
+\`\`\`
+
+## Why this matters for local development
+
+Compose is most commonly reached for to spin up an entire application stack - with its database, cache, and message queue - on a single laptop, in one command, identically for every developer on the team. No more "works on my machine because I have Postgres 14 and you have 15."
+
+## Try it
+
+\`\`\`bash
+touch docker-compose.yml
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'kubernetes-basics',
+    slug: 'kubernetes-basics',
+    title: 'Kubernetes Basics',
+    description: 'Pods, Deployments, and Services - how Kubernetes keeps containers running at scale.',
+    difficulty: 'advanced',
+    track: 'containers',
+    order: 44,
+    trackCommand: 'docker ps',
+    challenge: "A Kubernetes node is, underneath, just running containers - list every currently-running container on this host.",
+    solution: 'docker ps',
+    content: `# Kubernetes Basics
+
+Docker Compose is great for one machine. **Kubernetes** (often "k8s") solves the much harder problem: running containers reliably across a whole *cluster* of machines, automatically replacing them when they fail.
+
+## Pods
+
+The smallest unit Kubernetes schedules is a **Pod** - one or more containers that always run together, on the same machine, sharing the same network address. Almost always, that's exactly one container per Pod.
+
+## Deployments
+
+You don't create Pods directly in practice - you create a **Deployment**, and tell it how many copies (**replicas**) of a Pod you want running:
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.25
+\`\`\`
+
+If a Pod crashes, or the machine it's on dies, the Deployment notices and starts a replacement - without anyone paging a human in the middle of the night to do it by hand. Change \`replicas: 3\` to \`replicas: 10\` and apply it again, and Kubernetes starts seven more, on whichever machines in the cluster have room.
+
+## Services
+
+Pods come and go, and each one gets a new IP address every time it's replaced - so nothing else in the cluster can reliably point *directly* at one. A **Service** gives a stable name and address that always routes to whichever Pods are currently healthy, no matter how many times they've been replaced underneath it.
+
+## Rolling updates
+
+Pushing \`nginx:1.26\` over the top of \`nginx:1.25\`, a Deployment replaces Pods a few at a time by default - never all at once - so there's no moment where zero healthy Pods are serving traffic.
+
+## Try it
+
+Everything above ultimately runs as ordinary containers on an ordinary Linux node:
+
+\`\`\`bash
+docker ps
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'kubernetes-networking',
+    slug: 'kubernetes-networking',
+    title: 'Kubernetes Networking & Scaling',
+    description: 'ClusterIP, Ingress, and the Horizontal Pod Autoscaler - how traffic finds pods, and how pods multiply under load.',
+    difficulty: 'advanced',
+    track: 'containers',
+    order: 45,
+    trackCommand: 'netstat -tulpn',
+    challenge: "List every listening network port on this host - exactly what you'd check if a Service wasn't reaching its pods.",
+    solution: 'netstat -tulpn',
+    content: `# Kubernetes Networking & Scaling
+
+Getting traffic to the right Pods, and making sure there are enough of them, is most of what running Kubernetes in production actually feels like day to day.
+
+## Service types
+
+A Service's \`type\` decides how it's reachable:
+
+| Type | Reachable from |
+| ---- | ---------------- |
+| \`ClusterIP\` (default) | Only inside the cluster |
+| \`NodePort\` | Any cluster node's IP, on a fixed port |
+| \`LoadBalancer\` | The internet, via a cloud provider's load balancer |
+
+Most internal services (a database, an internal API another service calls) stay \`ClusterIP\` - no reason to expose them any wider than that.
+
+## Ingress
+
+Giving every public-facing service its own cloud load balancer gets expensive and repetitive fast. An **Ingress** is a single entry point that routes HTTP traffic to many different internal Services, based on hostname or URL path:
+
+\`\`\`
+example.com/api      → api-service
+example.com/app      → frontend-service
+blog.example.com     → blog-service
+\`\`\`
+
+One load balancer, one place to manage TLS certificates, routing rules that live in your cluster's config as code.
+
+## Horizontal Pod Autoscaler (HPA)
+
+Rather than someone watching a dashboard and manually running \`kubectl scale\`, an **HPA** does it automatically, based on a metric - CPU usage being the default:
+
+\`\`\`
+target: 70% average CPU
+min replicas: 2
+max replicas: 10
+\`\`\`
+
+Traffic spikes, average CPU climbs past 70%, the HPA adds Pods. Traffic drops back off, and it scales back down - the exact same elastic-scaling idea from the cloud-compute lesson, just applied one layer up, at the Pod level instead of the VM level.
+
+## Try it
+
+\`\`\`bash
+netstat -tulpn
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'container-registries',
+    slug: 'container-registries',
+    title: 'Container Registries & Shipping Images',
+    description: 'Tagging, pushing, and pulling images - the glue between your CI pipeline and a running cluster.',
+    difficulty: 'expert',
+    track: 'containers',
+    order: 46,
+    trackCommand: 'docker images',
+    challenge: 'List every image available locally, ready to be tagged and pushed to a registry.',
+    solution: 'docker images',
+    content: `# Container Registries & Shipping Images
+
+A **registry** is where built images live between being built and being run - Docker Hub, Amazon ECR, Google Artifact Registry, and plenty of self-hosted options all do the same essential job.
+
+## The full loop, start to finish
+
+This lesson is the capstone that ties the whole track together - CI/CD, cloud, and containers all meet right here:
+
+\`\`\`
+1. Jenkins (or any CI) builds the image from your Dockerfile
+2. CI tags it and pushes it to a registry
+3. A Kubernetes cluster (running in the cloud) pulls that exact image
+4. A Deployment rolls it out across the cluster
+\`\`\`
+
+Nothing in steps 3-4 rebuilds anything - the cluster runs the *literal* image CI already built and tested, the same "build once, promote everywhere" principle from the Jenkins deploy lesson.
+
+## Tagging conventions
+
+A tag is just a label on an image - \`myapp:1.4.2\`, \`myapp:latest\`. A few conventions that matter in practice:
+
+- **Semantic version tags** (\`1.4.2\`) - clear, human-readable, easy to roll back to by name.
+- **Git SHA tags** (\`myapp:a3f9c21\`) - ties an image to the *exact* commit it was built from, no ambiguity.
+- \`:latest\` - deceptively named; it just means "whatever was pushed most recently without an explicit tag," not "the newest stable release." Relying on it in production is a common source of "which version is actually running right now?" confusion.
+
+## Pushing and pulling
+
+\`\`\`bash
+docker tag myapp:a3f9c21 registry.example.com/myapp:a3f9c21
+docker push registry.example.com/myapp:a3f9c21
+docker pull registry.example.com/myapp:a3f9c21
+\`\`\`
+
+A push uploads any layers the registry doesn't already have (the same layer-caching idea from the Docker deep-dive lesson applies here too - most pushes only upload the one or two layers that actually changed).
+
+## Try it
+
+\`\`\`bash
+docker images
+\`\`\`
+
+When you're ready, hit **Mark complete**. You've completed the DevOps track!
 `,
   },
 ];
@@ -2683,6 +3812,286 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     order: 2,
     prompt: 'Which command prints every system call a running process makes, in real time?',
     answer: 'strace',
+  },
+  {
+    id: 'q-cicd-f-1',
+    lessonId: 'cicd-fundamentals',
+    order: 0,
+    prompt: 'Which command initializes a new git repository?',
+    answer: 'git init',
+  },
+  {
+    id: 'q-cicd-f-2',
+    lessonId: 'cicd-fundamentals',
+    order: 1,
+    prompt: 'Shipping to production automatically with no human approval step is called continuous what?',
+    answer: 'deployment',
+  },
+  {
+    id: 'q-jen-i-1',
+    lessonId: 'jenkins-intro',
+    order: 0,
+    prompt: 'What term describes the Jenkins machines that actually run builds?',
+    answer: 'agents',
+  },
+  {
+    id: 'q-jen-i-2',
+    lessonId: 'jenkins-intro',
+    order: 1,
+    prompt: 'Which command checks whether the jenkins service is active?',
+    answer: 'systemctl status jenkins',
+  },
+  {
+    id: 'q-jkf-1',
+    lessonId: 'jenkinsfile-basics',
+    order: 0,
+    prompt: 'What is the file called that defines a Jenkins pipeline as code?',
+    answer: 'jenkinsfile',
+  },
+  {
+    id: 'q-jkf-2',
+    lessonId: 'jenkinsfile-basics',
+    order: 1,
+    prompt: 'Which declarative pipeline block always runs after the stages, success or failure?',
+    answer: 'post',
+  },
+  {
+    id: 'q-jtrg-1',
+    lessonId: 'jenkins-triggers',
+    order: 0,
+    prompt: 'Which trigger style has your git host call Jenkins the instant you push a commit?',
+    answer: 'webhooks',
+  },
+  {
+    id: 'q-jtrg-2',
+    lessonId: 'jenkins-triggers',
+    order: 1,
+    prompt: 'In Jenkins cron syntax, which single letter tells it to pick a spread-out time instead of an exact one?',
+    answer: 'h',
+  },
+  {
+    id: 'q-jdep-1',
+    lessonId: 'jenkins-deploy',
+    order: 0,
+    prompt: "Which tool is a frequent upgrade over `scp` for transferring more than one changed file?",
+    answer: 'rsync',
+  },
+  {
+    id: 'q-jdep-2',
+    lessonId: 'jenkins-deploy',
+    order: 1,
+    prompt: 'What deployment strategy keeps two environments so you can instantly flip which one receives traffic?',
+    answer: 'blue-green',
+  },
+  {
+    id: 'q-cld-b-1',
+    lessonId: 'cloud-computing-basics',
+    order: 0,
+    prompt: 'Which cloud service model leaves you managing only your application code?',
+    answer: 'paas',
+  },
+  {
+    id: 'q-cld-b-2',
+    lessonId: 'cloud-computing-basics',
+    order: 1,
+    prompt: 'What do you call a physically separate data center within a cloud region?',
+    answer: 'availability zone',
+  },
+  {
+    id: 'q-cld-c-1',
+    lessonId: 'cloud-compute',
+    order: 0,
+    prompt: 'What component continuously health-checks a fleet and stops sending traffic to failing instances?',
+    answer: 'load balancer',
+  },
+  {
+    id: 'q-cld-c-2',
+    lessonId: 'cloud-compute',
+    order: 1,
+    prompt: 'What should a cloud instance be treated as, since auto-scaling can terminate it at any time?',
+    answer: 'disposable',
+  },
+  {
+    id: 'q-cld-s-1',
+    lessonId: 'cloud-storage',
+    order: 0,
+    prompt: 'Which storage type is addressed by keys rather than file paths, the way Amazon S3 works?',
+    answer: 'object storage',
+  },
+  {
+    id: 'q-cld-s-2',
+    lessonId: 'cloud-storage',
+    order: 1,
+    prompt: 'Which storage type behaves like a normal hard drive attached to a VM?',
+    answer: 'block storage',
+  },
+  {
+    id: 'q-cld-iam-1',
+    lessonId: 'cloud-iam',
+    order: 0,
+    prompt: "What's the principle of granting exactly the access something needs, and nothing more, called?",
+    answer: 'least privilege',
+  },
+  {
+    id: 'q-cld-iam-2',
+    lessonId: 'cloud-iam',
+    order: 1,
+    prompt: 'What do you call a set of permissions that something can assume temporarily, instead of a permanent user?',
+    answer: 'role',
+  },
+  {
+    id: 'q-cld-net-1',
+    lessonId: 'cloud-networking',
+    order: 0,
+    prompt: "What's your own isolated slice of a cloud provider's network called?",
+    answer: 'vpc',
+  },
+  {
+    id: 'q-cld-net-2',
+    lessonId: 'cloud-networking',
+    order: 1,
+    prompt: 'What lets private instances reach out to the internet without accepting inbound connections?',
+    answer: 'nat gateway',
+  },
+  {
+    id: 'q-obs-f-1',
+    lessonId: 'observability-fundamentals',
+    order: 0,
+    prompt: 'Which of the three observability pillars captures numbers over time, like CPU percent?',
+    answer: 'metrics',
+  },
+  {
+    id: 'q-obs-f-2',
+    lessonId: 'observability-fundamentals',
+    order: 1,
+    prompt: 'Which pillar gives the detailed, timestamped story of exactly what happened?',
+    answer: 'logs',
+  },
+  {
+    id: 'q-obs-l-1',
+    lessonId: 'observability-logs',
+    order: 0,
+    prompt: 'Which log level is usually turned off entirely in production?',
+    answer: 'debug',
+  },
+  {
+    id: 'q-obs-l-2',
+    lessonId: 'observability-logs',
+    order: 1,
+    prompt: 'Which command shows the last 20 log lines for the nginx unit?',
+    answer: 'journalctl -u nginx -n 20',
+  },
+  {
+    id: 'q-obs-m-1',
+    lessonId: 'observability-metrics',
+    order: 0,
+    prompt: 'Which metric type only ever goes up, like a total request count?',
+    answer: 'counter',
+  },
+  {
+    id: 'q-obs-m-2',
+    lessonId: 'observability-metrics',
+    order: 1,
+    prompt: 'Does Prometheus pull metrics from applications, or have them pushed to it?',
+    answer: 'pull',
+  },
+  {
+    id: 'q-obs-a-1',
+    lessonId: 'observability-alerting',
+    order: 0,
+    prompt: 'Should alerts page on symptoms users would notice, or on every possible internal cause?',
+    answer: 'symptoms',
+  },
+  {
+    id: 'q-obs-a-2',
+    lessonId: 'observability-alerting',
+    order: 1,
+    prompt: "What's it called when too many non-actionable alerts teach engineers to tune out real pages too?",
+    answer: 'alert fatigue',
+  },
+  {
+    id: 'q-obs-t-1',
+    lessonId: 'observability-tracing',
+    order: 0,
+    prompt: 'What ties every span across multiple services back into one request?',
+    answer: 'trace id',
+  },
+  {
+    id: 'q-obs-t-2',
+    lessonId: 'observability-tracing',
+    order: 1,
+    prompt: 'What do you call one unit of work within a trace?',
+    answer: 'span',
+  },
+  {
+    id: 'q-dkr-d-1',
+    lessonId: 'docker-deep-dive',
+    order: 0,
+    prompt: 'What do you call a running instance of a Docker image?',
+    answer: 'container',
+  },
+  {
+    id: 'q-dkr-d-2',
+    lessonId: 'docker-deep-dive',
+    order: 1,
+    prompt: 'Which Dockerfile instruction copies files from your machine into the image?',
+    answer: 'copy',
+  },
+  {
+    id: 'q-dkc-1',
+    lessonId: 'docker-compose-basics',
+    order: 0,
+    prompt: 'Which Compose file key lists one entry per container to run?',
+    answer: 'services',
+  },
+  {
+    id: 'q-dkc-2',
+    lessonId: 'docker-compose-basics',
+    order: 1,
+    prompt: 'Which command starts every service defined in a compose file, in the background?',
+    answer: 'docker compose up -d',
+  },
+  {
+    id: 'q-k8s-b-1',
+    lessonId: 'kubernetes-basics',
+    order: 0,
+    prompt: "What's the smallest unit Kubernetes schedules?",
+    answer: 'pod',
+  },
+  {
+    id: 'q-k8s-b-2',
+    lessonId: 'kubernetes-basics',
+    order: 1,
+    prompt: 'Which resource gives a stable address that always routes to healthy pods?',
+    answer: 'service',
+  },
+  {
+    id: 'q-k8s-n-1',
+    lessonId: 'kubernetes-networking',
+    order: 0,
+    prompt: 'Which Kubernetes Service type is only reachable from inside the cluster?',
+    answer: 'clusterip',
+  },
+  {
+    id: 'q-k8s-n-2',
+    lessonId: 'kubernetes-networking',
+    order: 1,
+    prompt: "What's the short name for the component that scales pods automatically based on a metric like CPU?",
+    answer: 'hpa',
+  },
+  {
+    id: 'q-reg-1',
+    lessonId: 'container-registries',
+    order: 0,
+    prompt: 'Where do built container images live between being built and being run?',
+    answer: 'registry',
+  },
+  {
+    id: 'q-reg-2',
+    lessonId: 'container-registries',
+    order: 1,
+    prompt: "Which image tag is often mistaken for 'the newest stable release' when it just means 'most recent untagged push'?",
+    answer: 'latest',
   },
 ];
 

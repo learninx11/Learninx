@@ -17,21 +17,40 @@ import { BookmarkButton } from '@/components/BookmarkButton';
 import { LessonNoteEditor } from '@/components/LessonNoteEditor';
 import { ShareButton } from '@/components/ShareButton';
 import {
+  ActivityIcon,
   ArrowRightIcon,
   BoltIcon,
   BrainIcon,
   CheckIcon,
   ChevronLeftIcon,
+  CloudIcon,
+  CommandIcon,
+  LayersIcon,
   SparklesIcon,
   TerminalIcon,
 } from '@/components/ui/Icon';
-import type { Lesson, QuizQuestion } from '@/lib/types';
+import type { Lesson, LessonTrack, QuizQuestion } from '@/lib/types';
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
   expert: 'Expert',
+};
+
+const TRACK_LABEL: Record<LessonTrack, string> = {
+  linux: 'Linux',
+  cicd: 'CI/CD',
+  cloud: 'Cloud',
+  observability: 'Observability',
+  containers: 'Containers',
+};
+const TRACK_ICON: Record<LessonTrack, React.ReactNode> = {
+  linux: <TerminalIcon size={10} />,
+  cicd: <CommandIcon size={10} />,
+  cloud: <CloudIcon size={10} />,
+  observability: <ActivityIcon size={10} />,
+  containers: <LayersIcon size={10} />,
 };
 
 interface Props {
@@ -93,6 +112,9 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
             <div className="flex flex-wrap items-center gap-2">
               <Pill tone={lesson.difficulty}>
                 {DIFFICULTY_LABEL[lesson.difficulty]}
+              </Pill>
+              <Pill tone="default">
+                {TRACK_ICON[lesson.track]} {TRACK_LABEL[lesson.track]}
               </Pill>
               {completed && (
                 <Pill tone="success">
