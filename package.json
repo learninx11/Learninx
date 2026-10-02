@@ -2,7 +2,7 @@
   "name": "learninx",
   "version": "0.1.0",
   "private": true,
-  "description": "An interactive Linux learning platform with in-browser terminal, lessons, and quizzes.",
+  "description": "An interactive DevOps learning platform with in-browser terminal, lessons, and quizzes.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

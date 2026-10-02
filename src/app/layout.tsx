@@ -11,7 +11,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Learninx',
   description:
-    'Learn Linux the easy way — an interactive learning platform with in-browser terminal, lessons, and quizzes. No signup required.',
+    'Learn DevOps the easy way — an interactive learning platform with in-browser terminal, lessons, and quizzes. No signup required.',
   // Icons are provided by `src/app/icon.svg` and `src/app/apple-icon.svg`,
   // which Next.js automatically wires up at the correct basePath (e.g.
   // `/Learninx/icon.svg` on GitHub Pages). Do NOT use `icons.icon: '/favicon.svg'`
@@ -119,7 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <footer className="mx-auto mt-12 max-w-6xl px-4 py-8 text-center text-xs text-slate-500">
           <p>
-            Built for learning Linux · open source · no signup, no tracking
+            Built for learning DevOps · open source · no signup, no tracking
           </p>
           <p className="mt-1 text-slate-600">
             Press <span className="lx-kbd">g</span> then{' '}

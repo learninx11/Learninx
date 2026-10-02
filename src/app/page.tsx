@@ -40,15 +40,15 @@ export default function Home() {
         <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
           Learn{' '}
           <span className="bg-gradient-to-r from-[var(--lx-accent)] to-[var(--lx-accent-2)] bg-clip-text text-transparent">
-            Linux
+            DevOps
           </span>
           <br className="hidden sm:block" /> the easy way.
         </h1>
 
         <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-slate-400 sm:text-lg">
+          From your first Linux command to CI/CD, cloud, and Kubernetes.
           Bite-sized lessons, hands-on challenges, and a safe in-browser
-          terminal. No signup. No install. Just open the site and start typing
-          commands.
+          terminal. No signup. No install.
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
@@ -91,7 +91,7 @@ export default function Home() {
             step="01"
             icon={<BookIcon size={20} />}
             title="Step-by-step lessons"
-            body="From your first `ls` to systemd and shell scripting — short chapters with real examples you can read in 5 minutes."
+            body="From your first `ls` to Jenkins pipelines and Kubernetes — short chapters with real examples you can read in 5 minutes."
           />
           <FeatureCard
             step="02"
@@ -177,7 +177,7 @@ export default function Home() {
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--lx-accent-glow)] blur-3xl" />
           <Pill tone="accent">Who is this for?</Pill>
           <h2 className="mt-3 text-xl font-semibold sm:text-2xl">
-            For anyone who wants to feel at home on a Linux box.
+            For anyone who wants to go from terminal novice to DevOps-ready.
           </h2>
           <ul className="mt-4 space-y-2.5 text-[var(--lx-fg)]">
             <li className="flex gap-3">
@@ -199,7 +199,7 @@ export default function Home() {
                 className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--lx-accent)]"
                 aria-hidden
               />
-              <span>Students preparing for DevOps, cloud, or sysadmin roles.</span>
+              <span>Anyone preparing for a DevOps, cloud, or SRE role.</span>
             </li>
           </ul>
         </div>

@@ -1,6 +1,6 @@
 # Learninx
 
-An interactive Linux learning platform that teaches the command line through short lessons, hands-on challenges, and a safe in-browser terminal.
+An interactive DevOps learning platform that teaches the command line and the DevOps toolchain through short lessons, hands-on challenges, and a safe in-browser terminal.
 
 No login. No accounts. No database. Open the page, type commands, learn.
 
@@ -16,7 +16,7 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 
 ## Highlights
 
-- **11 bite-sized lessons** covering the core of the Linux command line: navigation, files, pipes & redirection, environment variables, permissions & ownership, text processing (grep/sed/awk), finding files, processes, archives & compression, and package management. Each ends with a "Further reading" pointer to a specific, well-known book.
+- **67 bite-sized lessons across 9 tracks** — Linux Fundamentals, Git & Version Control, CI/CD & Jenkins, Infrastructure as Code, Cloud, Security & DevSecOps, Observability, Site Reliability Engineering, and Containers & Kubernetes. Each ends with a hands-on challenge in the sandbox and a short quiz; many point to a specific, well-known book for further reading.
 - **In-browser terminal sandbox** (xterm.js) with a POSIX-style shell and an in-memory virtual filesystem — nothing touches the user's real machine.
 - **Auto-graded challenges** and end-of-lesson quizzes with score-based completion.
 - **Boss levels** — five multi-step scenarios for learners who finish the regular catalogue: restore a broken service, sort a messy log folder, ship a deploy script (`sed` + `tee` + `chmod` + `install`), bring a systemd service back online, and fix a permissions puzzle (`chown` + `chmod`).
@@ -30,7 +30,7 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Streaks & points** (10 per lesson, 1 per correct quiz, 25 per boss, 5 per badge) tracked in a signed per-browser cookie / localStorage.
 - **Daily Linux tip** card on the home page, deterministic by UTC day. Includes a "Shuffle" button so visitors can browse the rest of the tip catalogue and an "N seen" counter that tracks unique tips surfaced.
 - **Table of contents** on long lessons, with active-section highlighting.
-- **Search and filter** on the lessons index (text + difficulty + completed / to-do / bookmarked).
+- **Track-based lesson hub** — pick a track from `/lessons`, then search and filter within it (text + difficulty + completed / to-do / bookmarked).
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
 - Polished, terminal-inspired dark/light UI with a shared design-token system (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`).
 - Keyboard shortcuts: `g l` lessons, `g h` home, `g b` boss, `g c` cheatsheet, `g a` achievements, `g p` profile, `g t` typing, `/` focuses search, `Cmd/Ctrl+K` opens the palette.

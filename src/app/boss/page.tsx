@@ -6,7 +6,7 @@ import { TargetIcon, TerminalIcon } from '@/components/ui/Icon';
 export const metadata = {
   title: 'Boss levels',
   description:
-    'Multi-step Linux challenges. Restore a broken service, sort a messy log folder, and more — all in the in-browser sandbox.',
+    'Multi-step DevOps challenges. Restore a broken service, sort a messy log folder, and more — all in the in-browser sandbox.',
 };
 
 export default function BossIndexPage() {
