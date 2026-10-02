@@ -17,40 +17,23 @@ import { BookmarkButton } from '@/components/BookmarkButton';
 import { LessonNoteEditor } from '@/components/LessonNoteEditor';
 import { ShareButton } from '@/components/ShareButton';
 import {
-  ActivityIcon,
   ArrowRightIcon,
   BoltIcon,
   BrainIcon,
   CheckIcon,
   ChevronLeftIcon,
-  CloudIcon,
-  CommandIcon,
-  LayersIcon,
   SparklesIcon,
   TerminalIcon,
 } from '@/components/ui/Icon';
-import type { Lesson, LessonTrack, QuizQuestion } from '@/lib/types';
+import { TrackIcon } from '@/components/TrackIcon';
+import { TRACK_LABEL, TRACK_SHORT_LABEL } from '@/lib/lesson-tracks';
+import type { Lesson, QuizQuestion } from '@/lib/types';
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
   expert: 'Expert',
-};
-
-const TRACK_LABEL: Record<LessonTrack, string> = {
-  linux: 'Linux',
-  cicd: 'CI/CD',
-  cloud: 'Cloud',
-  observability: 'Observability',
-  containers: 'Containers',
-};
-const TRACK_ICON: Record<LessonTrack, React.ReactNode> = {
-  linux: <TerminalIcon size={10} />,
-  cicd: <CommandIcon size={10} />,
-  cloud: <CloudIcon size={10} />,
-  observability: <ActivityIcon size={10} />,
-  containers: <LayersIcon size={10} />,
 };
 
 interface Props {
@@ -104,17 +87,17 @@ export function LessonDetailClient({ lesson, neighbours, position, questions }: 
         <article className="min-w-0 space-y-6">
           <header className="space-y-3">
             <Link
-              href="/lessons"
+              href={`/lessons/track/${lesson.track}`}
               className="inline-flex items-center gap-1 text-sm text-slate-400 transition hover:text-[var(--lx-accent)]"
             >
-              <ChevronLeftIcon size={14} /> Back to lessons
+              <ChevronLeftIcon size={14} /> Back to {TRACK_LABEL[lesson.track]}
             </Link>
             <div className="flex flex-wrap items-center gap-2">
               <Pill tone={lesson.difficulty}>
                 {DIFFICULTY_LABEL[lesson.difficulty]}
               </Pill>
               <Pill tone="default">
-                {TRACK_ICON[lesson.track]} {TRACK_LABEL[lesson.track]}
+                <TrackIcon track={lesson.track} size={10} /> {TRACK_SHORT_LABEL[lesson.track]}
               </Pill>
               {completed && (
                 <Pill tone="success">

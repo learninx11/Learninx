@@ -1,0 +1,18 @@
+import { ActivityIcon, BoltIcon, CloudIcon, LayersIcon, TerminalIcon } from '@/components/ui/Icon';
+import type { LessonTrack } from '@/lib/types';
+
+/** The one icon that represents a lesson track everywhere it shows up. */
+export function TrackIcon({ track, size = 14 }: { track: LessonTrack; size?: number }) {
+  switch (track) {
+    case 'linux':
+      return <TerminalIcon size={size} />;
+    case 'cicd':
+      return <BoltIcon size={size} />;
+    case 'cloud':
+      return <CloudIcon size={size} />;
+    case 'observability':
+      return <ActivityIcon size={size} />;
+    case 'containers':
+      return <LayersIcon size={size} />;
+  }
+}

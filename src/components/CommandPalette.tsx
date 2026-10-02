@@ -21,7 +21,9 @@ import {
   UserIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { TrackIcon } from '@/components/TrackIcon';
 import { getAllLessons } from '@/lib/lessons';
+import { TRACK_DESCRIPTION, TRACK_LABEL, TRACK_ORDER } from '@/lib/lesson-tracks';
 
 interface PaletteItem {
   id: string;
@@ -45,12 +47,20 @@ const STATIC_NAV: Omit<PaletteItem, 'id'>[] = [
   },
   {
     title: 'All lessons',
-    description: 'Browse the full lesson catalogue',
+    description: 'Pick a track to start',
     group: 'Navigate',
     href: '/lessons',
     icon: <BookIcon size={14} />,
-    keywords: ['lessons', 'catalogue', 'list'],
+    keywords: ['lessons', 'catalogue', 'list', 'tracks'],
   },
+  ...TRACK_ORDER.map((t) => ({
+    title: `${TRACK_LABEL[t]} lessons`,
+    description: TRACK_DESCRIPTION[t],
+    group: 'Navigate' as const,
+    href: `/lessons/track/${t}`,
+    icon: <TrackIcon track={t} size={14} />,
+    keywords: ['lessons', 'track', t],
+  })),
   {
     title: 'Terminal',
     description: 'A dedicated sandbox for free practice — no lesson attached',
