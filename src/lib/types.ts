@@ -19,7 +19,9 @@ export type LessonTrack =
   | 'iac'
   | 'cloud'
   | 'observability'
-  | 'containers';
+  | 'containers'
+  | 'security'
+  | 'sre';
 
 export interface Lesson {
   /** Stable id used in the URL, the quiz-question join, and the cookie store. */

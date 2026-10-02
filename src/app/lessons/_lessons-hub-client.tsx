@@ -32,10 +32,11 @@ export function LessonsHubClient({ lessons }: { lessons: Lesson[] }) {
       <header className="space-y-4">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Lessons</h1>
         <p className="max-w-2xl text-[var(--lx-muted)]">
-          Pick a track above. Linux fundamentals first, then a full DevOps
+          Pick a track below. Linux fundamentals first, then a full DevOps
           curriculum - Git, CI/CD &amp; Jenkins, Infrastructure as Code, Cloud,
-          Observability, and Containers &amp; Kubernetes. Each lesson ends
-          with a small challenge, and your progress is saved on this browser.
+          Security, Observability, SRE, and Containers &amp; Kubernetes. Each
+          lesson ends with a small challenge, and your progress is saved on
+          this browser.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">

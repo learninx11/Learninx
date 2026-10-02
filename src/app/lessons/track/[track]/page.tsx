@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllLessons } from '@/lib/lessons';
 import { TRACK_DESCRIPTION, TRACK_LABEL, TRACK_ORDER } from '@/lib/lesson-tracks';
-import { TrackMenu } from '@/components/TrackMenu';
 import type { LessonTrack } from '@/lib/types';
 import { LessonsIndexClient } from '../../_lessons-index-client';
 
@@ -31,10 +30,5 @@ export default function TrackLessonsPage({ params }: PageProps) {
   const track = params.track;
   const lessons = getAllLessons().filter((l) => l.track === track);
 
-  return (
-    <div className="space-y-6">
-      <TrackMenu activeTrack={track} />
-      <LessonsIndexClient lessons={lessons} track={track} />
-    </div>
-  );
+  return <LessonsIndexClient lessons={lessons} track={track} />;
 }

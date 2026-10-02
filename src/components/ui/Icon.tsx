@@ -421,3 +421,9 @@ export const ServerIcon = ({ size = 16, ...rest }: IconProps) => (
     <line x1="6" y1="18" x2="6.01" y2="18" />
   </svg>
 );
+
+export const ShieldIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M20 13c0 5-3.5 7.5-8 8.95-4.5-1.45-8-4-8-9V5l8-3 8 3z" />
+  </svg>
+);
