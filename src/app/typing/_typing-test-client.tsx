@@ -24,6 +24,7 @@ import { Pill } from '@/components/ui/Pill';
 import { TYPING_SNIPPETS, type TypingSnippet } from '@/lib/typing-snippets';
 import { useProgress } from '@/lib/progress-context';
 import type { TypingScore } from '@/lib/progress-types';
+import type { Difficulty } from '@/lib/types';
 
 type Mode = 'practice' | 'test';
 type Status = 'idle' | 'running' | 'finished';
@@ -31,20 +32,43 @@ type Status = 'idle' | 'running' | 'finished';
 /** Take Test always runs for exactly this long, however many snippets get through. */
 const TEST_DURATION_MS = 3 * 60_000;
 
+/** Same scale and labels as lessons/boss levels (`@/lib/types`), reused here for consistency. */
+const DIFFICULTY_ORDER: Difficulty[] = ['beginner', 'intermediate', 'advanced', 'expert'];
+const DIFFICULTY_LABEL: Record<Difficulty, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  expert: 'Expert',
+};
+/** How many snippets/rounds spent at each tier before ramping up to the next. */
+const ROUNDS_PER_TIER = 3;
+
+/** Maps "how many snippets completed so far" to a difficulty tier — ramps up, then holds at expert. */
+function difficultyForRound(roundsCompleted: number): Difficulty {
+  const tier = Math.min(
+    Math.floor(roundsCompleted / ROUNDS_PER_TIER),
+    DIFFICULTY_ORDER.length - 1,
+  );
+  return DIFFICULTY_ORDER[tier]!;
+}
+
 const FALLBACK_SNIPPET: TypingSnippet = {
   text: 'ls -la',
   usage: 'List every file in the current directory, including hidden ones.',
+  difficulty: 'beginner',
 };
 
-function pickSnippet(previous?: TypingSnippet): TypingSnippet {
-  if (TYPING_SNIPPETS.length === 0) return FALLBACK_SNIPPET;
-  if (TYPING_SNIPPETS.length === 1) return TYPING_SNIPPETS[0]!;
+function pickSnippet(previous?: TypingSnippet, difficulty: Difficulty = 'beginner'): TypingSnippet {
+  const pool = TYPING_SNIPPETS.filter((s) => s.difficulty === difficulty);
+  const candidates = pool.length > 0 ? pool : TYPING_SNIPPETS;
+  if (candidates.length === 0) return FALLBACK_SNIPPET;
+  if (candidates.length === 1) return candidates[0]!;
   let next: TypingSnippet | undefined = previous;
   // Roll a few times to avoid repeating the previous one.
   for (let i = 0; i < 4 && next?.text === previous?.text; i += 1) {
-    next = TYPING_SNIPPETS[Math.floor(Math.random() * TYPING_SNIPPETS.length)];
+    next = candidates[Math.floor(Math.random() * candidates.length)];
   }
-  return next ?? TYPING_SNIPPETS[0]!;
+  return next ?? candidates[0]!;
 }
 
 /**
@@ -73,10 +97,10 @@ export function TypingTestClient() {
   // would differ between the server and client passes and trip a
   // hydration mismatch.
   const [snippet, setSnippet] = useState<TypingSnippet>(
-    () => TYPING_SNIPPETS[0] ?? FALLBACK_SNIPPET,
+    () => TYPING_SNIPPETS.find((s) => s.difficulty === 'beginner') ?? FALLBACK_SNIPPET,
   );
   useEffect(() => {
-    setSnippet(pickSnippet());
+    setSnippet(pickSnippet(undefined, 'beginner'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [typed, setTyped] = useState<string>('');
@@ -239,16 +263,19 @@ export function TypingTestClient() {
     return Math.round(wordsFromChars(totalChars) / minutes);
   }, [mode, typed, elapsedMs, testRemainingMs, testTotalChars]);
 
-  const resetPractice = useCallback((nextSnippet: TypingSnippet = pickSnippet()) => {
-    finishedRef.current = false;
-    setSnippet(nextSnippet);
-    setTyped('');
-    setStatus('idle');
-    setStartedAt(null);
-    setElapsedMs(0);
-    setLastScore(null);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
+  const resetPractice = useCallback(
+    (nextSnippet?: TypingSnippet) => {
+      finishedRef.current = false;
+      setSnippet(nextSnippet ?? pickSnippet(undefined, difficultyForRound(practiceRoundsDone)));
+      setTyped('');
+      setStatus('idle');
+      setStartedAt(null);
+      setElapsedMs(0);
+      setLastScore(null);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    },
+    [practiceRoundsDone],
+  );
 
   const resetTest = useCallback(() => {
     finishedRef.current = false;
@@ -258,7 +285,7 @@ export function TypingTestClient() {
     setTestResult(null);
     setTestRemainingMs(TEST_DURATION_MS);
     setTestStartedAt(null);
-    setSnippet(pickSnippet());
+    setSnippet(pickSnippet(undefined, difficultyForRound(0)));
     setTyped('');
     setStatus('idle');
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -267,7 +294,12 @@ export function TypingTestClient() {
   function switchMode(next: Mode) {
     if (next === mode) return;
     setMode(next);
-    resetPractice(pickSnippet());
+    // Practice keeps ramping from wherever practiceRoundsDone left off;
+    // test always restarts its own ramp at the top since its counter is
+    // about to be zeroed below.
+    const nextDifficulty =
+      next === 'practice' ? difficultyForRound(practiceRoundsDone) : difficultyForRound(0);
+    resetPractice(pickSnippet(undefined, nextDifficulty));
     // resetPractice already clears the shared bits (status/typed/etc);
     // just also zero out the other mode's session so switching back
     // and forth never carries stale progress with it.
@@ -323,10 +355,11 @@ export function TypingTestClient() {
     // `finishTest` may already have ended the session by the time it
     // fires) — once finished, don't keep mutating session state.
     if (finishedRef.current) return;
+    const nextDone = testSnippetsDone + 1;
     setTestTotalChars((n) => n + snippet.text.length);
     setTestCorrectChars((n) => n + countCorrect(typed, snippet.text));
-    setTestSnippetsDone((n) => n + 1);
-    setSnippet(pickSnippet(snippet));
+    setTestSnippetsDone(nextDone);
+    setSnippet(pickSnippet(snippet, difficultyForRound(nextDone)));
     setTyped('');
   }
 
@@ -397,8 +430,12 @@ export function TypingTestClient() {
             Type the command exactly as shown, as fast and as accurately as you can.
             <strong className="text-slate-300"> Practice</strong> is one snippet at a time,
             no pressure. <strong className="text-slate-300">Take Test</strong> is a focused
-            3-minute sprint across as many snippets as you can get through. Hitting 30 WPM
-            unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
+            3-minute sprint across as many snippets as you can get through. Commands start{' '}
+            <strong className="text-slate-300">Beginner</strong> and ramp up through{' '}
+            <strong className="text-slate-300">Intermediate</strong>,{' '}
+            <strong className="text-slate-300">Advanced</strong>, and{' '}
+            <strong className="text-slate-300">Expert</strong> as you clear rounds. Hitting 30
+            WPM unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
             either mode counts.
           </p>
         </header>
@@ -447,15 +484,18 @@ export function TypingTestClient() {
           }
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {mode === 'practice' ? (
-              <Pill tone="accent">
-                <TargetIcon size={12} /> Round {practiceRoundsDone + 1}
-              </Pill>
-            ) : (
-              <Pill tone="accent">
-                <ClockIcon size={12} /> {testSnippetsDone} snippet{testSnippetsDone === 1 ? '' : 's'} completed
-              </Pill>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {mode === 'practice' ? (
+                <Pill tone="accent">
+                  <TargetIcon size={12} /> Round {practiceRoundsDone + 1}
+                </Pill>
+              ) : (
+                <Pill tone="accent">
+                  <ClockIcon size={12} /> {testSnippetsDone} snippet{testSnippetsDone === 1 ? '' : 's'} completed
+                </Pill>
+              )}
+              <Pill tone={snippet.difficulty}>{DIFFICULTY_LABEL[snippet.difficulty]}</Pill>
+            </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"

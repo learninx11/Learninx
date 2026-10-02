@@ -7,6 +7,13 @@
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
+/**
+ * Which curriculum track a lesson belongs to. `linux` is the original
+ * shell/OS fundamentals catalogue; the rest are the DevOps-practices
+ * tracks that build on it.
+ */
+export type LessonTrack = 'linux' | 'cicd' | 'cloud' | 'observability' | 'containers';
+
 export interface Lesson {
   /** Stable id used in the URL, the quiz-question join, and the cookie store. */
   id: string;
@@ -14,6 +21,7 @@ export interface Lesson {
   title: string;
   description: string;
   difficulty: Difficulty;
+  track: LessonTrack;
   order: number;
   /** Markdown body. */
   content: string;

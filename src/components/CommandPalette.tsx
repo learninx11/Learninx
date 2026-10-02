@@ -160,6 +160,7 @@ export function CommandPalette() {
         l.description,
         l.trackCommand ?? '',
         l.difficulty,
+        l.track,
       ],
       icon: <BookIcon size={14} />,
     }));
