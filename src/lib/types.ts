@@ -12,7 +12,14 @@ export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
  * shell/OS fundamentals catalogue; the rest are the DevOps-practices
  * tracks that build on it.
  */
-export type LessonTrack = 'linux' | 'cicd' | 'cloud' | 'observability' | 'containers';
+export type LessonTrack =
+  | 'linux'
+  | 'git'
+  | 'cicd'
+  | 'iac'
+  | 'cloud'
+  | 'observability'
+  | 'containers';
 
 export interface Lesson {
   /** Stable id used in the URL, the quiz-question join, and the cookie store. */

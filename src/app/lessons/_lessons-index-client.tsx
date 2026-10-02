@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/Icon';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
 import { StreakWidget } from '@/components/StreakWidget';
-import { TrackIcon } from '@/components/TrackIcon';
 import { useProgress } from '@/lib/progress-context';
 import { TRACK_DESCRIPTION, TRACK_LABEL } from '@/lib/lesson-tracks';
 import type { Difficulty, Lesson, LessonTrack } from '@/lib/types';
@@ -156,9 +155,6 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
         >
           <ChevronLeftIcon size={12} /> All tracks
         </Link>
-        <Pill tone="accent">
-          <TrackIcon track={track} size={12} /> ~/lessons/{track}
-        </Pill>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           {TRACK_LABEL[track]}
         </h1>

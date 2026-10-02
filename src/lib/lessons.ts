@@ -3311,6 +3311,522 @@ docker images
 When you're ready, hit **Mark complete**. You've completed the DevOps track!
 `,
   },
+
+  // ─────────────────────── Git & Version Control ───────────────────────
+  {
+    id: 'git-fundamentals',
+    slug: 'git-fundamentals',
+    title: 'Git Fundamentals',
+    description: 'What version control actually is, and the three places git keeps track of your files.',
+    difficulty: 'beginner',
+    track: 'git',
+    order: 47,
+    trackCommand: 'git init',
+    challenge: 'Initialize a new git repository in the current directory.',
+    solution: 'git init',
+    content: `# Git Fundamentals
+
+**Version control** is a system for recording changes to a set of files over time, so you can review what changed, revert a mistake, and work alongside other people without overwriting each other's work. **git** is, by a huge margin, the version control system the industry standardized on.
+
+## Three places, one file
+
+At any moment, a file you're tracking with git exists in up to three places:
+
+| Area | What it holds |
+| ---- | -------------- |
+| **Working directory** | The files as they currently sit on disk - whatever you're editing right now. |
+| **Staging area** (the "index") | Changes you've marked as ready for the *next* commit, via \`git add\`. |
+| **Repository** | The permanent history - every commit you've ever made, via \`git commit\`. |
+
+Nothing becomes permanent until it's committed, and nothing gets committed until it's staged first. That two-step "stage, then commit" process is deliberate: it lets you build one coherent commit out of several edits, instead of every single save becoming its own entry in the history.
+
+## Starting a repository
+
+\`\`\`bash
+git init
+\`\`\`
+
+This creates a hidden \`.git\` directory in the current folder - that's the entire repository, holding every commit, branch, and bit of history git will ever track here. Delete \`.git\` and, as far as git is concerned, the history never existed.
+
+## Checking where you stand
+
+\`\`\`bash
+git status
+\`\`\`
+
+This is the single most-run git command there is. It reports, in plain English, what's changed in your working directory, what's staged and ready to commit, and what git isn't tracking at all yet.
+
+## Try it
+
+\`\`\`bash
+git init
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'git-staging-commits',
+    slug: 'git-staging-commits',
+    title: 'Staging & Committing',
+    description: 'Moving changes from your working directory into a permanent, named snapshot.',
+    difficulty: 'beginner',
+    track: 'git',
+    order: 48,
+    trackCommand: 'git add notes.txt',
+    challenge: 'Stage the file `notes.txt`, ready to be committed.',
+    solution: 'git add notes.txt',
+    content: `# Staging & Committing
+
+With files tracked in a repository, the next skill is turning edits into a real, permanent entry in the history.
+
+## Staging: picking what goes in this commit
+
+\`\`\`bash
+git add notes.txt        # stage one specific file
+git add .                 # stage everything that's changed
+\`\`\`
+
+Think of the staging area as a loading dock: you place exactly the boxes (files, or even parts of files) you want on this particular truck (commit), and leave the rest for later. That's genuinely useful - it lets you commit "fix the login bug" and "update the README" as two separate, clean commits, even if you happened to edit both files in the same sitting.
+
+## Committing: making it permanent
+
+\`\`\`bash
+git commit -m "Fix login redirect on expired sessions"
+\`\`\`
+
+The \`-m\` flag supplies the commit message inline. A good commit message is written in the **imperative mood** - "Fix the bug," not "Fixed the bug" or "Fixes the bug" - as if finishing the sentence "If applied, this commit will...". It's a small convention, but it keeps a project's history reading like a coherent list of actions rather than a diary.
+
+## Viewing the history
+
+\`\`\`bash
+git log
+\`\`\`
+
+Every commit shows its unique ID, author, date, and message - a permanent, append-only record of every change anyone has made, in order.
+
+## Try it
+
+\`\`\`bash
+git add notes.txt
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'git-branching',
+    slug: 'git-branching',
+    title: 'Branching',
+    description: "Working on something new without touching the code everyone else depends on.",
+    difficulty: 'intermediate',
+    track: 'git',
+    order: 49,
+    trackCommand: 'git checkout -b feature/login',
+    challenge: 'Create a new branch called `feature/login` and switch to it, in a single command.',
+    solution: 'git checkout -b feature/login',
+    content: `# Branching
+
+A **branch** is nothing more than a movable pointer to a commit. That simplicity is exactly what makes branching in git fast and cheap, and why it's the foundation almost every git workflow is built on.
+
+## HEAD: where you are right now
+
+Git tracks a special pointer called **HEAD**, which points at whichever branch (and therefore commit) you currently have checked out. When you make a new commit, HEAD - and the branch it points to - both move forward to it.
+
+## Why branch at all?
+
+Editing \`main\` directly means every half-finished change is visible to, and can break things for, everyone else working from it. A branch gives you an isolated line of development:
+
+\`\`\`
+main:              A---B---C
+                        \\
+feature/login:           D---E
+\`\`\`
+
+Commits \`D\` and \`E\` exist only on \`feature/login\` until that branch is merged back - \`main\` stays exactly as it was at commit \`C\` the whole time.
+
+## Creating and switching branches
+
+\`\`\`bash
+git branch feature/login       # create a branch (stays on the current one)
+git checkout feature/login     # switch to it
+
+# or do both in one step:
+git checkout -b feature/login
+\`\`\`
+
+## Listing branches
+
+\`\`\`bash
+git branch
+\`\`\`
+
+Lists every branch in the repository, with an asterisk marking whichever one you currently have checked out.
+
+## Try it
+
+\`\`\`bash
+git checkout -b feature/login
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'git-merging-rebasing',
+    slug: 'git-merging-rebasing',
+    title: 'Merging & Rebasing',
+    description: "Two ways to bring a branch's changes back together, and why history ends up looking different.",
+    difficulty: 'advanced',
+    track: 'git',
+    order: 50,
+    trackCommand: 'git branch',
+    challenge: 'List every branch in the repository, with the one you are currently on marked.',
+    solution: 'git branch',
+    content: `# Merging & Rebasing
+
+Once a branch is ready, its changes need to make it back into \`main\`. Git gives you two genuinely different ways to do that.
+
+## Merging
+
+A **merge** brings two branches' histories together, usually creating a new **merge commit** with two parents:
+
+\`\`\`
+main:              A---B---C-------F  (merge commit)
+                        \\         /
+feature/login:           D---E---
+\`\`\`
+
+Nothing about the existing commits changes - a merge is purely additive. The trade-off: a long-lived project accumulates a lot of these merge commits, and the history graph can get tangled.
+
+## Fast-forward merges
+
+If \`main\` hasn't moved at all since \`feature/login\` branched off it, there's nothing to "merge" - git just slides the \`main\` pointer forward to the tip of \`feature/login\`. No merge commit is created at all; this is called a **fast-forward**.
+
+## Rebasing
+
+A **rebase** takes your branch's commits and replays them, one by one, on top of the latest \`main\` - rewriting their underlying commit hashes in the process:
+
+\`\`\`
+before:  main: A---B---C          feature: A---B---D---E
+after rebase:  main: A---B---C    feature:         A---B---C---D'---E'
+\`\`\`
+
+The payoff is a clean, linear history with no merge commits at all. The cost: because it rewrites history, you should **never rebase a branch other people have already pulled** - their copy and the rewritten copy will have permanently diverged.
+
+## Conflicts
+
+Either approach can hit a **merge conflict**: the same lines of the same file were changed differently on both sides, and git can't guess which version you want. Git pauses and asks you to resolve it by hand before continuing - the one moment in all of this that genuinely needs a human decision.
+
+## Try it
+
+\`\`\`bash
+git branch
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'git-workflows-gitops',
+    slug: 'git-workflows-gitops',
+    title: 'Git Workflows & GitOps',
+    description: 'Trunk-based development, pull requests, and using git itself as the source of truth for what should be running.',
+    difficulty: 'expert',
+    track: 'git',
+    order: 51,
+    trackCommand: 'git log --oneline --graph --decorate --all',
+    challenge: 'Show a compact, one-line-per-commit graph of every branch in the repository.',
+    solution: 'git log --oneline --graph --decorate --all',
+    content: `# Git Workflows & GitOps
+
+Branches and commits are the mechanics. A **workflow** is the team-wide agreement on how those mechanics actually get used day to day.
+
+## Trunk-based development vs. Git Flow
+
+- **Trunk-based development** - everyone branches off \`main\` for a short-lived feature branch (hours to a couple of days), merges back quickly, and \`main\` is always close to deployable. Favored by teams practicing continuous deployment.
+- **Git Flow** - a heavier model with long-lived \`develop\`, \`release\`, and \`hotfix\` branches alongside \`main\`. More structure, more ceremony - a reasonable fit for software shipped in discrete, versioned releases rather than deployed continuously.
+
+Most modern web teams lean toward trunk-based development specifically because it pairs well with the CI/CD pipelines from earlier in this track - the whole point of fast feedback is undercut if branches sit unmerged for weeks.
+
+## Pull requests
+
+A **pull request** (or "merge request") is the review gate before a branch merges: a diff, a place for teammates to comment line-by-line, and (usually) a requirement that CI passes before the merge button even unlocks. It's the social and quality-control layer git itself doesn't provide on its own.
+
+## GitOps
+
+**GitOps** takes this a step further for infrastructure and deployments: the *desired state* of a system - which image version should be running, how many replicas, which config - is described declaratively and committed to a git repository. An operator (often running inside the cluster itself) continuously compares that desired state against what's actually running, and reconciles any difference automatically.
+
+The result: deploying is just a commit and a pull request, exactly like shipping a code change. Rolling back is \`git revert\`. And the git history itself becomes a complete, auditable record of every change ever made to production - tying directly back to the Kubernetes and CI/CD lessons earlier in this curriculum.
+
+## Try it
+
+\`\`\`bash
+git log --oneline --graph --decorate --all
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+
+  // ─────────────────────── Infrastructure as Code ───────────────────────
+  {
+    id: 'iac-fundamentals',
+    slug: 'iac-fundamentals',
+    title: 'What Is Infrastructure as Code',
+    description: 'Describing servers, networks, and databases in version-controlled files instead of clicking through a console.',
+    difficulty: 'beginner',
+    track: 'iac',
+    order: 52,
+    trackCommand: 'touch main.tf',
+    challenge: 'Create an empty file named `main.tf` - where Terraform configuration lives.',
+    solution: 'touch main.tf',
+    content: `# What Is Infrastructure as Code
+
+**Infrastructure as Code (IaC)** means describing your servers, networks, and databases in files - checked into version control - rather than clicking buttons in a cloud provider's web console.
+
+## The problem with clicking
+
+Manually clicking through a console to create a server works fine, right up until:
+
+- Nobody can tell you exactly what was configured, or why, six months later.
+- Rebuilding the same environment for staging means remembering (or re-discovering) every single click.
+- There's no diff, no review, and no record of who changed what.
+
+Every one of those problems disappears once "how the infrastructure is configured" is a text file sitting in the same repository as the application code.
+
+## Declarative, not imperative
+
+Most IaC tools are **declarative**: you describe the end state you want ("there should be one web server, this size, in this region"), not the step-by-step commands to get there. The tool itself figures out what needs to change to reach that state - including doing nothing at all, if reality already matches.
+
+## Idempotency
+
+That leads to the single most important property an IaC tool needs: **idempotency**. Running the same configuration twice should produce the exact same result as running it once - never a second copy, never an error because "it already exists." You can safely re-run it after a crash, after a doubt, or just as routine maintenance, and trust it will only change what actually needs to change.
+
+## Why it matters
+
+- **Reviewable** - a proposed infrastructure change is a pull request diff, read and approved like any code change.
+- **Repeatable** - standing up an identical staging environment is running the same files again, not re-deriving tribal knowledge.
+- **Disaster recovery** - if a server vanishes, "rebuild it" means rerunning the config, not reconstructing a manual setup from memory.
+
+## Try it
+
+\`\`\`bash
+touch main.tf
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'terraform-basics',
+    slug: 'terraform-basics',
+    title: 'Terraform Basics',
+    description: 'Providers, resources, and the plan-then-apply workflow that makes infrastructure changes predictable.',
+    difficulty: 'intermediate',
+    track: 'iac',
+    order: 53,
+    trackCommand: 'cat main.tf',
+    challenge: 'View the contents of `main.tf`.',
+    solution: 'cat main.tf',
+    content: `# Terraform Basics
+
+**Terraform** is the most widely used tool for infrastructure as code, and works across every major cloud provider through the same core workflow and syntax.
+
+## Providers and resources
+
+A Terraform file (written in **HCL**, HashiCorp Configuration Language) names a **provider** - which platform it's talking to - and then declares **resources** on it:
+
+\`\`\`hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "web" {
+  ami           = "ami-0123456789"
+  instance_type = "t3.micro"
+}
+\`\`\`
+
+This says, in full: "talk to AWS's us-east-1 region, and there should exist one t3.micro instance running this AMI, which I'll refer to elsewhere in this config as \`aws_instance.web\`."
+
+## The core workflow
+
+\`\`\`bash
+terraform init      # download the provider plugin, set up the working directory
+terraform plan       # show exactly what would change - a dry run
+terraform apply      # actually make those changes
+terraform destroy    # tear everything this config created back down
+\`\`\`
+
+\`terraform plan\` is the step that makes this trustworthy: it prints precisely what will be created, changed, or destroyed, and nothing actually happens until \`apply\` is run and confirmed. No surprises between "what I expected" and "what happened."
+
+## Reading a plan
+
+Terraform marks every line of a plan with a symbol - \`+\` to create, \`-\` to destroy, \`~\` to update in place. A plan that shows an unexpected \`-\` (destroying something you didn't mean to touch) is exactly the kind of mistake this dry-run step exists to catch before it becomes real.
+
+## Try it
+
+\`\`\`bash
+cat main.tf
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'terraform-state',
+    slug: 'terraform-state',
+    title: 'State Management',
+    description: 'Why Terraform keeps a map of what it already built, and why that file deserves the same care as a credential.',
+    difficulty: 'advanced',
+    track: 'iac',
+    order: 54,
+    trackCommand: 'chmod 600 terraform.tfstate',
+    challenge: 'Lock down `terraform.tfstate` so only its owner can read or write it - it often contains sensitive resource data in plain text.',
+    solution: 'chmod 600 terraform.tfstate',
+    content: `# State Management
+
+Terraform's configuration describes what you *want*. Its **state file** records what it already *built* - and that distinction turns out to matter a lot.
+
+## What state actually is
+
+Every time \`terraform apply\` creates a resource, Terraform writes an entry into \`terraform.tfstate\` mapping your configuration's name for it (\`aws_instance.web\`) to the real resource ID the cloud provider assigned. On every future \`plan\`, Terraform reads that file to know what already exists, so it can compute an accurate diff instead of trying to recreate everything from scratch.
+
+## Why it needs real care
+
+- **It often contains secrets.** Resource attributes - a generated database password, a private key - can end up in state in plain text. It deserves the exact same handling as any other credential file.
+- **Never hand-edit it.** The file's format isn't meant for manual editing, and small corruption here can make Terraform lose track of real infrastructure entirely, leading it to try to recreate resources that already exist.
+- **Concurrent runs corrupt it.** If two people run \`apply\` at the same time against the same state, they can race and corrupt it.
+
+## Remote state
+
+For any team beyond a single person, state lives in a **remote backend** - commonly cloud object storage (like S3) paired with a locking mechanism (like a DynamoDB table) that prevents two \`apply\`s from running at once. Everyone's Terraform runs then read and write the same shared, locked copy, instead of each having their own out-of-sync local file.
+
+## Drift
+
+**Drift** is what happens when real infrastructure stops matching the state Terraform believes is true - usually because someone changed something by hand in the cloud console. The next \`terraform plan\` will show that difference clearly, which is exactly why teams that take IaC seriously treat console changes as a last resort, not a habit.
+
+## Try it
+
+\`\`\`bash
+chmod 600 terraform.tfstate
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'ansible-basics',
+    slug: 'ansible-basics',
+    title: 'Ansible Basics',
+    description: 'Agentless configuration management: pushing the same setup over SSH to every server in your inventory.',
+    difficulty: 'advanced',
+    track: 'iac',
+    order: 55,
+    trackCommand: 'ssh user@web1',
+    challenge: 'Connect over SSH to `web1` - the same way Ansible reaches every host in its inventory, just without installing anything on the other end first.',
+    solution: 'ssh user@web1',
+    content: `# Ansible Basics
+
+Where Terraform's job is usually *provisioning* - creating the VM, the network, the database - **Ansible**'s job is typically *configuration*: once a server exists, making sure it has the right packages, files, and services running.
+
+## Agentless, over SSH
+
+Tools like Puppet or Chef require installing a permanent agent on every managed machine. Ansible doesn't - it connects over plain SSH (the same protocol you already know from earlier lessons), runs what it needs to, and leaves nothing permanently installed behind. One less piece of software to patch and secure on every server you manage.
+
+## Inventory
+
+An **inventory** file lists every host Ansible manages, usually grouped by role:
+
+\`\`\`ini
+[webservers]
+web1.example.com
+web2.example.com
+
+[databases]
+db1.example.com
+\`\`\`
+
+A single command can then target "every webserver" or "every host" without naming each one individually.
+
+## Playbooks
+
+A **playbook** is a YAML file listing the tasks to run, in order:
+
+\`\`\`yaml
+- hosts: webservers
+  tasks:
+    - name: Ensure nginx is installed
+      apt:
+        name: nginx
+        state: present
+    - name: Ensure nginx is running
+      service:
+        name: nginx
+        state: started
+\`\`\`
+
+## Idempotent tasks, not scripts
+
+Notice the task reads "ensure nginx is installed," not "install nginx." Every built-in Ansible module is written to be idempotent: running this playbook against a server that already has nginx running changes nothing and reports "ok" rather than erroring or reinstalling. Run it against ten fresh servers and ten already-configured ones in the same batch, and every single one ends up in the exact same state.
+
+## Try it
+
+\`\`\`bash
+ssh user@web1
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'iac-in-pipelines',
+    slug: 'iac-in-pipelines',
+    title: 'Infrastructure as Code in a Pipeline',
+    description: 'Running `terraform plan` on every pull request, and catching drift before it catches you.',
+    difficulty: 'expert',
+    track: 'iac',
+    order: 56,
+    trackCommand: 'echo',
+    challenge:
+      "Write a crontab line into a file called `drift-check` that runs `/usr/local/bin/terraform-plan-check.sh` every night at 3:00 AM, using a single redirected `echo`.",
+    solution: "echo '0 3 * * * /usr/local/bin/terraform-plan-check.sh' > drift-check",
+    content: `# Infrastructure as Code in a Pipeline
+
+This lesson is the capstone that ties the whole curriculum together: infrastructure changes reviewed and shipped exactly the way application code is, using the CI/CD machinery from earlier in this track.
+
+## Plan on every pull request
+
+A common, high-value pattern: every pull request that touches Terraform files automatically triggers a pipeline stage that runs \`terraform plan\` and posts the output as a comment on the PR itself. Reviewers see *exactly* what infrastructure will change - not just the HCL diff, but its real, computed effect - before approving anything.
+
+\`\`\`groovy
+stage('Terraform Plan') {
+  steps {
+    sh 'terraform plan -out=tfplan'
+  }
+}
+\`\`\`
+
+## Apply only after merge
+
+\`terraform apply\` runs separately, triggered only once that reviewed, approved plan merges to the main branch - the exact same "build once, promote everywhere" discipline from the Jenkins deploy lesson, just applied to infrastructure instead of application artifacts. Nobody applies a plan that wasn't the one actually reviewed.
+
+## Catching drift on a schedule
+
+Code review catches changes made *through* the pipeline. It can't catch someone changing something by hand in the cloud console at 2 AM. A separate, scheduled job - a nightly \`terraform plan\` with no corresponding apply - catches that: any unexpected diff in its output means something drifted outside the pipeline's view, and it's worth paging someone to go find out why.
+
+## Try it
+
+Real cron handles the "nightly" part, the same way it did for the scheduled Jenkins builds earlier in this curriculum:
+
+\`\`\`bash
+echo '0 3 * * * /usr/local/bin/terraform-plan-check.sh' > drift-check
+\`\`\`
+
+When you're ready, hit **Mark complete**. You've completed the Infrastructure as Code track!
+`,
+  },
 ];
 
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
@@ -4092,6 +4608,146 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     order: 1,
     prompt: "Which image tag is often mistaken for 'the newest stable release' when it just means 'most recent untagged push'?",
     answer: 'latest',
+  },
+  {
+    id: 'q-git-f-1',
+    lessonId: 'git-fundamentals',
+    order: 0,
+    prompt: 'What do you call the area between your working directory and the repository, where `git add` puts files?',
+    answer: 'staging area',
+  },
+  {
+    id: 'q-git-f-2',
+    lessonId: 'git-fundamentals',
+    order: 1,
+    prompt: 'Which command shows the status of your working directory and staging area?',
+    answer: 'git status',
+  },
+  {
+    id: 'q-git-sc-1',
+    lessonId: 'git-staging-commits',
+    order: 0,
+    prompt: 'Which command stages notes.txt for the next commit?',
+    answer: 'git add notes.txt',
+  },
+  {
+    id: 'q-git-sc-2',
+    lessonId: 'git-staging-commits',
+    order: 1,
+    prompt: "What verb mood do good commit messages conventionally use - 'Fix bug' rather than 'Fixed bug'?",
+    answer: 'imperative',
+  },
+  {
+    id: 'q-git-br-1',
+    lessonId: 'git-branching',
+    order: 0,
+    prompt: 'What do you call the pointer to whichever commit you currently have checked out?',
+    answer: 'head',
+  },
+  {
+    id: 'q-git-br-2',
+    lessonId: 'git-branching',
+    order: 1,
+    prompt: 'Which command creates a new branch and switches to it in one step?',
+    answer: 'git checkout -b',
+  },
+  {
+    id: 'q-git-mr-1',
+    lessonId: 'git-merging-rebasing',
+    order: 0,
+    prompt: "What's it called when git just slides a branch pointer forward because the target hasn't moved?",
+    answer: 'fast-forward',
+  },
+  {
+    id: 'q-git-mr-2',
+    lessonId: 'git-merging-rebasing',
+    order: 1,
+    prompt: 'Which command lists every branch, marking the current one?',
+    answer: 'git branch',
+  },
+  {
+    id: 'q-git-go-1',
+    lessonId: 'git-workflows-gitops',
+    order: 0,
+    prompt: 'In GitOps, where does the desired state of your infrastructure live?',
+    answer: 'git',
+  },
+  {
+    id: 'q-git-go-2',
+    lessonId: 'git-workflows-gitops',
+    order: 1,
+    prompt: "What's the review step called where a teammate checks your branch before it merges?",
+    answer: 'pull request',
+  },
+  {
+    id: 'q-iac-f-1',
+    lessonId: 'iac-fundamentals',
+    order: 0,
+    prompt: 'What word describes a config that produces the same result no matter how many times you apply it?',
+    answer: 'idempotent',
+  },
+  {
+    id: 'q-iac-f-2',
+    lessonId: 'iac-fundamentals',
+    order: 1,
+    prompt: 'Which command creates the empty file where Terraform configuration lives?',
+    answer: 'touch main.tf',
+  },
+  {
+    id: 'q-tf-b-1',
+    lessonId: 'terraform-basics',
+    order: 0,
+    prompt: 'Which Terraform command shows what would change, without actually changing anything?',
+    answer: 'terraform plan',
+  },
+  {
+    id: 'q-tf-b-2',
+    lessonId: 'terraform-basics',
+    order: 1,
+    prompt: "Which command actually applies a Terraform plan to real infrastructure?",
+    answer: 'terraform apply',
+  },
+  {
+    id: 'q-tf-s-1',
+    lessonId: 'terraform-state',
+    order: 0,
+    prompt: 'Which command locks down terraform.tfstate to just its owner?',
+    answer: 'chmod 600 terraform.tfstate',
+  },
+  {
+    id: 'q-tf-s-2',
+    lessonId: 'terraform-state',
+    order: 1,
+    prompt: "What's it called when real infrastructure no longer matches what Terraform's state believes is true?",
+    answer: 'drift',
+  },
+  {
+    id: 'q-ans-b-1',
+    lessonId: 'ansible-basics',
+    order: 0,
+    prompt: 'Does Ansible require installing a permanent agent on every managed server?',
+    answer: 'no',
+  },
+  {
+    id: 'q-ans-b-2',
+    lessonId: 'ansible-basics',
+    order: 1,
+    prompt: 'What do you call the file listing every host Ansible manages?',
+    answer: 'inventory',
+  },
+  {
+    id: 'q-iac-p-1',
+    lessonId: 'iac-in-pipelines',
+    order: 0,
+    prompt: 'Which Terraform command should run automatically on every pull request, before anything merges?',
+    answer: 'terraform plan',
+  },
+  {
+    id: 'q-iac-p-2',
+    lessonId: 'iac-in-pipelines',
+    order: 1,
+    prompt: "What's it called when manual console changes make real infrastructure diverge from Terraform's config?",
+    answer: 'drift',
   },
 ];
 
