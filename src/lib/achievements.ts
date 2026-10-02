@@ -188,6 +188,57 @@ export function evaluateAchievements(
   }));
 }
 
+export interface AchievementProgress {
+  value: number;
+  max: number;
+}
+
+/**
+ * Quantified "how close" progress toward an achievement with a genuine
+ * multi-step target (e.g. "3/5 bookmarks"). Returns `null` for one-shot
+ * achievements (first lesson, first boss, any perfect quiz, any saved
+ * note) where a progress bar would only ever read 0 or 1 — those are
+ * better left as a plain locked/unlocked state.
+ */
+export function achievementProgress(
+  state: ProgressState,
+  id: string,
+): AchievementProgress | null {
+  const totalLessons = getAllLessons().length;
+  const totalBosses = getAllBosses().length;
+  const completedCount = state.completed.length;
+  const quizPerfect = Object.values(state.quiz).filter(
+    (q) => q.total > 0 && q.correct === q.total,
+  ).length;
+
+  switch (id) {
+    case 'halfway':
+      return { value: completedCount, max: Math.ceil(totalLessons / 2) };
+    case 'graduate':
+      return { value: completedCount, max: totalLessons };
+    case 'streak-3':
+      return { value: state.streak.best, max: 3 };
+    case 'streak-7':
+      return { value: state.streak.best, max: 7 };
+    case 'streak-30':
+      return { value: state.streak.best, max: 30 };
+    case 'perfect-ten':
+      return { value: quizPerfect, max: 10 };
+    case 'all-bosses':
+      return { value: state.bossesCompleted.length, max: totalBosses };
+    case 'bookworm':
+      return { value: state.bookmarks.length, max: 5 };
+    case 'tip-explorer':
+      return { value: state.tipsSeen.length, max: 5 };
+    case 'fast-fingers':
+      return { value: state.bestTyping?.wpm ?? 0, max: 30 };
+    case 'lightning':
+      return { value: state.bestTyping?.wpm ?? 0, max: 60 };
+    default:
+      return null;
+  }
+}
+
 /**
  * Compare the stored achievements with the freshly derived ones and
  * return the list of *newly* unlocked ids (so the UI can show a toast).

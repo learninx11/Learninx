@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRightIcon,
+  CheckCheckIcon,
   CheckIcon,
+  CopyIcon,
   ResetIcon,
   TerminalIcon,
 } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { Pill, ProgressBar } from '@/components/ui/Pill';
 import { createInitialFs, type FsDir } from '@/lib/shell/fs';
 import { runCommand, type ShellContext } from '@/lib/shell/evaluator';
 import { getBossBySlug, type BossLevel } from '@/lib/bosses';
@@ -47,9 +49,19 @@ function BossRunner({ boss }: { boss: BossLevel }) {
     message: string;
     ok: boolean;
   } | null>(null);
+  // Index of the step that *just* flipped to passed, held briefly so its
+  // card can pulse — cleared automatically so the pulse only plays once.
+  const [justPassedIdx, setJustPassedIdx] = useState<number | null>(null);
 
   const isComplete = statuses.every((s) => s === 'passed');
+  const passedCount = statuses.filter((s) => s === 'passed').length;
   const currentStep = boss.steps[stepIdx];
+
+  useEffect(() => {
+    if (justPassedIdx === null) return;
+    const id = window.setTimeout(() => setJustPassedIdx(null), 1400);
+    return () => window.clearTimeout(id);
+  }, [justPassedIdx]);
 
   // When the learner completes the boss, mark it in the progress
   // store exactly once. The store handles achievement re-evaluation
@@ -65,6 +77,7 @@ function BossRunner({ boss }: { boss: BossLevel }) {
     setStepIdx(0);
     setStatuses(boss.steps.map(() => 'pending'));
     setLastRun(null);
+    setJustPassedIdx(null);
   }
 
   // Run the user's command in a fresh seeded VFS and grade it.
@@ -105,6 +118,7 @@ function BossRunner({ boss }: { boss: BossLevel }) {
       ok: result.ok,
     });
     if (result.ok) {
+      if (statuses[stepIdx] !== 'passed') setJustPassedIdx(stepIdx);
       setStatuses((prev) => {
         const next = [...prev];
         next[stepIdx] = 'passed';
@@ -121,6 +135,25 @@ function BossRunner({ boss }: { boss: BossLevel }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <ProgressBar
+          value={passedCount}
+          max={boss.steps.length}
+          label="Steps passed"
+          className="min-w-[14rem] flex-1"
+        />
+        {!isComplete && (passedCount > 0 || statuses.includes('failed')) && (
+          <button
+            type="button"
+            onClick={reset}
+            className="lx-btn lx-btn-ghost lx-btn-sm shrink-0"
+            title="Start this boss over from step 1"
+          >
+            <ResetIcon size={12} /> Reset attempt
+          </button>
+        )}
+      </div>
+
       {/* Steps overview */}
       <ol className="grid gap-2 sm:grid-cols-2">
         {boss.steps.map((s, i) => {
@@ -138,7 +171,7 @@ function BossRunner({ boss }: { boss: BossLevel }) {
                   active
                     ? 'border-[var(--lx-accent)]/50 bg-[var(--lx-accent-glow)]/30'
                     : ''
-                }`}
+                } ${justPassedIdx === i ? 'lx-pulse-success' : ''}`}
               >
                 <span
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
@@ -266,6 +299,19 @@ function StepRunner({
   onRun,
 }: StepRunnerProps) {
   const [showHint, setShowHint] = useState(false);
+  const [hintCopied, setHintCopied] = useState(false);
+
+  async function copyHint(): Promise<void> {
+    if (!step.hint) return;
+    try {
+      await navigator.clipboard.writeText(step.hint);
+      setHintCopied(true);
+      setTimeout(() => setHintCopied(false), 1600);
+    } catch {
+      /* clipboard blocked */
+    }
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
       <section className="lx-card flex flex-col gap-4 p-5 sm:p-6">
@@ -286,9 +332,27 @@ function StepRunner({
               {showHint ? 'Hide hint' : 'Show hint'}
             </button>
             {showHint && (
-              <p className="mt-2 rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)]/40 p-3 font-mono text-xs text-[var(--lx-muted)]">
-                {step.hint}
-              </p>
+              <div className="mt-2 flex items-start justify-between gap-2 rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)]/40 p-3">
+                <p className="font-mono text-xs text-[var(--lx-muted)]">
+                  {step.hint}
+                </p>
+                <button
+                  type="button"
+                  onClick={copyHint}
+                  className="inline-flex shrink-0 items-center gap-1 text-[0.7rem] text-[var(--lx-muted)] transition hover:text-[var(--lx-accent)]"
+                  aria-label={hintCopied ? 'Copied' : 'Copy hint'}
+                >
+                  {hintCopied ? (
+                    <>
+                      <CheckCheckIcon size={11} /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon size={11} /> Copy
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -368,8 +432,18 @@ function BossTerminal({ onRun }: { onRun: (cmd: string) => void }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const cmd = typed;
-    setTyped((t) => t + `\n$ ${cmd}\n→ submitted for grading (see left panel)`);
+    // `typed` holds the whole transcript, with the *current* input line
+    // as its last entry, stored with a `$ ` prefix (see the input's
+    // `value`/`onChange` below) — pull just that line back out, not the
+    // whole buffer, so the command actually graded doesn't include a
+    // leftover prompt glyph or prior history.
+    const cmd = typed.split('\n').pop()?.replace(/^\$ /, '') ?? '';
+    setTyped((t) => {
+      const lines = t.split('\n');
+      lines[lines.length - 1] = `$ ${cmd}`;
+      lines.push('→ submitted for grading (see left panel)', '$ ');
+      return lines.join('\n');
+    });
     onRun(cmd);
   }
 

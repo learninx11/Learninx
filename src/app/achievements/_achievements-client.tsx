@@ -9,8 +9,13 @@ import {
   BrainIcon,
   SparklesIcon,
 } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
-import { ACHIEVEMENTS, evaluateAchievements, type Achievement } from '@/lib/achievements';
+import { Pill, ProgressBar } from '@/components/ui/Pill';
+import {
+  ACHIEVEMENTS,
+  achievementProgress,
+  evaluateAchievements,
+  type Achievement,
+} from '@/lib/achievements';
 import { getAllLessons } from '@/lib/lessons';
 import { getAllBosses } from '@/lib/bosses';
 import { useProgress } from '@/lib/progress-context';
@@ -95,6 +100,7 @@ export function AchievementsClient() {
               key={a.id}
               achievement={a}
               unlocked={unlocked.has(a.id)}
+              progress={ready ? achievementProgress(state, a.id) : null}
             />
           ))}
         </ul>
@@ -157,10 +163,13 @@ function SummaryStat({
 function AchievementCard({
   achievement,
   unlocked,
+  progress,
 }: {
   achievement: Achievement;
   unlocked: boolean;
+  progress: { value: number; max: number } | null;
 }) {
+  const showProgress = !unlocked && !achievement.hidden && progress && progress.max > 0;
   return (
     <li
       className={
@@ -181,7 +190,7 @@ function AchievementCard({
       >
         <AchievementBadge glyph={achievement.glyph} size={24} unlocked={unlocked} />
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h3 className="truncate font-semibold">{achievement.title}</h3>
           {unlocked ? (
@@ -195,6 +204,13 @@ function AchievementCard({
         <p className="mt-1 text-sm text-slate-400">
           {achievement.hidden && !unlocked ? 'Keep going — it will show up here.' : achievement.description}
         </p>
+        {showProgress && (
+          <ProgressBar
+            value={Math.min(progress.value, progress.max)}
+            max={progress.max}
+            className="mt-2.5"
+          />
+        )}
       </div>
     </li>
   );
