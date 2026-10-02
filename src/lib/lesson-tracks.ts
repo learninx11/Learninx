@@ -12,7 +12,9 @@ export const TRACK_ORDER: LessonTrack[] = [
   'cicd',
   'iac',
   'cloud',
+  'security',
   'observability',
+  'sre',
   'containers',
 ];
 
@@ -22,7 +24,9 @@ export const TRACK_LABEL: Record<LessonTrack, string> = {
   cicd: 'CI/CD & Jenkins',
   iac: 'Infrastructure as Code',
   cloud: 'Cloud',
+  security: 'Security & DevSecOps',
   observability: 'Observability',
+  sre: 'Site Reliability Engineering',
   containers: 'Containers & Kubernetes',
 };
 
@@ -32,7 +36,9 @@ export const TRACK_SHORT_LABEL: Record<LessonTrack, string> = {
   cicd: 'CI/CD',
   iac: 'IaC',
   cloud: 'Cloud',
+  security: 'Security',
   observability: 'Observability',
+  sre: 'SRE',
   containers: 'Containers',
 };
 
@@ -43,6 +49,8 @@ export const TRACK_DESCRIPTION: Record<LessonTrack, string> = {
   cicd: 'Continuous integration and delivery with Jenkins — pipelines, triggers, and shipping a build out to production.',
   iac: 'Provisioning infrastructure from version-controlled code with Terraform and Ansible, instead of clicking through a console.',
   cloud: 'Core cloud concepts: compute, storage, IAM, and networking, the way every major provider shapes them.',
+  security: 'Hardening, secrets management, and shifting security left into the pipeline instead of bolting it on at the end.',
   observability: 'Logs, metrics, traces, and alerting — how you find out what a system is actually doing.',
+  sre: 'SLIs, SLOs, error budgets, and the incident response and postmortem habits that keep systems reliable.',
   containers: "Docker and Kubernetes, from a single container to a cluster that heals and scales itself.",
 };

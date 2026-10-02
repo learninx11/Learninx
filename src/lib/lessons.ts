@@ -3827,6 +3827,449 @@ echo '0 3 * * * /usr/local/bin/terraform-plan-check.sh' > drift-check
 When you're ready, hit **Mark complete**. You've completed the Infrastructure as Code track!
 `,
   },
+
+  // ─────────────────────── Security & DevSecOps ───────────────────────
+  {
+    id: 'security-fundamentals',
+    slug: 'security-fundamentals',
+    title: 'Security Fundamentals',
+    description: 'The CIA triad, attack surface, and defense in depth — the handful of ideas every other security lesson builds on.',
+    difficulty: 'beginner',
+    track: 'security',
+    order: 57,
+    trackCommand: 'chmod 600 id_rsa',
+    challenge: 'Lock down your SSH private key `id_rsa` so only you can read or write it.',
+    solution: 'chmod 600 id_rsa',
+    content: `# Security Fundamentals
+
+Security isn't one skill - it's a handful of recurring ideas, applied over and over to every system you touch. This lesson covers the three that come up constantly for the rest of this track.
+
+## The CIA triad
+
+- **Confidentiality** - only the people (and services) who should see data can see it.
+- **Integrity** - data can't be silently changed by someone who shouldn't be able to change it.
+- **Availability** - the system is actually up and usable when legitimate users need it.
+
+Every security control you'll ever reach for exists to protect one of these three. A firewall rule protects confidentiality and integrity by blocking unauthorized access; a backup protects availability by surviving a disaster.
+
+## Attack surface
+
+Your **attack surface** is everything an attacker could possibly target: every open port, every exposed API endpoint, every dependency, every person with access. Reducing it is almost always cheaper and more effective than defending every inch of a sprawling surface - a port that isn't open at all can't be exploited, full stop.
+
+## Defense in depth
+
+No single control is perfect, so security is built in **layers**: a firewall, *and* authentication, *and* least-privilege permissions, *and* encrypted data at rest. If an attacker gets past one layer, the next one is still there. This is exactly why the earlier IAM lesson's "least privilege" principle matters so much - it's one layer in a stack, not the whole stack.
+
+## Try it
+
+Private keys are a perfect example of all three ideas at once - lock one down, and you're protecting confidentiality (nobody else can use it), integrity (nobody can swap it), and ultimately availability (you still have working access):
+
+\`\`\`bash
+chmod 600 id_rsa
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'secrets-management',
+    slug: 'secrets-management',
+    title: 'Secrets Management',
+    description: "Why passwords and API keys don't belong in code, and where they should live instead.",
+    difficulty: 'intermediate',
+    track: 'security',
+    order: 58,
+    trackCommand: 'cat .gitignore',
+    challenge: 'Check whether `.env` is already excluded from version control.',
+    solution: 'cat .gitignore',
+    content: `# Secrets Management
+
+A **secret** is anything that grants access if it leaks: a database password, an API key, a signing key. How a team handles them says a lot about how seriously they take security in general.
+
+## Why secrets in code are a permanent leak
+
+Committing a secret to git doesn't just expose it today - it's in the **history** forever, even after you delete it in a later commit, unless you rewrite history entirely (which is its own disruptive operation). Anyone who ever clones the repository, or had access at any point, has that secret. The only real fix once a secret is committed is to treat it as compromised and rotate it.
+
+## The minimum bar: .gitignore
+
+\`\`\`
+.env
+*.pem
+secrets.yaml
+\`\`\`
+
+Keeping real secrets in a local, untracked file (commonly \`.env\`), and listing that file in \`.gitignore\`, is the minimum - it stops the *accidental* commit. It's not a complete solution on its own: the file still sits in plain text on disk, readable by anything else running on that machine.
+
+## The real fix: a secrets manager
+
+Tools like **HashiCorp Vault**, or a cloud provider's native secrets service, go further:
+
+- Secrets are stored encrypted, not in plain text anywhere.
+- Access is logged - you can see exactly what read a given secret, and when.
+- Secrets can be fetched at runtime instead of baked into a config file at all.
+
+## Rotation
+
+Even a well-managed secret should be **rotated** periodically - replaced with a new value on a schedule, or immediately if there's any suspicion it leaked. A secret that's valid forever is a single point of failure that never expires; rotation puts a ceiling on how long a leaked credential actually stays useful to whoever has it.
+
+## Try it
+
+\`\`\`bash
+cat .gitignore
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'shift-left-security',
+    slug: 'shift-left-security',
+    title: 'Shift-Left Security',
+    description: 'Catching vulnerabilities while a pull request is still open, instead of after it ships.',
+    difficulty: 'intermediate',
+    track: 'security',
+    order: 59,
+    trackCommand: 'docker images',
+    challenge: 'List every image available locally - exactly what a container vulnerability scanner would work through.',
+    solution: 'docker images',
+    content: `# Shift-Left Security
+
+"Shift left" means moving a concern earlier in the timeline - toward the "left" end of a plan-build-test-release diagram. Applied to security, it means catching problems while code is still in review, not after it's already running in production.
+
+## Why earlier is cheaper
+
+A vulnerability found in code review costs a few minutes to fix. The same vulnerability found by a customer, or an attacker, after release costs an incident, a scramble, and often a public disclosure. The cost of the exact same bug grows by orders of magnitude the later it's caught - the single biggest argument for building these checks straight into the pipeline from this curriculum's CI/CD lessons.
+
+## SAST: static analysis
+
+**Static Application Security Testing** scans your source code directly, without running it, looking for known-dangerous patterns - string-concatenated SQL queries, hardcoded secrets, unsafe deserialization. It runs in seconds as part of a pipeline stage, on every single commit.
+
+## DAST: dynamic analysis
+
+**Dynamic Application Security Testing** instead tests the *running* application from the outside - sending it malformed input, probing its actual HTTP responses - the way an external attacker actually would. It catches a different class of issue than SAST (real runtime behavior, not just suspicious-looking code).
+
+## Dependency and image scanning
+
+Modern software is mostly other people's code: third-party libraries, base container images. A **dependency scanner** checks every library your project pulls in against a database of known vulnerabilities; an **image scanner** does the same for a built container image's full set of installed packages - both a natural pipeline stage right after the build step from the Docker lessons earlier in this curriculum.
+
+## Try it
+
+\`\`\`bash
+docker images
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'network-hardening',
+    slug: 'network-hardening',
+    title: 'Network & Firewall Hardening',
+    description: 'Closing everything you can, and being able to prove what is left open.',
+    difficulty: 'advanced',
+    track: 'security',
+    order: 60,
+    trackCommand: 'iptables -L',
+    challenge: 'List every firewall rule currently configured with iptables.',
+    solution: 'iptables -L',
+    content: `# Network & Firewall Hardening
+
+A server's network exposure is one of the most direct parts of its attack surface - and one of the most straightforward to actually reduce.
+
+## Default-deny
+
+The soundest posture is **default-deny**: block everything, then explicitly allow only the specific ports a service genuinely needs. The alternative - leaving everything open and trying to remember to close the ones you don't need - reliably leaves something exposed that nobody remembers opening, usually discovered during an audit or, worse, an incident.
+
+## ufw vs. iptables
+
+Both tools from earlier Linux lessons reappear here with security specifically in mind:
+
+- **iptables** is the low-level Linux firewall - powerful, precise, and verbose to configure directly.
+- **ufw** ("uncomplicated firewall") is a simpler frontend over the same underlying iptables rules, built for exactly the case of "allow SSH and HTTPS, deny everything else" without hand-writing raw rule syntax.
+
+\`\`\`bash
+iptables -L
+\`\`\`
+
+lists every chain and rule currently in effect - the ground truth of what traffic this host will actually accept, independent of whatever tool was used to configure it.
+
+## This applies in the cloud too
+
+The cloud networking lesson's **security groups** are the exact same default-deny idea, just enforced by the cloud provider instead of the host's own kernel. The principle travels unchanged: list only what must be open, and treat every other port as closed until proven otherwise.
+
+## Try it
+
+\`\`\`bash
+iptables -L
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'security-incident-response',
+    slug: 'security-incident-response',
+    title: 'Detecting & Responding to a Breach',
+    description: 'What actually happens in the first hour after something looks wrong.',
+    difficulty: 'expert',
+    track: 'security',
+    order: 61,
+    trackCommand: 'journalctl -u ssh -n 20',
+    challenge: 'Check the last 20 log lines for the ssh service - exactly what you would review first after a suspected unauthorized-access attempt.',
+    solution: 'journalctl -u ssh -n 20',
+    content: `# Detecting & Responding to a Breach
+
+This lesson is the capstone for the track: every earlier lesson here - hardened defaults, managed secrets, scanning, a locked-down network - exists to prevent needing this one. When it's needed anyway, speed and discipline matter more than anything else.
+
+## Contain first, root-cause second
+
+The same "mitigate before you fully explain" discipline from incident response in general applies here, with extra urgency: **revoke or isolate first**. Rotate every credential that might have been exposed, cut network access to a compromised host, disable a leaked API key - immediately, before fully understanding how the attacker got in. A breach that's still active gets worse every minute it's merely being *studied* instead of stopped.
+
+## Logs are the evidence trail
+
+\`\`\`bash
+journalctl -u ssh -n 20
+\`\`\`
+
+Every lesson on logging and observability earlier in this curriculum pays off directly here: logs are frequently the only record of exactly when access happened, from where, and as whom. This is also precisely why **centralized** logging (from the Observability track) matters so much for security specifically - an attacker with access to a single compromised host can delete its local logs; they generally can't reach a separate, centralized log store they were never given access to.
+
+## Assume compromise is broader than it looks
+
+A good habit under pressure: assume the blast radius is larger than the first signal suggests. If one credential leaked, what else did that credential have access to? Rotate broadly, then narrow down with evidence - not the other way around.
+
+## DevSecOps, in one sentence
+
+Every lesson in this track has been building toward the same idea: security isn't a gate at the very end of a pipeline, checked once before a release ships. It's hardened defaults, managed secrets, automated scanning, and a locked-down network, each built into its own stage of the exact same CI/CD pipeline covered earlier in this curriculum - continuous, not occasional.
+
+## Try it
+
+\`\`\`bash
+journalctl -u ssh -n 20
+\`\`\`
+
+When you're ready, hit **Mark complete**. You've completed the Security & DevSecOps track!
+`,
+  },
+
+  // ─────────────────── Site Reliability Engineering ───────────────────
+  {
+    id: 'sre-fundamentals',
+    slug: 'sre-fundamentals',
+    title: 'SRE Fundamentals',
+    description: 'Site Reliability Engineering: treating operations as a software problem instead of a 3 AM fire drill.',
+    difficulty: 'beginner',
+    track: 'sre',
+    order: 62,
+    trackCommand: 'uptime',
+    challenge: "Check this host's current uptime and load average - the most basic reliability signal there is.",
+    solution: 'uptime',
+    content: `# SRE Fundamentals
+
+**Site Reliability Engineering (SRE)** is a discipline Google popularized: apply the same rigor, measurement, and automation habits software engineering already has to the job of running systems reliably - instead of treating "operations" as a separate, more ad-hoc world of fire drills and tribal knowledge.
+
+## Reliability is a feature, with a cost
+
+The instinctive goal is "100% uptime, always." In practice, that's both practically impossible and not actually what users need - chasing the last fraction of a percent gets exponentially more expensive for improvements users often can't even perceive. SRE treats reliability as a deliberately chosen target, not an unquestioned maximum - the next lesson, on error budgets, makes that precise.
+
+## Toil: the enemy of scaling operations
+
+**Toil** is manual, repetitive operational work that's purely reactive and creates no lasting improvement - restarting the same stuck service by hand every few days, say. It doesn't scale: more services and more traffic just means more toil, forever, unless it gets automated away. A later lesson in this track covers reducing it directly.
+
+## What this track covers
+
+This track walks through the core SRE toolkit in order: turning "reliable" into a measurable number (SLIs, SLOs, error budgets), responding to incidents when reliability slips, writing postmortems that make the next incident less likely, and finally automating away the toil that caused it in the first place.
+
+## Try it
+
+\`\`\`bash
+uptime
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'slis-slos-error-budgets',
+    slug: 'slis-slos-error-budgets',
+    title: 'SLIs, SLOs & Error Budgets',
+    description: 'Turning "reliable" into an actual number you can measure, target, and spend.',
+    difficulty: 'intermediate',
+    track: 'sre',
+    order: 63,
+    trackCommand: 'curl -I https://api.example.com/health',
+    challenge: "Send a HEAD request to a service's health endpoint - the kind of check an SLI is often built directly on top of.",
+    solution: 'curl -I https://api.example.com/health',
+    content: `# SLIs, SLOs & Error Budgets
+
+"The service should be reliable" isn't something you can measure or argue about consistently. SRE breaks that vague goal into three specific, related terms.
+
+## SLI: the measured number
+
+A **Service Level Indicator** is a concrete, measured metric - "percentage of requests that returned successfully in the last 5 minutes," "percentage of requests served in under 200ms." It's just a number your monitoring already produces, same as the metrics from the Observability track.
+
+## SLO: the target for that number
+
+A **Service Level Objective** is the target you set for an SLI - "99.9% of requests succeed, measured over a rolling 30 days." It's an internal goal, something the team aims for and designs around.
+
+## SLA: the SLO with a contract attached
+
+A **Service Level Agreement** is what happens when an SLO gets a consequence attached for an external customer - "99.9% uptime, or you get a service credit." Not every SLO needs to be an SLA; plenty of internal targets never get a contract wrapped around them at all.
+
+## Error budget: how much unreliability is allowed
+
+If the SLO is 99.9%, the **error budget** is the remaining 0.1% - the amount of unreliability you're explicitly allowed before you've broken your own target. This reframes incidents from "bad" in the abstract to a specific, trackable resource being spent:
+
+- **Budget healthy** (plenty of the 0.1% left) → ship new features at normal velocity; some risk is fine.
+- **Budget nearly exhausted** → freeze risky changes, shift focus to reliability work, until it recovers.
+
+This is what makes error budgets genuinely powerful: they turn "reliability vs. shipping speed" from an endless argument into a number both sides already agreed to in advance.
+
+## Try it
+
+\`\`\`bash
+curl -I https://api.example.com/health
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'incident-response',
+    slug: 'incident-response',
+    title: 'Incident Response',
+    description: 'Severity levels, the incident commander role, and the discipline of mitigating before explaining.',
+    difficulty: 'advanced',
+    track: 'sre',
+    order: 64,
+    trackCommand: 'ps aux | grep nginx',
+    challenge: 'An incident report says nginx might be down - list every process and filter it down to the ones mentioning nginx to confirm.',
+    solution: 'ps aux | grep nginx',
+    content: `# Incident Response
+
+An **incident** is any unplanned event degrading or interrupting a service. What separates a team that handles incidents well from one that doesn't usually isn't technical skill - it's having an agreed process *before* the pressure of a live outage ever starts.
+
+## Severity levels
+
+Not every incident deserves the same response. Most teams land on something like:
+
+| Severity | Example | Response |
+| -------- | ------- | -------- |
+| **SEV1** | Full outage, every user affected | Immediate, all-hands |
+| **SEV2** | Degraded for a subset of users | Urgent, dedicated responder |
+| **SEV3** | Minor, workaround exists | Normal business-hours priority |
+
+Agreeing on these tiers *before* an incident means nobody has to argue about how urgent something is while it's actively happening.
+
+## The incident commander
+
+For anything serious, one person takes the **incident commander** role: coordinating the response, making the call on what to try next, and handling communication - explicitly *not* necessarily the person actually typing commands to fix it. Separating "coordinating" from "fixing" keeps the person doing hands-on work from also having to context-switch into managing status updates.
+
+## Mitigate first, root-cause second
+
+The single most important habit: **stop the bleeding before you fully understand it**. Roll back the last deploy, restart the stuck service, fail over to a backup - any of these can restore service in minutes, long before a full root-cause investigation would finish. The investigation absolutely still happens - just afterward, calmly, as a postmortem, not under the pressure of an ongoing outage.
+
+## Try it
+
+\`\`\`bash
+ps aux | grep nginx
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'postmortems',
+    slug: 'postmortems',
+    title: 'Postmortems & Blameless Culture',
+    description: 'Turning an outage into the thing that prevents the next three.',
+    difficulty: 'advanced',
+    track: 'sre',
+    order: 65,
+    trackCommand: 'touch postmortem.md',
+    challenge: "Create the file where this incident's postmortem will be written up.",
+    solution: 'touch postmortem.md',
+    content: `# Postmortems & Blameless Culture
+
+Once an incident is over and the mitigation has held, the most valuable part of the whole process starts: writing it up so it's genuinely less likely to happen again.
+
+## Anatomy of a postmortem
+
+A good postmortem is a short, specific document, not a novel:
+
+- **Timeline** - what happened, in order, with real timestamps.
+- **Impact** - who was affected, for how long, and how badly.
+- **Root cause** - what actually, specifically caused it - not just "the server crashed," but *why* it crashed.
+- **Action items** - concrete follow-up work, each with a named owner and a deadline.
+
+That last point matters more than it looks: a postmortem with no owned, deadlined action items is just a very detailed way of describing a problem that will happen again.
+
+## Blameless, on purpose
+
+A **blameless** postmortem asks "what about our systems and processes allowed this to happen?" - never "who caused this?" This isn't a nicety; it's load-bearing for the whole process. If writing an honest timeline risks someone getting blamed, people learn - quickly, and rationally - to leave out inconvenient details or avoid flagging problems early. A team only gets the full, honest story when being part of an incident doesn't feel like a personal risk to admit to.
+
+## It's a learning artifact, not paperwork
+
+The best postmortems get read by people who weren't even involved in the incident - they're how an organization's hard-won lessons about its own system spread beyond the handful of people who happened to be on call that night.
+
+## Try it
+
+\`\`\`bash
+touch postmortem.md
+\`\`\`
+
+When you're ready, hit **Mark complete** and move to the next lesson.
+`,
+  },
+  {
+    id: 'toil-reduction',
+    slug: 'toil-reduction',
+    title: 'Toil Reduction & Automation',
+    description: 'The SRE habit of never doing the same manual fix a third time.',
+    difficulty: 'expert',
+    track: 'sre',
+    order: 66,
+    trackCommand: 'echo',
+    challenge:
+      "Write a crontab line into a file called `cleanup-job` that runs `/usr/local/bin/cleanup-tmp.sh` every day at midnight, automating away a task you'd otherwise do by hand.",
+    solution: "echo '0 0 * * * /usr/local/bin/cleanup-tmp.sh' > cleanup-job",
+    content: `# Toil Reduction & Automation
+
+This lesson closes the loop on the whole track: the point of measuring reliability and responding well to incidents is to free up time for the thing that actually prevents the next one - eliminating toil.
+
+## What counts as toil
+
+Not all operational work is toil. Work is toil specifically when it's:
+
+- **Manual** - a human doing it by hand, not a system.
+- **Repetitive** - the same task, again and again.
+- **Automatable** - a script genuinely could do it.
+- Of **no enduring value** - once it's done, nothing is actually better than before; you're just back to baseline until the next time it recurs.
+
+Clearing disk space on a server by hand, every week, because logs fill it up, is toil in exactly this sense: real work, that accomplishes nothing new, forever.
+
+## Why SRE caps it
+
+Google's own guidance suggests capping toil at around 50% of an SRE's time. The reasoning is direct: time spent on toil is time *not* spent on the engineering work - automation, better tooling, fixing root causes - that would actually reduce toil, and incidents, going forward. Left unchecked, toil grows to fill all available time, and the team never gets ahead of it.
+
+## The loop
+
+A simple, repeatable habit for not accumulating toil in the first place:
+
+1. **Do it manually once** - understand the problem for real.
+2. **Script it the second time** - stop relying on memory and manual steps.
+3. **Schedule or automate it entirely the third time** - a human shouldn't need to remember to run it at all.
+
+## Try it
+
+That log-cleanup example from earlier, automated the way this whole curriculum has been building toward - cron, the same tool from the very first Job Scheduling lesson:
+
+\`\`\`bash
+echo '0 0 * * * /usr/local/bin/cleanup-tmp.sh' > cleanup-job
+\`\`\`
+
+When you're ready, hit **Mark complete**. You've completed the Site Reliability Engineering track!
+`,
+  },
 ];
 
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
@@ -4748,6 +5191,146 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     order: 1,
     prompt: "What's it called when manual console changes make real infrastructure diverge from Terraform's config?",
     answer: 'drift',
+  },
+  {
+    id: 'q-sec-f-1',
+    lessonId: 'security-fundamentals',
+    order: 0,
+    prompt: 'The CIA triad is confidentiality, integrity, and...?',
+    answer: 'availability',
+  },
+  {
+    id: 'q-sec-f-2',
+    lessonId: 'security-fundamentals',
+    order: 1,
+    prompt: 'Which command locks down id_rsa so only its owner can read or write it?',
+    answer: 'chmod 600 id_rsa',
+  },
+  {
+    id: 'q-secrets-1',
+    lessonId: 'secrets-management',
+    order: 0,
+    prompt: 'Which command checks whether .env is excluded from version control?',
+    answer: 'cat .gitignore',
+  },
+  {
+    id: 'q-secrets-2',
+    lessonId: 'secrets-management',
+    order: 1,
+    prompt: "What's it called when you periodically replace a credential so a leaked copy stops working?",
+    answer: 'rotation',
+  },
+  {
+    id: 'q-shift-1',
+    lessonId: 'shift-left-security',
+    order: 0,
+    prompt: 'Which type of security testing analyzes your source code without running it?',
+    answer: 'sast',
+  },
+  {
+    id: 'q-shift-2',
+    lessonId: 'shift-left-security',
+    order: 1,
+    prompt: 'Which command lists every image available locally, ready to be scanned?',
+    answer: 'docker images',
+  },
+  {
+    id: 'q-neth-1',
+    lessonId: 'network-hardening',
+    order: 0,
+    prompt: 'Which command lists every iptables firewall rule currently configured?',
+    answer: 'iptables -L',
+  },
+  {
+    id: 'q-neth-2',
+    lessonId: 'network-hardening',
+    order: 1,
+    prompt: "What's the posture called where you block everything by default and explicitly allow only what's needed?",
+    answer: 'default-deny',
+  },
+  {
+    id: 'q-secir-1',
+    lessonId: 'security-incident-response',
+    order: 0,
+    prompt: 'Which command checks the last 20 ssh log lines after a suspected unauthorized-access attempt?',
+    answer: 'journalctl -u ssh -n 20',
+  },
+  {
+    id: 'q-secir-2',
+    lessonId: 'security-incident-response',
+    order: 1,
+    prompt: 'Should you contain a breach first, or fully root-cause it first?',
+    answer: 'contain',
+  },
+  {
+    id: 'q-sre-f-1',
+    lessonId: 'sre-fundamentals',
+    order: 0,
+    prompt: "Which command shows this host's uptime and load average?",
+    answer: 'uptime',
+  },
+  {
+    id: 'q-sre-f-2',
+    lessonId: 'sre-fundamentals',
+    order: 1,
+    prompt: 'Which company originated the term Site Reliability Engineering?',
+    answer: 'google',
+  },
+  {
+    id: 'q-slo-1',
+    lessonId: 'slis-slos-error-budgets',
+    order: 0,
+    prompt: "What do you call the measured metric an SLO sets a target for, e.g. percent of successful requests?",
+    answer: 'sli',
+  },
+  {
+    id: 'q-slo-2',
+    lessonId: 'slis-slos-error-budgets',
+    order: 1,
+    prompt: 'What do you call the amount of unreliability left over when you subtract your SLO from 100%?',
+    answer: 'error budget',
+  },
+  {
+    id: 'q-incres-1',
+    lessonId: 'incident-response',
+    order: 0,
+    prompt: 'During an incident, should you mitigate first or fully explain the root cause first?',
+    answer: 'mitigate',
+  },
+  {
+    id: 'q-incres-2',
+    lessonId: 'incident-response',
+    order: 1,
+    prompt: 'What role coordinates an incident response without necessarily fixing it themselves?',
+    answer: 'incident commander',
+  },
+  {
+    id: 'q-pm-sre-1',
+    lessonId: 'postmortems',
+    order: 0,
+    prompt: 'What word describes a postmortem culture that focuses on the system, not on blaming an individual?',
+    answer: 'blameless',
+  },
+  {
+    id: 'q-pm-sre-2',
+    lessonId: 'postmortems',
+    order: 1,
+    prompt: "Which command creates the file where a postmortem will be written up?",
+    answer: 'touch postmortem.md',
+  },
+  {
+    id: 'q-toil-1',
+    lessonId: 'toil-reduction',
+    order: 0,
+    prompt: 'What word describes manual, repetitive operational work with no lasting value?',
+    answer: 'toil',
+  },
+  {
+    id: 'q-toil-2',
+    lessonId: 'toil-reduction',
+    order: 1,
+    prompt: "Google's SRE guidance suggests capping toil at about what percent of an SRE's time? (just the number)",
+    answer: '50',
   },
 ];
 
