@@ -6,7 +6,7 @@ import { LessonsHubClient } from './_lessons-hub-client';
 export const metadata: Metadata = {
   title: 'Lessons',
   description:
-    'Pick a track — Linux fundamentals, CI/CD & Jenkins, Cloud, Observability, or Containers & Kubernetes — each with hands-on challenges and quizzes.',
+    'Pick a track — Linux fundamentals, Git, CI/CD & Jenkins, Infrastructure as Code, Cloud, Observability, or Containers & Kubernetes — each with hands-on challenges and quizzes.',
 };
 
 export default function LessonsIndexPage() {

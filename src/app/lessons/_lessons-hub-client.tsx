@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { ArrowRightIcon, TerminalIcon } from '@/components/ui/Icon';
-import { Pill, ProgressBar } from '@/components/ui/Pill';
+import { ArrowRightIcon } from '@/components/ui/Icon';
+import { ProgressBar } from '@/components/ui/Pill';
 import { StreakWidget } from '@/components/StreakWidget';
 import { TrackIcon } from '@/components/TrackIcon';
 import { useProgress } from '@/lib/progress-context';
@@ -30,15 +30,12 @@ export function LessonsHubClient({ lessons }: { lessons: Lesson[] }) {
   return (
     <div className="space-y-10">
       <header className="space-y-4">
-        <Pill tone="accent">
-          <TerminalIcon size={12} /> ~/lessons
-        </Pill>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Lessons</h1>
         <p className="max-w-2xl text-[var(--lx-muted)]">
           Pick a track above. Linux fundamentals first, then a full DevOps
-          curriculum - CI/CD &amp; Jenkins, Cloud, Observability, and
-          Containers &amp; Kubernetes. Each lesson ends with a small
-          challenge, and your progress is saved on this browser.
+          curriculum - Git, CI/CD &amp; Jenkins, Infrastructure as Code, Cloud,
+          Observability, and Containers &amp; Kubernetes. Each lesson ends
+          with a small challenge, and your progress is saved on this browser.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
