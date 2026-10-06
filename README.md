@@ -16,7 +16,9 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 
 ## Highlights
 
-- **67 bite-sized lessons across 9 tracks** — Linux Fundamentals, Git & Version Control, CI/CD & Jenkins, Infrastructure as Code, Cloud, Security & DevSecOps, Observability, Site Reliability Engineering, and Containers & Kubernetes. Each ends with a hands-on challenge in the sandbox and a short quiz; many point to a specific, well-known book for further reading.
+- **75 bite-sized lessons across 9 tracks** — Linux Fundamentals, Git & Version Control, CI/CD & Jenkins, Infrastructure as Code, Cloud, Security & DevSecOps, Observability, Site Reliability Engineering, and Containers & Kubernetes. Each ends with a hands-on challenge in the sandbox and a short quiz; many point to a specific, well-known book for further reading.
+- **Google Cloud lessons** — eight GCP lessons in the Cloud track (resource hierarchy, the gcloud CLI, IAM and service accounts, Compute Engine, Cloud Storage, VPC networks and firewall rules, Cloud Run, and GKE), written from Google's official documentation and linking back to it.
+- **Simulated `gcloud`** — the sandbox runs real gcloud commands against an in-browser fake project: config, IAM bindings, service accounts, VMs, networks, firewall rules, buckets with `gcloud storage cp`, Cloud Run deploys with revisions, and GKE clusters with `get-credentials`. Nothing touches a real Google Cloud account.
 - **In-browser terminal sandbox** (xterm.js) with a POSIX-style shell and an in-memory virtual filesystem — nothing touches the user's real machine.
 - **Auto-graded challenges** and end-of-lesson quizzes with score-based completion.
 - **Boss levels** — five multi-step scenarios for learners who finish the regular catalogue: restore a broken service, sort a messy log folder, ship a deploy script (`sed` + `tee` + `chmod` + `install`), bring a systemd service back online, and fix a permissions puzzle (`chown` + `chmod`).

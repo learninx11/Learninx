@@ -23,6 +23,27 @@ type FlagTable = Record<string, Record<string, FlagInfo | string>>;
  * FlagInfo when the flag takes a value).
  */
 const FLAGS: FlagTable = {
+  gcloud: {
+    '--project': { text: 'Run this one command against a different project than the configured default.', takesValue: true },
+    '--zone': { text: 'The zone the resource lives in, e.g. us-central1-a.', takesValue: true },
+    '--region': { text: 'The region the resource lives in, e.g. us-central1.', takesValue: true },
+    '--location': { text: 'A region or zone, for commands that accept either (GKE clusters).', takesValue: true },
+    '--machine-type': { text: 'VM size: vCPUs and memory, e.g. e2-medium.', takesValue: true },
+    '--image-family': { text: 'Boot from the newest image in this family, e.g. debian-12.', takesValue: true },
+    '--image-project': { text: 'The project that hosts a public image, e.g. debian-cloud.', takesValue: true },
+    '--image': { text: 'Container image to deploy (Cloud Run).', takesValue: true },
+    '--allow-unauthenticated': 'Make a Cloud Run service public by granting roles/run.invoker to allUsers.',
+    '--member': { text: 'The principal to grant, with a type prefix such as user: or serviceAccount:.', takesValue: true },
+    '--role': { text: 'The IAM role to grant, e.g. roles/storage.objectViewer.', takesValue: true },
+    '--network': { text: 'The VPC network to use (defaults to "default").', takesValue: true },
+    '--allow': { text: 'Protocols and ports the firewall rule allows, e.g. tcp:22.', takesValue: true },
+    '--source-ranges': { text: 'Where allowed traffic may come from. Omitted on an ingress rule means 0.0.0.0/0.', takesValue: true },
+    '--target-tags': { text: 'Apply the firewall rule only to VMs with these network tags.', takesValue: true },
+    '--subnet-mode': { text: 'auto (one subnet per region) or custom (you create subnets).', takesValue: true },
+    '--default-storage-class': { text: 'Storage class for new objects: standard, nearline, coldline, or archive.', takesValue: true },
+    '--format': { text: 'Output format: json, yaml, csv, or value(FIELDS) for script-friendly output.', takesValue: true },
+    '--quiet': 'Answer yes to every prompt. Use in scripts.',
+  },
   ls: {
     '-l': 'Long listing: permissions, links, owner, group, size, and modified time.',
     '-a': 'Show hidden entries, the ones whose names start with a dot.',
@@ -290,6 +311,18 @@ const FLAGS: FlagTable = {
 
 /** Subcommands that are worth naming even though they are not flags. */
 const SUBCOMMANDS: Record<string, Record<string, string>> = {
+  gcloud: {
+    init: 'Sign in and choose a default project, region, and zone, interactively.',
+    config: 'View or change gcloud properties such as core/project and compute/zone.',
+    auth: 'Manage the accounts gcloud is signed in with.',
+    projects: 'List projects and manage their IAM allow policy.',
+    iam: 'Manage service accounts and roles.',
+    services: 'Enable or list Google Cloud APIs on the project.',
+    compute: 'Compute Engine: VMs, disks, networks, and firewall rules.',
+    storage: 'Cloud Storage: buckets and the objects in them.',
+    run: 'Cloud Run: deploy and manage serverless container services.',
+    container: 'Google Kubernetes Engine (GKE) clusters.',
+  },
   systemctl: {
     start: 'Start the unit now.',
     stop: 'Stop the unit now.',

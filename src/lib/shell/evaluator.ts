@@ -6,6 +6,7 @@
 // injects when the previous command produced output.
 
 import type { FsDir, FsNode } from './fs';
+import { runGcloud } from './gcloud';
 
 export interface ShellContext {
   cwd: string;
@@ -443,8 +444,8 @@ const KNOWN_UNSIMULATED_COMMANDS = new Set([
   // dev tools, compilers, and language runtimes (git is simulated for real — see COMMANDS.git)
   'svn', 'hg', 'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'cc', 'clang',
   'make', 'cmake', 'ninja', 'perl', 'ruby', 'php', 'rustc', 'cargo', 'go', 'kotlinc', 'swift', 'dotnet',
-  // containers, orchestration, and cloud CLIs (docker is simulated for real — see COMMANDS.docker)
-  'docker-compose', 'podman', 'kubectl', 'helm', 'terraform', 'ansible', 'ansible-playbook', 'vagrant', 'aws', 'gcloud', 'az',
+  // containers, orchestration, and cloud CLIs (docker and gcloud are simulated for real — see COMMANDS)
+  'docker-compose', 'podman', 'kubectl', 'helm', 'terraform', 'ansible', 'ansible-playbook', 'vagrant', 'aws', 'az',
   // monitoring & terminal multiplexers
   'htop', 'glances', 'screen', 'tmux', 'byobu', 'iftop', 'nethogs', 'iotop', 'atop',
   // small extras people inevitably try
@@ -3235,7 +3236,33 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
       }
     },
   },
+  gcloud: {
+    name: 'gcloud',
+    summary: 'simulated Google Cloud CLI — config, projects, iam, compute, storage, run, container',
+    run: (args, ctx) =>
+      runGcloud(args, {
+        readState: () => {
+          const node = resolveNode(ctx, GCLOUD_STATE_PATH);
+          return node && node.type === 'file' ? node.content : null;
+        },
+        writeState: (json) => {
+          ensureDir(ctx, '/home/learner/.config/gcloud');
+          writeFile(ctx, GCLOUD_STATE_PATH, json);
+        },
+        readFile: (path) => {
+          const node = resolveNode(ctx, path);
+          return node && node.type === 'file' ? node.content : null;
+        },
+        writeFile: (path, content) => {
+          if (path.startsWith('/home/learner/.kube/')) ensureDir(ctx, '/home/learner/.kube');
+          return writeFile(ctx, path, content);
+        },
+      }),
+  },
 };
+
+/** Where the simulated gcloud keeps its projects, VMs, buckets, and so on. */
+const GCLOUD_STATE_PATH = '/home/learner/.config/gcloud/learninx-state.json';
 
 export const COMMAND_NAMES = Object.keys(COMMANDS).sort();
 
@@ -3593,7 +3620,10 @@ export function runCommand(input: string, ctx: ShellContext): string | string[] 
     // content that happens to start with "word: ".
     const failedCmd = lastPipelineStageCommand(line);
     lastExitOk =
-      text !== '__NUL__' && !(failedCmd !== '' && text.startsWith(`${failedCmd}: `));
+      text !== '__NUL__' &&
+      !(failedCmd !== '' && text.startsWith(`${failedCmd}: `)) &&
+      // gcloud's own error convention: `ERROR: (gcloud.compute.instances.create) ...`
+      !(failedCmd !== '' && text.startsWith(`ERROR: (${failedCmd}`));
   }
 
   if (backgrounded) {

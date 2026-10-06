@@ -18,6 +18,7 @@ export type CheatCategory =
   | 'Network'
   | 'Archiving'
   | 'System'
+  | 'Cloud'
   | 'Help';
 
 export interface CheatEntry {
@@ -1543,6 +1544,20 @@ export const CHEATSHEET: CheatEntry[] = [
     category: 'Editing',
     keywords: ['exec', 'replace', 'redirect', 'shell'],
   },
+  {
+    cmd: 'gcloud',
+    short: 'Google Cloud CLI (simulated)',
+    long: 'Creates and manages Google Cloud resources from the terminal. Commands are groups plus a verb: `gcloud compute instances create`, `gcloud storage buckets list`. Set defaults with `gcloud config set project ID` and `gcloud config set compute/zone ZONE`, and get machine-readable output with `--format=json` or `--format="value(name)"`. The sandbox simulates config, projects and IAM bindings, service accounts, Compute Engine VMs, networks and firewall rules, Cloud Storage, Cloud Run, and GKE clusters, with no real account involved.',
+    examples: [
+      'gcloud config set project learninx-demo',
+      'gcloud compute instances create web-1 --zone=us-central1-a --machine-type=e2-medium',
+      'gcloud storage buckets create gs://learninx-demo-assets --location=us-central1',
+      'gcloud run deploy hello --image=us-docker.pkg.dev/cloudrun/container/hello --region=us-central1',
+      'gcloud container clusters create-auto demo-cluster --location=us-central1',
+    ],
+    category: 'Cloud',
+    keywords: ['google', 'cloud', 'gcp', 'gce', 'gcs', 'gke', 'cloud run', 'bucket', 'vm', 'iam', 'service account', 'firewall', 'vpc', 'kubernetes'],
+  },
 ];
 
 export const CHEAT_CATEGORIES: CheatCategory[] = [
@@ -1556,6 +1571,7 @@ export const CHEAT_CATEGORIES: CheatCategory[] = [
   'Network',
   'Archiving',
   'System',
+  'Cloud',
   'Help',
 ];
 

@@ -111,4 +111,20 @@ export const TYPING_SNIPPETS: TypingSnippet[] = [
     usage: "List every container's name and status, filtered to the ones that aren't currently running.",
     difficulty: 'expert',
   },
+  // --- Google Cloud (gcloud) ----------------------------------------------
+  {
+    text: 'gcloud config set project learninx-demo',
+    usage: 'Point the gcloud CLI at a Google Cloud project for every following command.',
+    difficulty: 'intermediate',
+  },
+  {
+    text: 'gcloud storage cp report.csv gs://learninx-demo-assets/',
+    usage: 'Upload a local file into a Cloud Storage bucket.',
+    difficulty: 'advanced',
+  },
+  {
+    text: 'gcloud compute instances create web-1 --zone=us-central1-a --machine-type=e2-medium',
+    usage: 'Create a Compute Engine VM named web-1 in a specific zone and size.',
+    difficulty: 'expert',
+  },
 ];

@@ -202,6 +202,23 @@ ships in the GitHub Pages static export — no server required.
       Memory bank (10 mastered commands), Regular (10 active days).
 - [x] Navigation: header links, palette entries, `g f` and `g e`.
 
+## Done in this pass (5)
+
+- [x] **Eight Google Cloud lessons** in the Cloud track (`gcp-fundamentals`,
+      `gcp-gcloud-cli`, `gcp-iam`, `gcp-compute-engine`, `gcp-cloud-storage`,
+      `gcp-vpc-networking`, `gcp-cloud-run`, `gcp-gke`), kept in
+      `src/lib/lessons-gcp.ts`, with three quiz questions each. Facts and
+      command syntax follow docs.cloud.google.com, and each lesson links to
+      the pages it draws on. Later tracks' `order` values shifted by +8.
+- [x] **Simulated `gcloud`** in `src/lib/shell/gcloud.ts`, with state in
+      `~/.config/gcloud/learninx-state.json`. Errors use gcloud's own
+      `ERROR: (gcloud.…)` form, and the shell treats them as failures so
+      `&&` chains stop.
+- [x] Challenge answers accept any flag order and both `--flag=value` and
+      `--flag value` (`flagVariants` helper).
+- [x] `gcloud` cheatsheet entry (new **Cloud** category), explainer flags
+      and subcommands, and three typing-test snippets.
+
 ## Future ideas
 
 - [ ] Optional syntax highlighting in markdown via `rehype-pretty-code`
