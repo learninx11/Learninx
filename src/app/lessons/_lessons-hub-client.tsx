@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { ArrowRightIcon } from '@/components/ui/Icon';
+import { ArrowRightIcon, BookmarkIcon, CheckIcon } from '@/components/ui/Icon';
 import { ProgressBar } from '@/components/ui/Pill';
 import { StreakWidget } from '@/components/StreakWidget';
 import { TrackIcon } from '@/components/TrackIcon';
@@ -18,6 +18,11 @@ export function LessonsHubClient({ lessons }: { lessons: Lesson[] }) {
   const quizAttempts = Object.keys(state.quiz).length;
   const displayCompleted = ready ? completed : 0;
   const displayQuizCount = ready ? quizAttempts : 0;
+
+  const saved = useMemo(
+    () => (ready ? lessons.filter((l) => state.bookmarks.includes(l.id)) : []),
+    [lessons, state.bookmarks, ready],
+  );
 
   const byTrack = useMemo(() => {
     return TRACK_ORDER.map((track) => {
@@ -55,6 +60,35 @@ export function LessonsHubClient({ lessons }: { lessons: Lesson[] }) {
 
         <StreakWidget variant="inline" />
       </header>
+
+      {saved.length > 0 && (
+        <section id="bookmarks" aria-labelledby="saved-heading" className="scroll-mt-24 space-y-3">
+          <h2 id="saved-heading" className="inline-flex items-center gap-2 text-lg font-semibold">
+            <BookmarkIcon size={16} className="text-[var(--lx-accent)]" /> Saved lessons
+            <span className="text-sm font-normal text-[var(--lx-muted)]">{saved.length}</span>
+          </h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {saved.map((l) => (
+              <li key={l.id}>
+                <Link
+                  href={`/lessons/${l.slug}`}
+                  className="lx-card lx-card-interactive flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <TrackIcon track={l.track} size={14} />
+                    <span className="truncate">{l.title}</span>
+                  </span>
+                  {completedSet.has(l.id) ? (
+                    <CheckIcon size={14} className="shrink-0 text-[var(--lx-success)]" />
+                  ) : (
+                    <ArrowRightIcon size={14} className="shrink-0 text-[var(--lx-muted)]" />
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {byTrack.map(({ track, total, completed: trackCompleted }) => (

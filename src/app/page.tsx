@@ -5,6 +5,7 @@ import {
   AwardIcon,
   BookIcon,
   BrainIcon,
+  CodeIcon,
   GamepadIcon,
   LightbulbIcon,
   MonitorIcon,
@@ -152,10 +153,22 @@ export default function Home() {
             body="Practice typing real shell commands against the clock. Hit 30 WPM to earn the Fast-fingers badge."
           />
           <ExploreCard
+            href="/flashcards"
+            icon={<BrainIcon size={20} />}
+            title="Flashcards"
+            body="Spaced-repetition cards for every sandbox command. Read what it does, type its name, and the schedule brings it back before you forget."
+          />
+          <ExploreCard
+            href="/explain"
+            icon={<CodeIcon size={20} />}
+            title="Explain a command"
+            body="Paste any one-liner and get a plain-English breakdown of every command, flag, pipe, and redirect."
+          />
+          <ExploreCard
             href="/achievements"
             icon={<AwardIcon size={20} />}
             title="Achievements"
-            body="Earn badges for streaks, perfect quizzes, bookmarks, notes, boss runs, and typing speed. Pure browser-side."
+            body="Earn badges for streaks, perfect quizzes, bookmarks, notes, boss runs, typing speed, and flashcards. Pure browser-side."
           />
           <ExploreCard
             href="/profile"

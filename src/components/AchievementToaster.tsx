@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AchievementBadge } from './AchievementBadge';
 import { useProgress } from '@/lib/progress-context';
-import { ACHIEVEMENTS } from '@/lib/achievements';
+import { ACHIEVEMENTS, type Achievement } from '@/lib/achievements';
 import { CloseIcon, SparklesIcon } from '@/components/ui/Icon';
 
 const DISPLAY_MS = 4500;
@@ -108,5 +108,5 @@ interface AchievementToast {
   id: string;
   title: string;
   description: string;
-  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist' | 'shuffle';
+  glyph: Achievement['glyph'];
 }

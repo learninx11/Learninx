@@ -15,6 +15,7 @@
  */
 
 import type {
+  FlashcardState,
   LessonNote,
   ProgressState,
   QuizScore,
@@ -51,6 +52,9 @@ const EMPTY: ProgressState = {
   bestTyping: null,
   bossesCompleted: [],
   tipsSeen: [],
+  flashcards: {},
+  flashcardReviews: 0,
+  activity: {},
 };
 
 // ──────────────────────────────────────────── storage helpers ──
@@ -121,7 +125,46 @@ function normalize(input: Partial<ProgressState>): ProgressState {
       ? input.bossesCompleted.filter((s): s is string => typeof s === 'string')
       : [],
     tipsSeen: normalizeTipsSeen(input.tipsSeen),
+    flashcards: normalizeFlashcards(input.flashcards),
+    flashcardReviews: clampInt(input.flashcardReviews, 0, 9_999_999),
+    activity: normalizeActivity(input.activity),
   };
+}
+
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Keep roughly a year of daily activity so the payload stays small. */
+const MAX_ACTIVITY_DAYS = 400;
+
+function normalizeFlashcards(input: unknown): Record<string, FlashcardState> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const out: Record<string, FlashcardState> = {};
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (!v || typeof v !== 'object') continue;
+    const card = v as Partial<FlashcardState>;
+    if (typeof card.due !== 'string' || !DAY_RE.test(card.due)) continue;
+    out[k] = { box: clampInt(card.box, 1, 5), due: card.due };
+  }
+  return out;
+}
+
+function normalizeActivity(input: unknown): Record<string, number> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const entries = Object.entries(input as Record<string, unknown>)
+    .filter(([k, v]) => DAY_RE.test(k) && typeof v === 'number' && v > 0)
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .slice(0, MAX_ACTIVITY_DAYS);
+  const out: Record<string, number> = {};
+  for (const [k, v] of entries) out[k] = clampInt(v, 0, 99_999);
+  return out;
+}
+
+/** Add one learning action to today's activity count (mutates). */
+function bumpActivity(state: ProgressState, today: string = utcDayKey()): void {
+  state.activity = { ...state.activity, [today]: (state.activity[today] ?? 0) + 1 };
+  const keys = Object.keys(state.activity);
+  if (keys.length > MAX_ACTIVITY_DAYS) {
+    state.activity = normalizeActivity(state.activity);
+  }
 }
 
 function normalizeTipsSeen(input: unknown): number[] {
@@ -271,6 +314,7 @@ export function markLessonComplete(lessonId: string): ProgressState {
   if (!already) {
     streak.totalCompletions += 1;
     streak.points += 10;
+    bumpActivity(state, today);
   }
   writeRaw({ ...state, streak });
   return { ...state, streak };
@@ -281,6 +325,7 @@ export function recordQuizScore(lessonId: string, score: QuizScore): ProgressSta
   const state = readRaw();
   const previous = state.quiz[lessonId];
   state.quiz[lessonId] = score;
+  bumpActivity(state);
   // Only award points for *new* correct answers (not re-takes at the same level).
   const prevCorrect = previous?.correct ?? 0;
   const delta = Math.max(0, score.correct - prevCorrect);
@@ -409,8 +454,9 @@ export function recordTypingScore(score: TypingScore): ProgressState {
   const best = state.bestTyping;
   if (!best || score.wpm > best.wpm) {
     state.bestTyping = score;
-    writeRaw(state);
   }
+  bumpActivity(state);
+  writeRaw(state);
   return state;
 }
 
@@ -420,6 +466,7 @@ export function markBossComplete(bossId: string): ProgressState {
   const state = readRaw();
   if (!state.bossesCompleted.includes(bossId)) {
     state.bossesCompleted.push(bossId);
+    bumpActivity(state);
     state.streak = {
       ...state.streak,
       totalCompletions: state.streak.totalCompletions + 1,
@@ -432,6 +479,61 @@ export function markBossComplete(bossId: string): ProgressState {
 
 export function isBossComplete(bossId: string): boolean {
   return readRaw().bossesCompleted.includes(bossId);
+}
+
+// ──────────────────────────────────────── flashcards ──
+
+/**
+ * Days until the next review for a card that has just landed in each
+ * Leitner box. Box 1 is "see it again today", box 5 is "mastered".
+ */
+export const FLASHCARD_INTERVALS: Record<number, number> = {
+  1: 0,
+  2: 1,
+  3: 3,
+  4: 7,
+  5: 21,
+};
+
+/** Shift a YYYY-MM-DD key by a whole number of days. */
+export function addDays(day: string, days: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return utcDayKey(d);
+}
+
+/**
+ * Record a flashcard answer. A correct answer promotes the card one
+ * box and schedules it further out; a miss drops it back to box 1 so
+ * it comes round again in the same session.
+ */
+export function recordFlashcardAnswer(cardId: string, correct: boolean): ProgressState {
+  const state = readRaw();
+  const today = utcDayKey();
+  const prevBox = state.flashcards[cardId]?.box ?? 0;
+  // Unseen cards count as box 1, so a first correct answer lands in
+  // box 2 (tomorrow) rather than staying due today.
+  const box = correct ? Math.min(5, Math.max(1, prevBox) + 1) : 1;
+  state.flashcards = {
+    ...state.flashcards,
+    [cardId]: { box, due: addDays(today, FLASHCARD_INTERVALS[box] ?? 0) },
+  };
+  state.flashcardReviews += 1;
+  if (correct && box === 5 && prevBox < 5) {
+    // Small reward for moving a command into long-term memory.
+    state.streak = { ...state.streak, points: state.streak.points + 2 };
+  }
+  bumpActivity(state, today);
+  writeRaw(state);
+  return state;
+}
+
+/** Forget all flashcard progress without touching anything else. */
+export function resetFlashcards(): ProgressState {
+  const state = readRaw();
+  state.flashcards = {};
+  writeRaw(state);
+  return state;
 }
 
 // ──────────────────────────────────────── import / export ──

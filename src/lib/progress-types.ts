@@ -48,6 +48,13 @@ export interface TypingScore {
   at: number;
 }
 
+export interface FlashcardState {
+  /** Leitner box, 1 (new / just missed) through 5 (mastered). */
+  box: number;
+  /** YYYY-MM-DD (UTC) the card is next due for review. */
+  due: string;
+}
+
 export interface ProgressState {
   v: 2;
   /** Set of lesson ids the visitor has completed. */
@@ -74,4 +81,16 @@ export interface ProgressState {
    * Used to award the "Tip explorer" achievement.
    */
   tipsSeen: number[];
+  /**
+   * Spaced-repetition state per cheatsheet command, keyed by the
+   * command's `cmd` string. Cards not in here have never been seen.
+   */
+  flashcards: Record<string, FlashcardState>;
+  /** Lifetime number of flashcard answers (right or wrong). */
+  flashcardReviews: number;
+  /**
+   * Learning actions per UTC day (YYYY-MM-DD -> count). Feeds the
+   * activity heatmap on the profile page. Trimmed to roughly a year.
+   */
+  activity: Record<string, number>;
 }

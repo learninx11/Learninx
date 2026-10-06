@@ -112,6 +112,21 @@ export function AchievementBadge({
             <path d="m9 12 2 2 4-4" />
           </>
         );
+      case 'cards':
+        return (
+          <>
+            <rect x="3" y="7" width="13" height="14" rx="2" />
+            <path d="M8 3h11a2 2 0 0 1 2 2v12" />
+          </>
+        );
+      case 'calendar':
+        return (
+          <>
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+            <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+          </>
+        );
       case 'shuffle':
         return (
           <>

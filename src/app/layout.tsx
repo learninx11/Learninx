@@ -86,6 +86,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Typing
               </Link>
               <Link
+                href="/flashcards"
+                className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] lg:inline-block"
+              >
+                Cards
+              </Link>
+              <Link
+                href="/explain"
+                className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] lg:inline-block"
+              >
+                Explain
+              </Link>
+              <Link
                 href="/achievements"
                 className="hidden rounded-md px-3 py-1.5 text-[var(--lx-muted)] transition hover:bg-[var(--lx-accent-glow)] hover:text-[var(--lx-accent)] sm:inline-block"
               >

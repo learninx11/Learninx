@@ -46,6 +46,9 @@ const EMPTY: ProgressState = {
   bestTyping: null,
   bossesCompleted: [],
   tipsSeen: [],
+  flashcards: {},
+  flashcardReviews: 0,
+  activity: {},
 };
 
 // ─────────────────────────────────────────────── signing key ──
@@ -127,6 +130,15 @@ function decode(raw: string | undefined): ProgressState {
             .filter((n): n is number => typeof n === 'number')
             .map((n) => Math.max(0, Math.min(9999, Math.floor(n))))
         : [],
+      flashcards:
+        parsed.flashcards && typeof parsed.flashcards === 'object' && !Array.isArray(parsed.flashcards)
+          ? parsed.flashcards
+          : {},
+      flashcardReviews: clampInt(parsed.flashcardReviews, 0, 9_999_999),
+      activity:
+        parsed.activity && typeof parsed.activity === 'object' && !Array.isArray(parsed.activity)
+          ? parsed.activity
+          : {},
     };
   } catch {
     return cloneEmpty();
@@ -146,6 +158,9 @@ function cloneEmpty(): ProgressState {
     bestTyping: null,
     bossesCompleted: [],
     tipsSeen: [],
+    flashcards: {},
+    flashcardReviews: 0,
+    activity: {},
   };
 }
 

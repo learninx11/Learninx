@@ -18,9 +18,11 @@ import {
   markBossComplete as storeMarkBossComplete,
   normalizeAnswer,
   normalizeCommand,
+  recordFlashcardAnswer as storeRecordFlashcardAnswer,
   recordQuizScore as storeRecordQuizScore,
   recordTipSeen as storeRecordTipSeen,
   recordTypingScore as storeRecordTypingScore,
+  resetFlashcards as storeResetFlashcards,
   resetProgress as storeResetProgress,
   setLessonNote as storeSetLessonNote,
   subscribeProgress,
@@ -85,6 +87,10 @@ interface ProgressContextValue {
   markBossComplete: (bossId: string) => void;
   /** Record a typing-test result. */
   recordTyping: (score: TypingScore) => void;
+  /** Grade one flashcard answer and reschedule the card. */
+  answerFlashcard: (cardId: string, correct: boolean) => void;
+  /** Wipe flashcard scheduling only. */
+  resetFlashcards: () => void;
   /** Replace the whole progress snapshot from an imported JSON string. */
   importJson: (json: string) => ProgressState;
   /** Achievements that were unlocked on the most recent write. */
@@ -124,6 +130,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     bestTyping: null,
     bossesCompleted: [],
     tipsSeen: [],
+    flashcards: {},
+    flashcardReviews: 0,
+    activity: {},
   });
   const [ready, setReady] = useState(false);
   const [newlyUnlocked, setNewlyUnlocked] = useState<string[]>([]);
@@ -303,6 +312,20 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [captureNewlyUnlocked],
   );
 
+  const answerFlashcard = useCallback(
+    (cardId: string, correct: boolean) => {
+      const before = readProgress();
+      const next = storeRecordFlashcardAnswer(cardId, correct);
+      captureNewlyUnlocked(before, next);
+      setState(next);
+    },
+    [captureNewlyUnlocked],
+  );
+
+  const resetFlashcards = useCallback(() => {
+    setState(storeResetFlashcards());
+  }, []);
+
   const importJson = useCallback((json: string): ProgressState => {
     const next = applyDerivedAchievements(storeImportProgress(json));
     setState(next);
@@ -329,6 +352,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       setNote,
       markBossComplete: markBoss,
       recordTyping,
+      answerFlashcard,
+      resetFlashcards,
       importJson,
       newlyUnlocked,
       clearNewlyUnlocked,
@@ -349,6 +374,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       setNote,
       markBoss,
       recordTyping,
+      answerFlashcard,
+      resetFlashcards,
       importJson,
       newlyUnlocked,
       clearNewlyUnlocked,

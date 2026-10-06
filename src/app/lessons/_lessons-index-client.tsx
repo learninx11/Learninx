@@ -43,6 +43,23 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
   const [status, setStatus] = useState<StatusFilter>('all');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Deep links: `?hl=grep` pre-fills the search, `?bookmarks=1` (or
+  // `?status=completed|todo|bookmarked`) pre-selects a status chip, and
+  // `?difficulty=beginner` pre-selects a difficulty. Read on mount
+  // instead of via useSearchParams so the static export stays simple.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hl = params.get('hl') ?? params.get('q');
+    if (hl) setQuery(hl);
+    const st = params.get('status');
+    if (params.get('bookmarks') === '1') setStatus('bookmarked');
+    else if (st === 'completed' || st === 'todo' || st === 'bookmarked') setStatus(st);
+    const diff = params.get('difficulty');
+    if (diff && (DIFFICULTY_ORDER as string[]).includes(diff)) {
+      setDifficulty(diff as Difficulty);
+    }
+  }, []);
+
   // Press "/" to focus the search box (skip when typing in another field).
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

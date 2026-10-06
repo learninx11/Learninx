@@ -75,6 +75,20 @@ export function KeyboardShortcuts() {
         if (pending) clearTimeout(pending);
         return;
       }
+      if (last === 'g' && key === 'f') {
+        e.preventDefault();
+        router.push('/flashcards');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
+      if (last === 'g' && key === 'e') {
+        e.preventDefault();
+        router.push('/explain');
+        last = null;
+        if (pending) clearTimeout(pending);
+        return;
+      }
       if (last === 'g' && key === 's') {
         e.preventDefault();
         router.push('/terminal');

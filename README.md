@@ -22,18 +22,21 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Boss levels** — five multi-step scenarios for learners who finish the regular catalogue: restore a broken service, sort a messy log folder, ship a deploy script (`sed` + `tee` + `chmod` + `install`), bring a systemd service back online, and fix a permissions puzzle (`chown` + `chmod`).
 - **Searchable cheatsheet** of every command the in-browser shell supports.
 - **Typing test** — type real shell commands against the clock, with WPM and accuracy tracking. Earn badges for speed.
-- **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Everything is stored in your browser only.
-- **Achievements** — 16 unlockable badges (streaks, perfect quizzes, boss runs, study tools, tip exploration, typing speed, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
+- **Command flashcards** — spaced-repetition review (five-box Leitner schedule) of every command in the cheatsheet. Read what a command does, type its name, and missed cards come back the same day. Filter by category and choose how many new cards each session introduces.
+- **Explain a command** — paste a shell one-liner and get a breakdown of every command, option, value, pipe, and redirect, with links into the cheatsheet. `/explain?cmd=...` links share an explanation.
+- **Activity heatmap** — a year-long calendar on the profile page showing which days you learned something (lessons, quizzes, bosses, typing tests, and flashcards all count).
+- **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Saved lessons from every track are listed on `/lessons`. Everything is stored in your browser only.
+- **Achievements** — 19 unlockable badges (streaks, perfect quizzes, boss runs, study tools, tip exploration, typing speed, flashcards, active days, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
 - **Profile + export/import** — lifetime stats and a JSON backup you can take to another browser.
 - **Cmd/Ctrl+K command palette** for fast navigation across the site.
 - **Light & dark themes** with automatic detection and a per-browser toggle.
 - **Streaks & points** (10 per lesson, 1 per correct quiz, 25 per boss, 5 per badge) tracked in a signed per-browser cookie / localStorage.
 - **Daily Linux tip** card on the home page, deterministic by UTC day. Includes a "Shuffle" button so visitors can browse the rest of the tip catalogue and an "N seen" counter that tracks unique tips surfaced.
 - **Table of contents** on long lessons, with active-section highlighting.
-- **Track-based lesson hub** — pick a track from `/lessons`, then search and filter within it (text + difficulty + completed / to-do / bookmarked).
+- **Track-based lesson hub** — pick a track from `/lessons`, then search and filter within it (text + difficulty + completed / to-do / bookmarked). Filters can be deep-linked: `?hl=grep`, `?difficulty=beginner`, `?bookmarks=1`, or `?status=todo`.
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
 - Polished, terminal-inspired dark/light UI with a shared design-token system (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`).
-- Keyboard shortcuts: `g l` lessons, `g h` home, `g b` boss, `g c` cheatsheet, `g a` achievements, `g p` profile, `g t` typing, `/` focuses search, `Cmd/Ctrl+K` opens the palette.
+- Keyboard shortcuts: `g l` lessons, `g h` home, `g b` boss, `g c` cheatsheet, `g a` achievements, `g p` profile, `g t` typing, `g f` flashcards, `g e` explain, `/` focuses search, `Cmd/Ctrl+K` opens the palette.
 - Ships with Docker support for production-style deployments.
 
 ## Stack

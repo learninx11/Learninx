@@ -19,7 +19,7 @@ export interface Achievement {
   title: string;
   description: string;
   /** Simple emoji-style badge rendered as an inline-SVG inside the card. */
-  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist' | 'shuffle';
+  glyph: 'rocket' | 'book' | 'streak' | 'quiz' | 'boss' | 'bookmark' | 'note' | 'trophy' | 'share' | 'typing' | 'first' | 'perfectionist' | 'shuffle' | 'cards' | 'calendar';
   /** Optional hidden achievement — not shown until unlocked. */
   hidden?: boolean;
 }
@@ -116,6 +116,24 @@ export const ACHIEVEMENTS: Achievement[] = [
     glyph: 'shuffle',
   },
   {
+    id: 'card-shark',
+    title: 'Card shark',
+    description: 'Answer 100 command flashcards.',
+    glyph: 'cards',
+  },
+  {
+    id: 'memory-bank',
+    title: 'Memory bank',
+    description: 'Master 10 commands in flashcards (reach the top box).',
+    glyph: 'cards',
+  },
+  {
+    id: 'regular',
+    title: 'Regular',
+    description: 'Learn something on 10 different days.',
+    glyph: 'calendar',
+  },
+  {
     id: 'completionist',
     title: 'Completionist',
     description: 'Unlock every other achievement.',
@@ -127,6 +145,16 @@ export const ACHIEVEMENTS: Achievement[] = [
 const ALL_OTHER_IDS = ACHIEVEMENTS.filter((a) => a.id !== 'completionist').map(
   (a) => a.id,
 );
+
+/** Number of flashcards sitting in the top Leitner box. */
+export function masteredFlashcards(state: ProgressState): number {
+  return Object.values(state.flashcards).filter((c) => c.box >= 5).length;
+}
+
+/** Number of distinct UTC days with at least one learning action. */
+export function activeDays(state: ProgressState): number {
+  return Object.values(state.activity).filter((n) => n > 0).length;
+}
 
 export interface DerivedAchievement {
   id: string;
@@ -175,6 +203,9 @@ export function evaluateAchievements(
   set('fast-fingers', !!bestTyping && bestTyping.wpm >= 30);
   set('lightning', !!bestTyping && bestTyping.wpm >= 60);
   set('tip-explorer', state.tipsSeen.length >= 5);
+  set('card-shark', state.flashcardReviews >= 100);
+  set('memory-bank', masteredFlashcards(state) >= 10);
+  set('regular', activeDays(state) >= 10);
 
   // `completionist` is satisfied once every other achievement is unlocked.
   const othersUnlocked = ALL_OTHER_IDS.every((id) =>
@@ -234,6 +265,12 @@ export function achievementProgress(
       return { value: state.bestTyping?.wpm ?? 0, max: 30 };
     case 'lightning':
       return { value: state.bestTyping?.wpm ?? 0, max: 60 };
+    case 'card-shark':
+      return { value: state.flashcardReviews, max: 100 };
+    case 'memory-bank':
+      return { value: masteredFlashcards(state), max: 10 };
+    case 'regular':
+      return { value: activeDays(state), max: 10 };
     default:
       return null;
   }

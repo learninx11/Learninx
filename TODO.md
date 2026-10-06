@@ -178,16 +178,35 @@ ships in the GitHub Pages static export — no server required.
       previous pass). Added entries for `apt`, `dpkg`, `dnf`/`yum`, and
       `pacman`.
 
+## Done in this pass (4)
+
+- [x] **Command flashcards** at `/flashcards` — one card per cheatsheet
+      command (follow-up entries such as "tar (advanced)" are skipped),
+      with the command name masked out of the prompt. Five-box Leitner
+      schedule (today, 1, 3, 7, 21 days); a miss drops a card to box 1
+      and re-queues it in the same session. Typed answers accept the
+      bare command or a full invocation, and an "I was right" override
+      covers near-misses. State lives in `state.flashcards`.
+- [x] **Explain a command** at `/explain` — quote-aware tokenizer,
+      pipes / `&&` / `||` / `;` / `&`, redirects including `2>&1`,
+      `VAR=value` prefixes, `sudo`/`xargs`/`time` wrappers, subcommands
+      for `systemctl` and `apt`, bundled short flags (`-czvf`), attached
+      values (`-n5`, `-d:`), and a curated flag table for about 40
+      commands with a fallback to the cheatsheet prose. `?cmd=` deep link
+      and a "Copy link" button.
+- [x] **Activity heatmap** on `/profile` backed by a new
+      `state.activity` day-count map (trimmed to about 400 days).
+- [x] **Saved lessons** list on `/lessons`, and `?hl=`, `?bookmarks=1`,
+      `?status=`, `?difficulty=` deep links on track pages.
+- [x] **Three new achievements**: Card shark (100 flashcard answers),
+      Memory bank (10 mastered commands), Regular (10 active days).
+- [x] Navigation: header links, palette entries, `g f` and `g e`.
+
 ## Future ideas
 
 - [ ] Optional syntax highlighting in markdown via `rehype-pretty-code`
       or `shiki`. Currently the CodeBlock adds a language label and
       a copy button but keeps the plain mono look.
-- [ ] A `?hl=` deep-link on the lessons index that pre-applies a
-      search query, so blog posts can link directly to filtered
-      catalogues.
-- [ ] A `?bookmarks=1` deep-link that pre-applies the bookmarked
-      filter, so the lesson header can link to "my saved lessons".
 - [ ] Internationalisation: extract the hard-coded English strings
       to a messages file and add a `?lang=` switch.
 - [ ] Optional IndexedDB mirror of the progress store, so visitors

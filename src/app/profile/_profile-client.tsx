@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import {
+  ActivityIcon,
   AwardIcon,
   ChartIcon,
   ClockIcon,
@@ -22,6 +23,8 @@ import { useProgress } from '@/lib/progress-context';
 import { exportProgress } from '@/lib/progress-client';
 import { getAllLessons } from '@/lib/lessons';
 import { getAllBosses } from '@/lib/bosses';
+import { ActivityHeatmap } from '@/components/ActivityHeatmap';
+import { masteredFlashcards } from '@/lib/achievements';
 
 export function ProfileClient() {
   const { state, ready, reset, importJson } = useProgress();
@@ -163,6 +166,28 @@ export function ProfileClient() {
         <div className="flex items-end justify-between">
           <div>
             <Pill tone="accent">
+              <ActivityIcon size={12} /> Activity
+            </Pill>
+            <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Your year</h2>
+          </div>
+        </div>
+        <div className="lx-card p-5 sm:p-6">
+          {ready ? (
+            <ActivityHeatmap activity={state.activity} />
+          ) : (
+            <div className="h-[130px]" aria-hidden />
+          )}
+          <p className="mt-3 text-xs text-slate-500">
+            Each square is a day (UTC). Lessons, quizzes, bosses, typing tests, and
+            flashcard answers all count.
+          </p>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <Pill tone="accent">
               <TargetIcon size={12} /> Progress
             </Pill>
             <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Where you are</h2>
@@ -211,11 +236,13 @@ export function ProfileClient() {
             <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Study tools</h2>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <ToolStat label="Bookmarks" value={bookmarkCount} href="/lessons" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ToolStat label="Bookmarks" value={bookmarkCount} href="/lessons#bookmarks" />
           <ToolStat label="Notes" value={noteCount} href="/lessons" />
           <ToolStat label="Quizzes taken" value={quizCount} href="/lessons" />
           <ToolStat label="Perfect quizzes" value={perfectQuizCount} href="/lessons" />
+          <ToolStat label="Flashcard answers" value={state.flashcardReviews} href="/flashcards" />
+          <ToolStat label="Commands mastered" value={masteredFlashcards(state)} href="/flashcards" />
         </div>
       </section>
 
