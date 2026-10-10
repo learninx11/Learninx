@@ -22,20 +22,21 @@ function SandboxSkeleton() {
     <div
       role="status"
       aria-label="Loading sandbox"
-      className="lx-card flex h-full flex-col overflow-hidden border-slate-800/80"
+      className="lx-theme-dark lx-terminal flex h-full flex-col overflow-hidden"
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-900/70 px-3 py-2 text-xs">
+      <div className="flex shrink-0 items-center justify-between border-b border-lx-border bg-lx-bg-elevated/70 px-3 py-2 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500/40" />
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-yellow-500/40 [animation-delay:120ms]" />
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500/40 [animation-delay:240ms]" />
-          <span className="ml-3 font-mono text-slate-500">learner@learninx:~</span>
+          <span className="h-2.5 w-2.5 rounded-full bg-[#f87171]/40" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#fbbf24]/40" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#34d399]/40" />
+          <span className="ml-3 font-mono text-lx-subtle">learner@learninx:~</span>
         </div>
       </div>
-      <div className="flex flex-1 items-center justify-center bg-[var(--lx-bg)] text-xs text-slate-500">
+      <div className="flex flex-1 items-center justify-center text-xs text-lx-subtle">
         <span className="flex items-center gap-2">
           <TerminalIcon size={12} />
           <span className="font-mono">booting sandbox…</span>
+          <span className="inline-block h-3.5 w-1.5 animate-lx-blink bg-lx-accent/70" aria-hidden />
         </span>
       </div>
     </div>

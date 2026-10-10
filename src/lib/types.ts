@@ -62,6 +62,17 @@ export interface QuizAnswerResult {
   correct: boolean;
 }
 
+/**
+ * A lesson without its markdown body — what list pages send to the
+ * browser. `excerpt` (the first lines of the body) feeds track search.
+ */
+export type LessonSummary = Omit<Lesson, 'content'> & { excerpt?: string };
+
+export function toLessonSummary(lesson: Lesson, withExcerpt = false): LessonSummary {
+  const { content, ...rest } = lesson;
+  return withExcerpt ? { ...rest, excerpt: content.slice(0, 200) } : rest;
+}
+
 /** A lesson with the per-visitor "completed" flag merged in. */
 export interface LessonWithStatus extends Lesson {
   completed: boolean;

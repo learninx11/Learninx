@@ -1,20 +1,12 @@
-import { TerminalIcon } from '@/components/ui/Icon';
-
 export default function Loading() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-400">
-      <div className="flex items-center gap-1 font-mono text-sm">
-        <span className="text-[var(--lx-accent)]">~</span>
-        <span className="text-slate-500">$</span>
-        <span className="ml-2 inline-flex">
-          <span className="animate-pulse">.</span>
-          <span className="animate-pulse [animation-delay:120ms]">.</span>
-          <span className="animate-pulse [animation-delay:240ms]">.</span>
-        </span>
+    <div role="status" className="flex flex-col items-center justify-center gap-3 py-24 text-lx-muted">
+      <div className="flex items-center gap-1.5 font-mono text-sm" aria-hidden>
+        <span className="text-lx-accent">~</span>
+        <span className="text-lx-subtle">$</span>
+        <span className="inline-block h-4 w-2 animate-lx-blink bg-lx-accent" />
       </div>
-      <p className="flex items-center gap-1.5 text-xs text-slate-500">
-        <TerminalIcon size={12} /> Booting the sandbox
-      </p>
+      <p className="text-xs text-lx-subtle">Loading…</p>
     </div>
   );
 }

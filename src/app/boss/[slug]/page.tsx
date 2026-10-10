@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Pill } from '@/components/ui/Pill';
-import { TargetIcon } from '@/components/ui/Icon';
+import { RichText } from '@/components/ui/RichText';
+import { ChevronRightIcon, TargetIcon } from '@/components/ui/Icon';
 import { getAllBosses, getBossBySlug } from '@/lib/bosses';
 import { BossClient } from './_boss-client';
 import { BossShareIsland } from './_share-island';
@@ -15,7 +16,7 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   if (!boss) return { title: 'Boss level' };
   return {
     title: `${boss.title} · Boss level`,
-    description: boss.description,
+    description: boss.description.replace(/`/g, ''),
   };
 }
 
@@ -25,12 +26,21 @@ export default function BossPage({ params }: { params: { slug: string } }) {
   return (
     <div className="space-y-6">
       <header className="space-y-3">
-        <Link
-          href="/boss"
-          className="inline-flex items-center gap-1 text-sm text-[var(--lx-muted)] transition hover:text-[var(--lx-accent)]"
-        >
-          ← All boss levels
-        </Link>
+        <nav aria-label="Breadcrumb" className="text-sm text-lx-subtle">
+          <ol className="flex items-center gap-1">
+            <li>
+              <Link href="/boss" className="transition hover:text-lx-accent">
+                Boss levels
+              </Link>
+            </li>
+            <li aria-hidden>
+              <ChevronRightIcon size={13} />
+            </li>
+            <li aria-current="page" className="text-lx-muted">
+              {boss.title}
+            </li>
+          </ol>
+        </nav>
         <div className="flex flex-wrap items-center gap-2">
           <Pill tone="accent">
             <TargetIcon size={12} /> Boss level
@@ -41,7 +51,9 @@ export default function BossPage({ params }: { params: { slug: string } }) {
           {boss.title}
         </h1>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-2xl text-[var(--lx-muted)]">{boss.description}</p>
+          <p className="max-w-2xl text-lx-muted">
+            <RichText text={boss.description} />
+          </p>
           <BossShareIsland path={`/boss/${boss.slug}`} title={boss.title} />
         </div>
       </header>

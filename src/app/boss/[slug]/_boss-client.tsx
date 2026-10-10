@@ -6,11 +6,14 @@ import {
   ArrowRightIcon,
   CheckCheckIcon,
   CheckIcon,
+  ChevronLeftIcon,
+  CloseIcon,
   CopyIcon,
   ResetIcon,
   TerminalIcon,
 } from '@/components/ui/Icon';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
+import { RichText } from '@/components/ui/RichText';
 import { createInitialFs, type FsDir } from '@/lib/shell/fs';
 import { runCommand, type ShellContext } from '@/lib/shell/evaluator';
 import { getBossBySlug, type BossLevel } from '@/lib/bosses';
@@ -169,16 +172,16 @@ function BossRunner({ boss }: { boss: BossLevel }) {
                 }}
                 className={`lx-card flex w-full items-center gap-3 px-4 py-3 text-left transition ${
                   active
-                    ? 'border-[var(--lx-accent)]/50 bg-[var(--lx-accent-glow)]/30'
+                    ? 'border-lx-accent/50 bg-lx-accent/[0.06]'
                     : ''
                 } ${justPassedIdx === i ? 'lx-pulse-success' : ''}`}
               >
                 <span
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                     status === 'passed'
-                      ? 'bg-[var(--lx-success)]/20 text-[var(--lx-success)]'
+                      ? 'bg-lx-success/20 text-lx-success'
                       : status === 'failed'
-                        ? 'bg-[var(--lx-danger)]/20 text-[var(--lx-danger)]'
+                        ? 'bg-lx-danger/20 text-lx-danger'
                         : 'border border-[var(--lx-border)] text-[var(--lx-muted)]'
                   }`}
                 >
@@ -242,7 +245,7 @@ function BossRunner({ boss }: { boss: BossLevel }) {
 
 function CompleteBanner({ onReset }: { onReset: () => void }) {
   return (
-    <div className="lx-pulse-success lx-card flex flex-col items-start justify-between gap-3 border-[var(--lx-success)]/30 p-6 sm:flex-row sm:items-center">
+    <div className="lx-pulse-success lx-card flex flex-col items-start justify-between gap-3 border-lx-success/30 p-6 sm:flex-row sm:items-center">
       <div>
         <div className="flex items-center gap-2">
           <Pill tone="success">
@@ -321,7 +324,9 @@ function StepRunner({
           </Pill>
         </header>
         <h2 className="text-xl font-semibold">{step.title}</h2>
-        <p className="text-[var(--lx-fg)]">{step.prompt}</p>
+        <p className="leading-relaxed text-lx-fg">
+          <RichText text={step.prompt} />
+        </p>
         {step.hint && (
           <div>
             <button
@@ -332,7 +337,7 @@ function StepRunner({
               {showHint ? 'Hide hint' : 'Show hint'}
             </button>
             {showHint && (
-              <div className="mt-2 flex items-start justify-between gap-2 rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)]/40 p-3">
+              <div className="mt-2 flex items-start justify-between gap-2 rounded-md border border-lx-border bg-lx-code-bg p-3">
                 <p className="font-mono text-xs text-[var(--lx-muted)]">
                   {step.hint}
                 </p>
@@ -361,15 +366,19 @@ function StepRunner({
           <div
             className={`rounded-md border p-3 text-sm ${
               lastRun.ok
-                ? 'border-[var(--lx-success)]/40 bg-[var(--lx-success)]/10 text-[var(--lx-success)]'
-                : 'border-[var(--lx-danger)]/40 bg-[var(--lx-danger)]/10 text-[var(--lx-danger)]'
+                ? 'border-lx-success/40 bg-lx-success/10 text-lx-success'
+                : 'border-lx-danger/40 bg-lx-danger/10 text-lx-danger'
             }`}
             role="status"
+            aria-live="polite"
           >
-            <div className="font-semibold">
-              {lastRun.ok ? '✓ Correct.' : '✗ Not yet.'}
+            <div className="flex items-center gap-1.5 font-semibold">
+              {lastRun.ok ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
+              {lastRun.ok ? 'Correct.' : 'Not yet.'}
             </div>
-            <div className="mt-1 text-[var(--lx-fg)]">{lastRun.message}</div>
+            <div className="mt-1 text-lx-fg">
+              <RichText text={lastRun.message} />
+            </div>
             <pre className="mt-2 max-h-48 overflow-auto rounded bg-[var(--lx-code-bg)] p-2 text-xs text-[var(--lx-fg)]">
               <code>
                 $ {lastRun.command}
@@ -387,7 +396,7 @@ function StepRunner({
             disabled={!canPrev}
             className="lx-btn lx-btn-ghost"
           >
-            ← Previous step
+            <ChevronLeftIcon size={14} /> Previous step
           </button>
           {lastRun?.ok ? (
             canNext ? (

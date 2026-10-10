@@ -49,9 +49,14 @@ export function DemoPlayer() {
     };
     if (v.readyState >= 2) tryPlay();
     else v.addEventListener('canplay', tryPlay, { once: true });
-    document.addEventListener('visibilitychange', () => {
+    const onVisibility = () => {
       if (!document.hidden) tryPlay();
-    });
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      v.removeEventListener('canplay', tryPlay);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   return (

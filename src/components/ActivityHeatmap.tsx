@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { addDays, utcDayKey } from '@/lib/progress-client';
 
 const WEEKS = 53;
@@ -69,6 +69,14 @@ export function ActivityHeatmap({
 
   const width = LEFT + WEEKS * (CELL + GAP);
   const height = TOP + 7 * (CELL + GAP);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // On a narrow screen the calendar scrolls sideways; start at the most
+  // recent weeks rather than a year ago.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -88,7 +96,7 @@ export function ActivityHeatmap({
           </dd>
         </div>
       </dl>
-      <div className="overflow-x-auto pb-1">
+      <div ref={scrollRef} className="overflow-x-auto pb-1">
         <svg
           width={width}
           height={height}

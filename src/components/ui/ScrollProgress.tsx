@@ -1,25 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
+/** Thin reading-position bar pinned to the top of the viewport. */
 export function ScrollProgress() {
-  const [pct, setPct] = useState(0);
+  const barRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let frame = 0;
     function update() {
+      frame = 0;
       const h = document.documentElement;
       const max = h.scrollHeight - h.clientHeight;
-      const next = max <= 0 ? 0 : (h.scrollTop / max) * 100;
-      setPct(next);
+      const ratio = max <= 0 ? 0 : Math.min(1, h.scrollTop / max);
+      if (barRef.current) barRef.current.style.transform = `scaleX(${ratio})`;
+    }
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(update);
     }
     update();
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
     return () => {
-      window.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
     };
   }, []);
 
-  return <div className="lx-scroll-progress" style={{ width: `${pct}%` }} aria-hidden />;
+  return <div ref={barRef} className="lx-scroll-progress" style={{ transform: 'scaleX(0)' }} aria-hidden />;
 }

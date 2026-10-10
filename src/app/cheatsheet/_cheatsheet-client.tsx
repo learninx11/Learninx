@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckIcon, CopyIcon, SearchIcon, ShareIcon } from '@/components/ui/Icon';
+import { CheckIcon, CloseIcon, CodeIcon, CopyIcon, SearchIcon, ShareIcon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { RichText } from '@/components/ui/RichText';
 import {
   CHEATSHEET,
   CHEAT_CATEGORIES,
@@ -17,28 +19,9 @@ function cardId(cmd: string): string {
 
 export function CheatsheetClient() {
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<CheatCategory | 'All'>(
-    'All',
-  );
+  const [activeCategory, setActiveCategory] = useState<CheatCategory | 'All'>('All');
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  // Press "/" to focus the search box (skip when typing in another field).
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== '/') return;
-      const target = event.target as HTMLElement | null;
-      const inField =
-        target &&
-        (/^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName) ||
-          target.isContentEditable);
-      if (inField) return;
-      event.preventDefault();
-      inputRef.current?.focus();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   // A link to `#cmd-chmod` should scroll to and briefly highlight that
   // card — the id is already there for anchor purposes, but a client-
@@ -85,26 +68,63 @@ export function CheatsheetClient() {
     return out;
   }, [filtered]);
 
+  const filteringActive = query.trim() !== '' || activeCategory !== 'All';
+
+  function clearFilters() {
+    setQuery('');
+    setActiveCategory('All');
+    inputRef.current?.focus();
+  }
+
   return (
     <div className="space-y-6">
-      <div className="lx-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div className="relative flex-1">
+      <div className="lx-card sticky top-[4.25rem] z-20 space-y-3 bg-lx-surface-strong/90 p-4 shadow-lx-lg sm:p-5">
+        <div className="relative">
           <span
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lx-subtle"
             aria-hidden
           >
             <SearchIcon size={16} />
           </span>
           <input
             ref={inputRef}
+            type="search"
+            data-lx-page-search
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search commands, concepts, or tasks (press / )"
-            className="lx-input pl-9"
-            aria-label="Search cheatsheet"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && query) {
+                e.preventDefault();
+                setQuery('');
+              }
+            }}
+            placeholder="Search commands, concepts, or tasks — try “permissions”"
+            className="lx-input pl-9 pr-16 font-sans [&::-webkit-search-cancel-button]:hidden"
+            aria-label="Search the cheatsheet"
           />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                inputRef.current?.focus();
+              }}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-lx-subtle transition hover:text-lx-fg"
+            >
+              <CloseIcon size={14} />
+            </button>
+          ) : (
+            <kbd className="lx-kbd pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 sm:inline-flex">
+              /
+            </kbd>
+          )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div
+          role="group"
+          aria-label="Category"
+          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
           <CategoryChip
             label="All"
             count={categoryCounts.total}
@@ -121,21 +141,34 @@ export function CheatsheetClient() {
             />
           ))}
         </div>
+        {filteringActive && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-lx-subtle" aria-live="polite">
+            {filtered.length} command{filtered.length === 1 ? '' : 's'} shown
+            <button type="button" onClick={clearFilters} className="font-medium text-lx-accent hover:underline">
+              Clear filters
+            </button>
+          </p>
+        )}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="lx-card p-10 text-center text-sm text-[var(--lx-muted)]">
-          No commands match &ldquo;{query}&rdquo;.
+        <div className="lx-card flex flex-col items-center gap-3 p-10 text-center">
+          <p className="text-sm text-lx-muted">No commands match &ldquo;{query.trim()}&rdquo;.</p>
+          <button type="button" onClick={clearFilters} className="lx-btn lx-btn-secondary lx-btn-sm">
+            Clear filters
+          </button>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {grouped.map(({ category, items }) => (
-            <section key={category} className="space-y-3">
+            <section key={category} aria-labelledby={`cat-${category}`} className="space-y-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{category}</h2>
+                <h2 id={`cat-${category}`} className="text-lg font-semibold">
+                  {category}
+                </h2>
                 <Pill tone="default">{items.length}</Pill>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {items.map((entry) => (
                   <CheatCard
                     key={entry.cmd}
@@ -167,25 +200,20 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      disabled={count === 0}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      disabled={count === 0 && !active}
+      aria-pressed={active}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active
-          ? 'border-[var(--lx-accent)] bg-[var(--lx-accent-glow)] text-[var(--lx-accent)]'
-          : 'border-[var(--lx-border)] text-[var(--lx-muted)] hover:border-[var(--lx-accent)]/40 hover:text-[var(--lx-accent)]'
+          ? 'border-lx-accent bg-lx-accent-glow text-lx-accent'
+          : 'border-lx-border text-lx-muted hover:border-lx-accent/40 hover:text-lx-fg'
       }`}
     >
-      {label} <span className="opacity-60">{count}</span>
+      {label} <span className="tabular-nums opacity-60">{count}</span>
     </button>
   );
 }
 
-function CheatCard({
-  entry,
-  highlighted,
-}: {
-  entry: CheatEntry;
-  highlighted: boolean;
-}) {
+function CheatCard({ entry, highlighted }: { entry: CheatEntry; highlighted: boolean }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const id = cardId(entry.cmd);
 
@@ -203,47 +231,55 @@ function CheatCard({
   return (
     <article
       id={id}
-      className={`lx-card flex flex-col gap-3 p-4 transition-shadow sm:p-5 ${
-        highlighted ? 'ring-2 ring-[var(--lx-accent)]' : ''
+      className={`lx-card flex min-w-0 scroll-mt-48 flex-col gap-3 p-4 transition-shadow sm:p-5 ${
+        highlighted ? 'ring-2 ring-lx-accent' : ''
       }`}
     >
-      <header className="flex items-baseline justify-between gap-3">
-        <span className="flex items-center gap-1.5">
-          <h3 className="font-mono text-base font-semibold text-[var(--lx-accent)]">
-            {entry.cmd}
-          </h3>
+      <header className="flex items-start justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-1">
+          <h3 className="truncate font-mono text-base font-semibold text-lx-accent">{entry.cmd}</h3>
           <CopyButton text={entry.cmd} label={`Copy command: ${entry.cmd}`} />
         </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <Pill tone="default">{entry.category}</Pill>
-          <button
-            type="button"
-            onClick={copyLink}
-            className="inline-flex items-center rounded p-1 text-[var(--lx-muted)] transition hover:text-[var(--lx-accent)]"
-            aria-label={linkCopied ? 'Link copied' : `Copy link to ${entry.cmd}`}
-            title={linkCopied ? 'Link copied' : 'Copy link to this command'}
-          >
-            {linkCopied ? <CheckIcon size={12} /> : <ShareIcon size={12} />}
-          </button>
-        </span>
+        <button
+          type="button"
+          onClick={copyLink}
+          className="inline-flex shrink-0 items-center gap-1 rounded p-1 text-lx-subtle transition hover:text-lx-accent"
+          aria-label={linkCopied ? 'Link copied' : `Copy link to ${entry.cmd}`}
+          title={linkCopied ? 'Link copied' : 'Copy a link to this command'}
+        >
+          {linkCopied ? <CheckIcon size={13} /> : <ShareIcon size={13} />}
+        </button>
       </header>
-      <p className="text-sm font-medium text-[var(--lx-fg)]">{entry.short}</p>
-      <p className="text-sm leading-relaxed text-[var(--lx-muted)]">
-        {entry.long}
+      <p className="text-sm font-medium text-lx-fg [overflow-wrap:anywhere]">
+        <RichText text={entry.short} />
+      </p>
+      <p className="text-sm leading-relaxed text-lx-muted [overflow-wrap:anywhere]">
+        <RichText text={entry.long} />
       </p>
       {entry.examples.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">
-            Examples
-          </div>
+          <div className="lx-eyebrow">Examples</div>
           <ul className="space-y-1.5 font-mono text-sm">
             {entry.examples.map((ex) => (
               <li
                 key={ex}
-                className="rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)] flex items-center justify-between gap-2 pl-2.5 pr-1.5 py-1.5 text-[var(--lx-fg)]"
+                className="flex items-center justify-between gap-2 rounded-md border border-lx-border bg-lx-code-bg py-1 pl-2.5 pr-1 text-lx-fg"
               >
-                <code className="truncate">$ {ex}</code>
-                <CopyButton text={ex} label={`Copy command: ${ex}`} showLabel />
+                <code className="min-w-0 truncate" title={ex}>
+                  <span className="select-none text-lx-subtle">$ </span>
+                  {ex}
+                </code>
+                <span className="flex shrink-0 items-center">
+                  <Link
+                    href={`/explain?cmd=${encodeURIComponent(ex)}`}
+                    className="inline-flex items-center rounded px-1.5 py-1 text-lx-subtle transition hover:text-lx-accent"
+                    aria-label={`Explain: ${ex}`}
+                    title="Explain this command"
+                  >
+                    <CodeIcon size={13} />
+                  </Link>
+                  <CopyButton text={ex} label={`Copy command: ${ex}`} />
+                </span>
               </li>
             ))}
           </ul>
@@ -257,15 +293,7 @@ function CheatCard({
  * Small copy-to-clipboard button. Shows a check for a moment after a
  * successful copy so the user gets confirmation without a toast.
  */
-function CopyButton({
-  text,
-  label,
-  showLabel = false,
-}: {
-  text: string;
-  label: string;
-  showLabel?: boolean;
-}) {
+function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy(): Promise<void> {
@@ -282,18 +310,13 @@ function CopyButton({
     <button
       type="button"
       onClick={copy}
-      className="inline-flex shrink-0 items-center gap-1 rounded border-[var(--lx-border)] px-1.5 py-0.5 text-[0.7rem] text-[var(--lx-muted)] transition hover:border-[var(--lx-accent)] hover:text-[var(--lx-accent)]"
+      className={`inline-flex shrink-0 items-center rounded px-1.5 py-1 transition ${
+        copied ? 'text-lx-success' : 'text-lx-subtle hover:text-lx-accent'
+      }`}
       aria-label={copied ? `Copied: ${text}` : label}
+      title={copied ? 'Copied' : 'Copy'}
     >
-      {copied ? (
-        <>
-          <CheckIcon size={showLabel ? 12 : 11} /> {showLabel && 'Copied'}
-        </>
-      ) : (
-        <>
-          <CopyIcon size={showLabel ? 12 : 11} /> {showLabel && 'Copy'}
-        </>
-      )}
+      {copied ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
     </button>
   );
 }

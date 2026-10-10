@@ -1,436 +1,480 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import {
-  ArrowRightIcon,
-  AwardIcon,
-  BookIcon,
-  BrainIcon,
-  CodeIcon,
-  CommandIcon,
-  GamepadIcon,
+  CheckIcon,
+  HomeIcon,
+  KeyboardIcon,
+  ListIcon,
+  MonitorIcon,
+  MoonIcon,
+  PlayIcon,
   SearchIcon,
-  TerminalIcon,
-  UserIcon,
+  ShuffleIcon,
+  SunIcon,
 } from '@/components/ui/Icon';
-import { Pill } from '@/components/ui/Pill';
+import { plainText } from '@/components/ui/RichText';
 import { TrackIcon } from '@/components/TrackIcon';
+import type { CheatEntry } from '@/lib/cheatsheet';
 import { getAllLessons } from '@/lib/lessons';
 import { TRACK_DESCRIPTION, TRACK_LABEL, TRACK_ORDER } from '@/lib/lesson-tracks';
+import { findNextLesson } from '@/lib/next-lesson';
+import { useProgress } from '@/lib/progress-context';
+import { NAV_GROUPS } from '@/lib/site-nav';
+import { useTheme } from '@/lib/theme';
+import { OPEN_PALETTE_EVENT, openShortcuts } from '@/lib/ui-events';
+import { useModal } from '@/lib/use-modal';
+import { useModKey } from '@/lib/use-mod-key';
+
+type Group = 'Continue' | 'Pages' | 'Tracks' | 'Commands' | 'Lessons' | 'Actions';
 
 interface PaletteItem {
   id: string;
   title: string;
-  description?: string;
-  group: 'Navigate' | 'Lesson' | 'Cheatsheet' | 'Action';
+  subtitle?: string;
+  group: Group;
   href?: string;
-  keywords?: string[];
-  icon: ReactNode;
   onSelect?: () => void;
+  keywords: string[];
+  icon: ReactNode;
+  /** Right-hand hint, e.g. the item's `g` shortcut. */
+  hint?: ReactNode;
+  done?: boolean;
+  /** Only listed once the visitor types something. */
+  searchOnly?: boolean;
 }
 
-const STATIC_NAV: Omit<PaletteItem, 'id'>[] = [
-  {
-    title: 'Home',
-    description: 'Back to the landing page',
-    group: 'Navigate',
-    href: '/',
-    icon: <ArrowRightIcon size={14} />,
-    keywords: ['home', 'landing'],
-  },
-  {
-    title: 'All lessons',
-    description: 'Pick a track to start',
-    group: 'Navigate',
-    href: '/lessons',
-    icon: <BookIcon size={14} />,
-    keywords: ['lessons', 'catalogue', 'list', 'tracks'],
-  },
-  ...TRACK_ORDER.map((t) => ({
-    title: `${TRACK_LABEL[t]} lessons`,
-    description: TRACK_DESCRIPTION[t],
-    group: 'Navigate' as const,
-    href: `/lessons/track/${t}`,
-    icon: <TrackIcon track={t} size={14} />,
-    keywords: ['lessons', 'track', t],
-  })),
-  {
-    title: 'Terminal',
-    description: 'A dedicated sandbox for free practice — no lesson attached',
-    group: 'Navigate',
-    href: '/terminal',
-    icon: <TerminalIcon size={14} />,
-    keywords: ['terminal', 'shell', 'sandbox', 'practice', 'console', 'play'],
-  },
-  {
-    title: 'Cheatsheet',
-    description: 'Searchable command reference',
-    group: 'Navigate',
-    href: '/cheatsheet',
-    icon: <TerminalIcon size={14} />,
-    keywords: ['cheatsheet', 'commands', 'reference', 'shell'],
-  },
-  {
-    title: 'Boss levels',
-    description: 'Multi-step challenges',
-    group: 'Navigate',
-    href: '/boss',
-    icon: <TerminalIcon size={14} />,
-    keywords: ['boss', 'challenge', 'hard'],
-  },
-  {
-    title: 'Typing test',
-    description: 'Practice typing real shell commands',
-    group: 'Navigate',
-    href: '/typing',
-    icon: <GamepadIcon size={14} />,
-    keywords: ['typing', 'wpm', 'speed', 'practice', 'game'],
-  },
-  {
-    title: 'Flashcards',
-    description: 'Spaced-repetition review of every sandbox command',
-    group: 'Navigate',
-    href: '/flashcards',
-    icon: <BrainIcon size={14} />,
-    keywords: ['flashcards', 'cards', 'review', 'memorize', 'spaced', 'repetition', 'recall', 'anki'],
-  },
-  {
-    title: 'Explain a command',
-    description: 'Break a shell one-liner into commands, flags, and pipes',
-    group: 'Navigate',
-    href: '/explain',
-    icon: <CodeIcon size={14} />,
-    keywords: ['explain', 'explainshell', 'parse', 'flags', 'options', 'pipe', 'what does'],
-  },
-  {
-    title: 'Achievements',
-    description: 'See your unlocked badges',
-    group: 'Navigate',
-    href: '/achievements',
-    icon: <AwardIcon size={14} />,
-    keywords: ['achievements', 'badges', 'rewards', 'trophies'],
-  },
-  {
-    title: 'Profile',
-    description: 'Lifetime stats, export, and import',
-    group: 'Navigate',
-    href: '/profile',
-    icon: <UserIcon size={14} />,
-    keywords: ['profile', 'stats', 'export', 'import', 'backup'],
-  },
-];
+const GROUP_BIAS: Record<Group, number> = {
+  Continue: -12,
+  Pages: -8,
+  Commands: -6,
+  Tracks: -4,
+  Actions: -3,
+  Lessons: 0,
+};
 
-function isMacLike(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+const LESSONS = getAllLessons();
+
+function rank(item: PaletteItem, query: string, terms: string[]): number | null {
+  const title = item.title.toLowerCase();
+  const haystack = [title, item.subtitle ?? '', item.group, ...item.keywords].join(' ').toLowerCase();
+  if (!terms.every((t) => haystack.includes(t))) return null;
+  let score = GROUP_BIAS[item.group];
+  if (title === query) score -= 100;
+  else if (title.startsWith(query)) score -= 60;
+  else if (title.split(/[\s:/&-]+/).some((word) => word.startsWith(query))) score -= 40;
+  else if (title.includes(query)) score -= 25;
+  for (const t of terms) if (title.includes(t)) score -= 5;
+  return score;
 }
 
+/**
+ * Cmd/Ctrl+K palette: jump to any page, track, or lesson, pick up where
+ * you left off, or run a quick action (theme, shortcuts, random lesson).
+ * The header's search button and the `/` key open it via
+ * `openCommandPalette()`.
+ */
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-  const mac = isMacLike();
+  const listId = useId();
+  const mod = useModKey();
+  const { completedSet, ready } = useProgress();
+  const { resolved, preference, setPreference } = useTheme();
+  // The cheatsheet is only needed once someone searches, so it loads the
+  // first time the palette opens instead of shipping with every page.
+  const [commands, setCommands] = useState<CheatEntry[] | null>(null);
 
-  // Open / close keyboard shortcut: Cmd/Ctrl + K, or "/" when no input
-  // is focused (mirrors GitHub, Linear, etc.).
+  const close = useCallback(() => setOpen(false), []);
+  useModal(open, close, panelRef);
+
+  useEffect(() => {
+    if (!open || commands) return;
+    let cancelled = false;
+    import('@/lib/cheatsheet').then(
+      (m) => {
+        if (!cancelled) setCommands(m.CHEATSHEET);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [open, commands]);
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      const inField =
-        target &&
-        (/^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName) ||
-          target.isContentEditable);
-
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setOpen((v) => !v);
-        return;
-      }
-      if (event.key === '/' && !inField && !open) {
-        event.preventDefault();
-        setOpen(true);
-      }
-      if (event.key === 'Escape' && open) {
-        event.preventDefault();
-        setOpen(false);
       }
     }
+    const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
-
-  // Build the item list. Lessons are static data so we can build them
-  // once per mount.
-  const items = useMemo<PaletteItem[]>(() => {
-    const lessons = getAllLessons();
-    const fromLessons: PaletteItem[] = lessons.map((l) => ({
-      id: `lesson:${l.id}`,
-      title: l.title,
-      description: l.description,
-      group: 'Lesson',
-      href: `/lessons/${l.slug}`,
-      keywords: [
-        l.id,
-        l.slug,
-        l.title,
-        l.description,
-        l.trackCommand ?? '',
-        l.difficulty,
-        l.track,
-      ],
-      icon: <BookIcon size={14} />,
-    }));
-    const navItems: PaletteItem[] = STATIC_NAV.map((n, i) => ({
-      id: `nav:${i}`,
-      ...n,
-    }));
-    return [...navItems, ...fromLessons];
+    window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
+    };
   }, []);
 
-  // Filter by query. Empty query shows the top items in declaration order.
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return items.slice(0, 12);
-    return items
-      .map((item) => {
-        const haystack = [
-          item.title,
-          item.description ?? '',
-          item.group,
-          ...(item.keywords ?? []),
-        ]
-          .join(' ')
-          .toLowerCase();
-        const idx = haystack.indexOf(q);
-        return { item, score: idx === -1 ? Number.POSITIVE_INFINITY : idx };
-      })
-      .filter((row) => Number.isFinite(row.score))
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 30)
-      .map((row) => row.item);
-  }, [items, query]);
-
-  // Reset highlight when filter changes.
   useEffect(() => {
+    if (!open) return;
+    setQuery('');
     setActiveIndex(0);
-  }, [query, open]);
-
-  // Focus the input on open.
-  useEffect(() => {
-    if (open) {
-      // microtask after the modal mounts
-      requestAnimationFrame(() => inputRef.current?.focus());
-      setQuery('');
-    }
+    requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 
-  const choose = useCallback(
-    (item: PaletteItem) => {
-      if (item.onSelect) {
-        item.onSelect();
-      } else if (item.href) {
-        router.push(item.href);
-      }
-      setOpen(false);
-    },
-    [router],
-  );
+  const items = useMemo<PaletteItem[]>(() => {
+    const list: PaletteItem[] = [];
 
-  function onListKey(event: React.KeyboardEvent<HTMLInputElement>) {
+    const next = ready ? findNextLesson(LESSONS, completedSet) : null;
+    if (next) {
+      list.push({
+        id: 'continue',
+        title: `Continue: ${next.title}`,
+        subtitle: `${TRACK_LABEL[next.track]} · up next`,
+        group: 'Continue',
+        href: `/lessons/${next.slug}`,
+        keywords: ['continue', 'resume', 'next', next.title],
+        icon: <PlayIcon size={14} />,
+      });
+    }
+
+    list.push({
+      id: 'page:/',
+      title: 'Home',
+      subtitle: 'Back to the start page',
+      group: 'Pages',
+      href: '/',
+      keywords: ['home', 'landing', 'start'],
+      icon: <HomeIcon size={14} />,
+      hint: <ShortcutHint keys={['g', 'h']} />,
+    });
+    for (const item of NAV_GROUPS.flatMap((g) => g.items)) {
+      const Icon = item.icon;
+      list.push({
+        id: `page:${item.href}`,
+        title: item.label,
+        subtitle: item.blurb,
+        group: 'Pages',
+        href: item.href,
+        keywords: [item.href.slice(1)],
+        icon: <Icon size={14} />,
+        hint: <ShortcutHint keys={['g', item.shortcut]} />,
+      });
+    }
+
+    list.push(
+      {
+        id: 'action:theme',
+        title: resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
+        group: 'Actions',
+        onSelect: () => setPreference(resolved === 'dark' ? 'light' : 'dark'),
+        keywords: ['theme', 'dark', 'light', 'mode', 'appearance', 'colors'],
+        icon: resolved === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />,
+      },
+      {
+        id: 'action:system-theme',
+        title: 'Use the system theme',
+        subtitle: preference === 'system' ? 'On — following your device' : 'Follow your device setting',
+        group: 'Actions',
+        onSelect: () => setPreference('system'),
+        keywords: ['theme', 'system', 'auto', 'os', 'dark', 'light', 'appearance'],
+        icon: <MonitorIcon size={14} />,
+      },
+      {
+        id: 'action:shortcuts',
+        title: 'Keyboard shortcuts',
+        group: 'Actions',
+        onSelect: () => window.setTimeout(openShortcuts, 0),
+        keywords: ['keys', 'hotkeys', 'keyboard', 'help', 'shortcuts'],
+        icon: <KeyboardIcon size={14} />,
+        hint: <ShortcutHint keys={['?']} />,
+      },
+      {
+        id: 'action:random',
+        title: 'Surprise me',
+        subtitle: 'Open a random lesson you haven’t finished',
+        group: 'Actions',
+        onSelect: () => {
+          const pool = LESSONS.filter((l) => !completedSet.has(l.id));
+          const from = pool.length > 0 ? pool : LESSONS;
+          const pick = from[Math.floor(Math.random() * from.length)];
+          if (pick) router.push(`/lessons/${pick.slug}`);
+        },
+        keywords: ['random', 'surprise', 'lucky', 'lesson'],
+        icon: <ShuffleIcon size={14} />,
+      },
+    );
+
+    for (const track of TRACK_ORDER) {
+      list.push({
+        id: `track:${track}`,
+        title: TRACK_LABEL[track],
+        subtitle: TRACK_DESCRIPTION[track],
+        group: 'Tracks',
+        href: `/lessons/track/${track}`,
+        keywords: ['track', 'lessons', track],
+        icon: <TrackIcon track={track} size={14} />,
+        searchOnly: true,
+      });
+    }
+
+    for (const entry of commands ?? []) {
+      list.push({
+        id: `cmd:${entry.cmd}`,
+        title: entry.cmd,
+        subtitle: plainText(entry.short),
+        group: 'Commands',
+        href: `/cheatsheet#cmd-${entry.cmd.replace(/[^a-z0-9]+/gi, '-')}`,
+        keywords: [entry.category, ...entry.keywords],
+        icon: <ListIcon size={14} />,
+        searchOnly: true,
+      });
+    }
+
+    for (const lesson of LESSONS) {
+      list.push({
+        id: `lesson:${lesson.id}`,
+        title: lesson.title,
+        subtitle: plainText(lesson.description),
+        group: 'Lessons',
+        href: `/lessons/${lesson.slug}`,
+        keywords: [lesson.slug, lesson.trackCommand ?? '', lesson.difficulty, TRACK_LABEL[lesson.track]],
+        icon: <TrackIcon track={lesson.track} size={14} />,
+        done: completedSet.has(lesson.id),
+        searchOnly: true,
+      });
+    }
+
+    return list;
+  }, [ready, completedSet, resolved, preference, setPreference, router, commands]);
+
+  // Matching items, best first, then gathered under their group headings
+  // (groups ordered by their best match) so headings never repeat.
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let ordered: PaletteItem[];
+    if (!q) {
+      ordered = items.filter((i) => !i.searchOnly);
+    } else {
+      const terms = q.split(/\s+/);
+      ordered = items
+        .map((item) => ({ item, score: rank(item, q, terms) }))
+        .filter((row): row is { item: PaletteItem; score: number } => row.score !== null)
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 40)
+        .map((row) => row.item);
+    }
+    const byGroup = new Map<Group, PaletteItem[]>();
+    for (const item of ordered) {
+      const bucket = byGroup.get(item.group);
+      if (bucket) bucket.push(item);
+      else byGroup.set(item.group, [item]);
+    }
+    return [...byGroup.entries()].map(([group, groupItems]) => ({ group, items: groupItems }));
+  }, [items, query]);
+
+  const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  const optionId = (i: number) => `${listId}-opt-${i}`;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
+
+  // Keep the highlighted row visible as the arrow keys move it.
+  useEffect(() => {
+    if (!open) return;
+    document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: 'nearest' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, open]);
+
+  function choose(item: PaletteItem) {
+    setOpen(false);
+    if (item.onSelect) item.onSelect();
+    else if (item.href) router.push(item.href);
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    const count = flat.length;
+    if (count === 0) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((i) => Math.min(filtered.length - 1, i + 1));
-      scrollActiveIntoView();
+      setActiveIndex((i) => (i + 1) % count);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setActiveIndex((i) => Math.max(0, i - 1));
-      scrollActiveIntoView();
+      setActiveIndex((i) => (i - 1 + count) % count);
+    } else if (event.key === 'PageDown') {
+      event.preventDefault();
+      setActiveIndex((i) => Math.min(count - 1, i + 6));
+    } else if (event.key === 'PageUp') {
+      event.preventDefault();
+      setActiveIndex((i) => Math.max(0, i - 6));
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const item = filtered[activeIndex];
+      const item = flat[activeIndex];
       if (item) choose(item);
     }
   }
 
-  function scrollActiveIntoView() {
-    requestAnimationFrame(() => {
-      const el = listRef.current?.querySelector<HTMLElement>(
-        `[data-idx="${activeIndex}"]`,
-      );
-      el?.scrollIntoView({ block: 'nearest' });
-    });
-  }
+  if (!open) return null;
 
+  let running = 0;
   return (
-    <>
-      <PaletteTrigger onClick={() => setOpen(true)} mac={mac} />
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Command palette"
-          className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]"
-        >
-          <div
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          <div className="lx-card relative z-10 w-full max-w-xl overflow-hidden border-[var(--lx-border-strong)]/70 shadow-2xl">
-            <div className="flex items-center gap-2 border-b border-[var(--lx-border)] px-4 py-3">
-              <SearchIcon size={16} className="text-slate-500" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={onListKey}
-                placeholder="Search lessons, jump to a page…"
-                className="flex-1 bg-transparent text-sm text-[var(--lx-fg)] outline-none placeholder:text-slate-500"
-                aria-label="Search"
-              />
-              <span className="lx-kbd">esc</span>
-            </div>
-            {filtered.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-slate-500">
-                No results for &ldquo;{query}&rdquo;
-              </div>
-            ) : (
-              <ul
-                ref={listRef}
-                role="listbox"
-                className="max-h-[55vh] overflow-y-auto p-1"
-              >
-                {renderGroup(filtered, activeIndex, choose, setActiveIndex)}
-              </ul>
-            )}
-            <div className="flex items-center justify-between border-t border-[var(--lx-border)] bg-[var(--lx-bg-elevated)]/60 px-4 py-2 text-xs text-slate-500">
-              <span className="flex items-center gap-2">
-                <CommandIcon size={12} /> {mac ? '⌘' : 'Ctrl'} + K
-              </span>
-              <span>
-                <span className="lx-kbd">↑</span> <span className="lx-kbd">↓</span> to
-                navigate · <span className="lx-kbd">↵</span> to open
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function PaletteTrigger({ onClick, mac }: { onClick: () => void; mac: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Open command palette"
-      className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-1.5 text-xs text-slate-400 transition hover:border-[var(--lx-accent)]/40 hover:text-[var(--lx-accent)]"
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      className="fixed inset-0 z-[100] flex items-start justify-center px-3 pt-[8vh] sm:px-4 sm:pt-[12vh]"
     >
-      <SearchIcon size={12} />
-      <span className="hidden sm:inline">Search</span>
-      <span className="hidden items-center gap-0.5 sm:flex">
-        <span className="lx-kbd">{mac ? '⌘' : 'Ctrl'}</span>
-        <span className="lx-kbd">K</span>
-      </span>
-    </button>
+      <div
+        aria-hidden
+        onClick={close}
+        className="absolute inset-0 bg-lx-overlay backdrop-blur-sm animate-lx-fade-in"
+      />
+      <div
+        ref={panelRef}
+        className="lx-popover relative flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden animate-lx-pop-in"
+      >
+        <div className="flex items-center gap-3 border-b border-lx-border px-4">
+          <SearchIcon size={16} className="shrink-0 text-lx-subtle" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onInputKeyDown}
+            placeholder="Search lessons, commands, and pages…"
+            className="h-12 min-w-0 flex-1 bg-transparent text-base text-lx-fg outline-none placeholder:text-lx-subtle focus-visible:outline-none sm:text-[15px]"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={flat.length > 0 ? optionId(activeIndex) : undefined}
+            aria-label="Search Learninx"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            onClick={close}
+            className="rounded-md px-1.5 py-1 text-xs text-lx-subtle transition hover:text-lx-fg"
+          >
+            <span className="sm:hidden">Cancel</span>
+            <kbd className="lx-kbd hidden sm:inline-flex">Esc</kbd>
+          </button>
+        </div>
+
+        {flat.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-sm text-lx-fg">No results for “{query.trim()}”</p>
+            <p className="mt-1 text-xs text-lx-subtle">
+              Try a command name like <code className="font-mono">grep</code>, or a topic like{' '}
+              <code className="font-mono">kubernetes</code>.
+            </p>
+          </div>
+        ) : (
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label="Results"
+            className="flex-1 overflow-y-auto overscroll-contain p-2"
+          >
+            {groups.map(({ group, items: groupItems }) => (
+              <li key={group} role="presentation" className="pb-1">
+                <div id={`${listId}-${group}`} aria-hidden className="lx-eyebrow px-3 pb-1.5 pt-2">
+                  {group}
+                </div>
+                <ul role="group" aria-labelledby={`${listId}-${group}`}>
+                  {groupItems.map((item) => {
+                    const index = running++;
+                    const active = index === activeIndex;
+                    return (
+                      <li
+                        key={item.id}
+                        id={optionId(index)}
+                        role="option"
+                        aria-selected={active}
+                        onMouseMove={() => active || setActiveIndex(index)}
+                        onClick={() => choose(item)}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                          active ? 'bg-lx-accent-glow' : ''
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
+                            active
+                              ? 'border-lx-accent/50 text-lx-accent'
+                              : 'border-lx-border text-lx-subtle'
+                          }`}
+                        >
+                          {item.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block truncate font-medium ${active ? 'text-lx-fg' : 'text-lx-prose-body'}`}
+                          >
+                            {item.title}
+                          </span>
+                          {item.subtitle && (
+                            <span className="block truncate text-xs text-lx-subtle">{item.subtitle}</span>
+                          )}
+                        </span>
+                        {item.done && (
+                          <span className="inline-flex shrink-0 items-center gap-1 text-xs text-lx-success">
+                            <CheckIcon size={12} /> Done
+                          </span>
+                        )}
+                        {item.hint && <span className="hidden shrink-0 sm:inline-flex">{item.hint}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="hidden items-center justify-between gap-3 border-t border-lx-border bg-lx-surface px-4 py-2 text-xs text-lx-subtle sm:flex">
+          <span className="flex items-center gap-1.5">
+            <kbd className="lx-kbd">↑</kbd>
+            <kbd className="lx-kbd">↓</kbd> to move
+            <kbd className="lx-kbd ml-2">↵</kbd> to open
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="lx-kbd">{mod}</kbd>
+            <kbd className="lx-kbd">K</kbd> to toggle
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function renderGroup(
-  items: PaletteItem[],
-  activeIndex: number,
-  choose: (item: PaletteItem) => void,
-  setActive: (i: number) => void,
-) {
-  const groups: { group: string; items: PaletteItem[]; startIdx: number }[] = [];
-  items.forEach((item, i) => {
-    const last = groups[groups.length - 1];
-    if (last && last.group === item.group) {
-      last.items.push(item);
-    } else {
-      groups.push({ group: item.group, items: [item], startIdx: i });
-    }
-  });
-
-  let runningIdx = 0;
-  return groups.map((g) => {
-    const groupEl = (
-      <li key={g.group} className="px-1 pb-1 pt-2 first:pt-1">
-        <div className="px-3 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">
-          {g.group}
-        </div>
-        <ul>
-          {g.items.map((item) => {
-            const isActive = runningIdx === activeIndex;
-            const idx = runningIdx;
-            runningIdx += 1;
-            return (
-              <li key={item.id} data-idx={idx}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onMouseEnter={() => setActive(idx)}
-                  onClick={() => choose(item)}
-                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition ${
-                    isActive
-                      ? 'bg-[var(--lx-accent-glow)] text-[var(--lx-fg)]'
-                      : 'text-slate-300 hover:bg-slate-800/40'
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-md border ${
-                      isActive
-                        ? 'border-[var(--lx-accent)]/50 text-[var(--lx-accent)]'
-                        : 'border-slate-800 text-slate-500'
-                    }`}
-                    aria-hidden
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{item.title}</span>
-                    {item.description && (
-                      <span className="block truncate text-xs text-slate-500">
-                        {item.description}
-                      </span>
-                    )}
-                  </span>
-                  {item.href && (
-                    <Pill tone="default" className="!text-[0.6rem]">
-                      {item.href}
-                    </Pill>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </li>
-    );
-    return groupEl;
-  });
-}
-
-// Re-export for the optional "Open search" button callers can place in
-// the chrome (e.g. lessons index search bar). Currently unused but
-// handy as a public API.
-export function openPaletteButtonProps(macLike?: boolean) {
-  return {
-    label: 'Search',
-    hint: macLike ? '⌘K' : 'Ctrl+K',
-  };
+function ShortcutHint({ keys }: { keys: string[] }) {
+  return (
+    <span className="flex items-center gap-0.5" aria-hidden>
+      {keys.map((k) => (
+        <kbd key={k} className="lx-kbd">
+          {k}
+        </kbd>
+      ))}
+    </span>
+  );
 }

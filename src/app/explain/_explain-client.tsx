@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckIcon, ShareIcon } from '@/components/ui/Icon';
+import { RichText } from '@/components/ui/RichText';
 import {
   EXPLAIN_EXAMPLES,
   explainCommand,
@@ -79,6 +80,7 @@ export function ExplainClient() {
           <textarea
             id="explain-input"
             ref={inputRef}
+            data-lx-page-search
             value={input}
             onChange={(e) => setInput(e.target.value)}
             rows={2}
@@ -99,7 +101,7 @@ export function ExplainClient() {
                 setInput(ex);
                 inputRef.current?.focus();
               }}
-              className="rounded-full border border-[var(--lx-border)] px-3 py-1 font-mono text-xs text-[var(--lx-muted)] transition hover:border-[var(--lx-accent)]/40 hover:text-[var(--lx-accent)]"
+              className="rounded-full border border-lx-border px-3 py-1 font-mono text-xs text-lx-muted transition hover:border-lx-accent/40 hover:text-lx-accent"
             >
               {ex}
             </button>
@@ -161,7 +163,7 @@ export function ExplainClient() {
                   </div>
                   {part.entry && (
                     <p className="text-sm text-[var(--lx-prose-body)]">
-                      <InlineCode text={part.entry.long} />
+                      <RichText text={part.entry.long} />
                     </p>
                   )}
                   {!part.entry && part.command && (
@@ -191,27 +193,6 @@ export function ExplainClient() {
   );
 }
 
-/** Render `backticked` spans from cheatsheet prose as inline code. */
-function InlineCode({ text }: { text: string }) {
-  const parts = text.split('`');
-  return (
-    <>
-      {parts.map((p, i) =>
-        i % 2 === 1 ? (
-          <code
-            key={i}
-            className="rounded bg-[var(--lx-code-bg)] px-1 py-0.5 font-mono text-[0.85em] text-[var(--lx-fg)]"
-          >
-            {p}
-          </code>
-        ) : (
-          <span key={i}>{p}</span>
-        ),
-      )}
-    </>
-  );
-}
-
 function TokenTable({ tokens }: { tokens: ExplainedToken[] }) {
   if (tokens.length === 0) return null;
   return (
@@ -227,7 +208,7 @@ function TokenTable({ tokens }: { tokens: ExplainedToken[] }) {
             </span>
           </dt>
           <dd className="text-[var(--lx-muted)]">
-            <InlineCode text={t.note || (t.kind === 'argument' ? 'Argument passed to the command.' : '')} />
+            <RichText text={t.note || (t.kind === 'argument' ? 'Argument passed to the command.' : '')} />
           </dd>
         </div>
       ))}

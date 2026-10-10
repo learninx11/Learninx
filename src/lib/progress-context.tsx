@@ -19,6 +19,7 @@ import {
   normalizeAnswer,
   normalizeCommand,
   recordFlashcardAnswer as storeRecordFlashcardAnswer,
+  recordAchievements as storeRecordAchievements,
   recordQuizScore as storeRecordQuizScore,
   recordTipSeen as storeRecordTipSeen,
   recordTypingScore as storeRecordTypingScore,
@@ -138,7 +139,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [newlyUnlocked, setNewlyUnlocked] = useState<string[]>([]);
 
   useEffect(() => {
-    setState(applyDerivedAchievements(readProgress()));
+    // Badges earned before unlocks were saved are recorded quietly: no
+    // toasts and no bonus points for old news.
+    const initial = readProgress();
+    const earned = diffAchievements(initial);
+    setState(earned.length > 0 ? storeRecordAchievements(earned) : initial);
     setReady(true);
     return subscribeProgress((next) =>
       setState(applyDerivedAchievements(next)),
@@ -152,28 +157,24 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [state.completed],
   );
 
-  const captureNewlyUnlocked = useCallback(
-    (before: ProgressState, after: ProgressState) => {
-      const fresh = diffAchievements(before).filter(
-        (id) => !before.achievements.includes(id),
-      );
-      // Only flag achievements that didn't exist *or* are in the after-state.
-      const persisted = fresh.filter((id) =>
-        after.achievements.includes(id),
-      );
-      if (persisted.length > 0) setNewlyUnlocked(persisted);
-    },
-    [],
-  );
+  /**
+   * Publish a freshly written snapshot. Any achievement it newly earns is
+   * saved (each awards its +5 points) and queued for the unlock toast.
+   */
+  const commit = useCallback((next: ProgressState): ProgressState => {
+    const fresh = diffAchievements(next);
+    let latest = next;
+    for (const id of fresh) latest = storeUnlockAchievement(id).state;
+    if (fresh.length > 0) setNewlyUnlocked((prev) => [...prev, ...fresh]);
+    setState(latest);
+    return latest;
+  }, []);
 
   const markComplete = useCallback(
     (lessonId: string) => {
-      const before = readProgress();
-      const next = storeMarkLessonComplete(lessonId);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeMarkLessonComplete(lessonId));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const reset = useCallback(() => {
@@ -184,22 +185,16 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const markTipSeen = useCallback(
     (tipIndex?: number) => {
-      const before = readProgress();
-      const next = storeMarkTipSeen(tipIndex);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeMarkTipSeen(tipIndex));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const recordTipSeen = useCallback(
     (tipIndex: number) => {
-      const before = readProgress();
-      const next = storeRecordTipSeen(tipIndex);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeRecordTipSeen(tipIndex));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const submitChallenge = useCallback<ProgressContextValue['submitChallenge']>(
@@ -210,10 +205,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const expected = normalizeCommand(solution);
       const accepted = expected.split('||').map((p) => p.trim());
       if (accepted.includes(normalizeCommand(command))) {
-        const before = readProgress();
-        const next = storeMarkLessonComplete(lessonId);
-        captureNewlyUnlocked(before, next);
-        setState(next);
+        commit(storeMarkLessonComplete(lessonId));
         return {
           ok: true,
           message: 'Nice work — that is the expected command.',
@@ -221,19 +213,16 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       }
       return {
         ok: false,
-        message: 'Not quite — try again, or peek at the hint in the sandbox.',
+        message: 'Not quite. Compare it with the task above, or reveal the hint below.',
       };
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const submitQuiz = useCallback<ProgressContextValue['submitQuiz']>(
     (lessonId, questions, answers) => {
       if (questions.length === 0) {
-        const before = readProgress();
-        const next = storeMarkLessonComplete(lessonId);
-        captureNewlyUnlocked(before, next);
-        setState(next);
+        commit(storeMarkLessonComplete(lessonId));
         return { results: [], correct: 0, total: 0, score: 0, passed: true };
       }
 
@@ -255,29 +244,27 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const score = Math.round((correct / total) * 100);
       const passed = score >= PASS_THRESHOLD;
 
-      const before = readProgress();
       const quizScore: QuizScore = { score, correct, total, at: Date.now() };
       let next = storeRecordQuizScore(lessonId, quizScore);
       if (passed) {
         next = storeMarkLessonComplete(lessonId);
       }
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(next);
 
       return { results, correct, total, score, passed };
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
-  const toggleBookmark = useCallback((lessonId: string) => {
-    const result = storeToggleBookmark(lessonId);
-    setState(result.state);
-    // Bookmarking itself isn't an achievement trigger, but if the
-    // user just hit 5 bookmarks we want the `bookworm` achievement to
-    // show up in the next evaluate pass (which runs via the
-    // `subscribeProgress` listener).
-    return result.added;
-  }, []);
+  const toggleBookmark = useCallback(
+    (lessonId: string) => {
+      const result = storeToggleBookmark(lessonId);
+      // Saving a fifth lesson earns the Bookworm badge.
+      commit(result.state);
+      return result.added;
+    },
+    [commit],
+  );
 
   const isBookmarked = useCallback(
     (lessonId: string) =>
@@ -285,41 +272,32 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [state.bookmarks, ready],
   );
 
-  const setNote = useCallback((lessonId: string, text: string) => {
-    const before = readProgress();
-    const next = storeSetLessonNote(lessonId, text);
-    captureNewlyUnlocked(before, next);
-    setState(next);
-  }, [captureNewlyUnlocked]);
+  const setNote = useCallback(
+    (lessonId: string, text: string) => {
+      commit(storeSetLessonNote(lessonId, text));
+    },
+    [commit],
+  );
 
   const markBoss = useCallback(
     (bossId: string) => {
-      const before = readProgress();
-      const next = storeMarkBossComplete(bossId);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeMarkBossComplete(bossId));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const recordTyping = useCallback(
     (score: TypingScore) => {
-      const before = readProgress();
-      const next = storeRecordTypingScore(score);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeRecordTypingScore(score));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const answerFlashcard = useCallback(
     (cardId: string, correct: boolean) => {
-      const before = readProgress();
-      const next = storeRecordFlashcardAnswer(cardId, correct);
-      captureNewlyUnlocked(before, next);
-      setState(next);
+      commit(storeRecordFlashcardAnswer(cardId, correct));
     },
-    [captureNewlyUnlocked],
+    [commit],
   );
 
   const resetFlashcards = useCallback(() => {
@@ -327,7 +305,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const importJson = useCallback((json: string): ProgressState => {
-    const next = applyDerivedAchievements(storeImportProgress(json));
+    // A restored backup's badges are history, not fresh unlocks.
+    const imported = storeImportProgress(json);
+    const earned = diffAchievements(imported);
+    const next = earned.length > 0 ? storeRecordAchievements(earned) : imported;
     setState(next);
     setNewlyUnlocked([]);
     return next;

@@ -34,6 +34,13 @@ export function ProfileClient() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importOk, setImportOk] = useState<string | null>(null);
   const [showReset, setShowReset] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{
+    text: string;
+    fileName: string;
+    exportedAt: string | null;
+    lessons: number;
+    badges: number;
+  } | null>(null);
 
   const totalLessons = lessons.length;
   const totalBosses = bosses.length;
@@ -88,23 +95,41 @@ export function ProfileClient() {
     fileInputRef.current?.click();
   }
 
+  // Read the chosen file and show what it holds; nothing is replaced
+  // until the learner confirms.
   function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
     setImportError(null);
     setImportOk(null);
+    setPendingImport(null);
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      const text = String(reader.result ?? '');
       try {
-        const text = String(reader.result ?? '');
-        const next = importJson(text);
-        setImportOk(
-          `Imported ${next.completed.length} completed lesson${next.completed.length === 1 ? '' : 's'} and ${next.achievements.length} achievement${next.achievements.length === 1 ? '' : 's'}.`,
-        );
+        const parsed = JSON.parse(text) as {
+          app?: string;
+          exportedAt?: string;
+          state?: { completed?: unknown[]; achievements?: unknown[] };
+        };
+        if (!parsed || parsed.app !== 'learninx' || !parsed.state) {
+          throw new Error('That file is not a Learninx backup.');
+        }
+        setPendingImport({
+          text,
+          fileName: file.name,
+          exportedAt: parsed.exportedAt ?? null,
+          lessons: Array.isArray(parsed.state.completed) ? parsed.state.completed.length : 0,
+          badges: Array.isArray(parsed.state.achievements) ? parsed.state.achievements.length : 0,
+        });
       } catch (err) {
         setImportError(
-          err instanceof Error ? err.message : 'Could not import that file.',
+          err instanceof SyntaxError
+            ? 'That file is not valid JSON.'
+            : err instanceof Error
+              ? err.message
+              : 'Could not read that file.',
         );
       }
     };
@@ -112,14 +137,27 @@ export function ProfileClient() {
     reader.readAsText(file);
   }
 
+  function confirmImport() {
+    if (!pendingImport) return;
+    try {
+      const next = importJson(pendingImport.text);
+      setImportOk(
+        `Restored ${next.completed.length} completed lesson${next.completed.length === 1 ? '' : 's'} and ${next.achievements.length} badge${next.achievements.length === 1 ? '' : 's'}.`,
+      );
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Could not import that file.');
+    }
+    setPendingImport(null);
+  }
+
   return (
     <div className="space-y-12">
       <header className="space-y-3 pt-6 text-center sm:pt-10">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 font-mono text-xs text-[var(--lx-accent)]">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-lx-border bg-lx-surface px-3 py-1 font-mono text-xs text-lx-accent">
           <UserIcon size={12} /> ~/profile $ whoami
         </div>
         <h1 className="text-balance text-3xl font-bold sm:text-4xl">Your profile</h1>
-        <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
+        <p className="mx-auto max-w-2xl text-pretty text-sm text-lx-muted sm:text-base">
           Lifetime stats, plus tools to back up and restore your progress on another
           device. Everything is computed from the snapshot stored in your browser.
         </p>
@@ -177,7 +215,7 @@ export function ProfileClient() {
           ) : (
             <div className="h-[130px]" aria-hidden />
           )}
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-lx-subtle">
             Each square is a day (UTC). Lessons, quizzes, bosses, typing tests, and
             flashcard answers all count.
           </p>
@@ -197,30 +235,30 @@ export function ProfileClient() {
           <div className="lx-card p-5 sm:p-6">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">Lessons</span>
-              <span className="text-slate-400">
+              <span className="font-mono tabular-nums text-lx-muted">
                 {completedLessons} / {totalLessons}
               </span>
             </div>
-            <ProgressBar value={completedLessons} max={totalLessons} label="Lessons" className="mt-3" />
-            <p className="mt-3 text-xs text-slate-500">
+            <ProgressBar value={completedLessons} max={totalLessons} label="Lessons completed" showLabel={false} className="mt-3" />
+            <p className="mt-3 text-xs text-lx-subtle">
               {lessonCompletionPct}% of the catalogue complete.
             </p>
-            <Link href="/lessons" className="mt-3 inline-flex items-center gap-1 text-xs text-[var(--lx-accent)]">
+            <Link href="/lessons" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-lx-accent hover:underline">
               Find the next one →
             </Link>
           </div>
           <div className="lx-card p-5 sm:p-6">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">Boss levels</span>
-              <span className="text-slate-400">
+              <span className="font-mono tabular-nums text-lx-muted">
                 {completedBosses} / {totalBosses}
               </span>
             </div>
-            <ProgressBar value={completedBosses} max={totalBosses} label="Bosses" className="mt-3" />
-            <p className="mt-3 text-xs text-slate-500">
+            <ProgressBar value={completedBosses} max={totalBosses} label="Boss levels defeated" showLabel={false} className="mt-3" />
+            <p className="mt-3 text-xs text-lx-subtle">
               {bossCompletionPct}% of bosses defeated. Bosses award 25 points each.
             </p>
-            <Link href="/boss" className="mt-3 inline-flex items-center gap-1 text-xs text-[var(--lx-accent)]">
+            <Link href="/boss" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-lx-accent hover:underline">
               Open a boss →
             </Link>
           </div>
@@ -254,15 +292,15 @@ export function ProfileClient() {
             </Pill>
             <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Badges</h2>
           </div>
-          <Link href="/achievements" className="text-xs text-[var(--lx-accent)]">
+          <Link href="/achievements" className="text-xs font-medium text-lx-accent hover:underline">
             See all →
           </Link>
         </div>
         <div className="lx-card flex flex-col items-center justify-between gap-2 p-5 sm:flex-row sm:p-6">
           <div>
-            <p className="text-sm text-slate-400">Unlocked so far</p>
+            <p className="text-sm text-lx-muted">Unlocked so far</p>
             <p className="text-2xl font-semibold">
-              {ready ? achievementCount : 0} <span className="text-sm text-slate-500">achievements</span>
+              {ready ? achievementCount : 0} <span className="text-sm text-lx-subtle">achievements</span>
             </p>
           </div>
           <Link href="/achievements" className="lx-btn lx-btn-secondary">
@@ -285,10 +323,10 @@ export function ProfileClient() {
             {recent.map((r) => (
               <li
                 key={`${r.kind}-${r.id}-${r.at}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-md border border-lx-border bg-lx-surface px-3 py-2"
               >
                 <span className="truncate">{r.title}</span>
-                <span className="text-xs text-slate-500">{formatTime(r.at)}</span>
+                <span className="shrink-0 text-xs text-lx-subtle">{formatTime(r.at)}</span>
               </li>
             ))}
           </ul>
@@ -307,7 +345,7 @@ export function ProfileClient() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="lx-card flex flex-col gap-3 p-5 sm:p-6">
             <h3 className="font-semibold">Export</h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-lx-muted">
               Save a JSON file containing your completions, streaks, bookmarks, notes,
               and achievements. You can keep it as a backup, or move it to another
               browser.
@@ -322,31 +360,73 @@ export function ProfileClient() {
           </div>
           <div className="lx-card flex flex-col gap-3 p-5 sm:p-6">
             <h3 className="font-semibold">Import</h3>
-            <p className="text-sm text-slate-400">
-              Restore a previously-exported file. This replaces the current progress
-              on this browser, so make sure you want to overwrite first.
+            <p className="text-sm text-lx-muted">
+              Restore a previously-exported file. You&apos;ll see what it contains and
+              confirm before it replaces the progress on this browser.
             </p>
-            <button
-              type="button"
-              onClick={handleImportClick}
-              className="lx-btn lx-btn-secondary self-start"
-            >
-              <UploadIcon size={14} /> Import a backup
-            </button>
+            {pendingImport ? (
+              <div
+                role="alertdialog"
+                aria-labelledby="import-confirm-title"
+                className="space-y-3 rounded-lg border border-lx-warning/40 bg-lx-warning/10 p-3 text-sm"
+              >
+                <p id="import-confirm-title" className="font-semibold text-lx-fg">
+                  Replace your progress with this backup?
+                </p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                  <dt className="text-lx-subtle">File</dt>
+                  <dd className="truncate text-lx-fg">{pendingImport.fileName}</dd>
+                  {pendingImport.exportedAt && (
+                    <>
+                      <dt className="text-lx-subtle">Saved</dt>
+                      <dd className="text-lx-fg">{new Date(pendingImport.exportedAt).toLocaleString()}</dd>
+                    </>
+                  )}
+                  <dt className="text-lx-subtle">Backup</dt>
+                  <dd className="text-lx-fg">
+                    {pendingImport.lessons} lessons · {pendingImport.badges} badges
+                  </dd>
+                  <dt className="text-lx-subtle">Now</dt>
+                  <dd className="text-lx-fg">
+                    {completedLessons} lessons · {achievementCount} badges
+                  </dd>
+                </dl>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={confirmImport} className="lx-btn lx-btn-primary lx-btn-sm">
+                    Replace progress
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingImport(null)}
+                    className="lx-btn lx-btn-ghost lx-btn-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleImportClick}
+                className="lx-btn lx-btn-secondary self-start"
+              >
+                <UploadIcon size={14} /> Import a backup
+              </button>
+            )}
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/json"
+              accept="application/json,.json"
               className="hidden"
               onChange={handleImportFile}
             />
             {importError && (
-              <p className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-200">
+              <p role="alert" className="rounded-md border border-lx-danger/30 bg-lx-danger/10 p-2 text-xs text-lx-danger">
                 {importError}
               </p>
             )}
             {importOk && (
-              <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-200">
+              <p role="status" className="rounded-md border border-lx-success/30 bg-lx-success/10 p-2 text-xs text-lx-success">
                 {importOk}
               </p>
             )}
@@ -363,27 +443,28 @@ export function ProfileClient() {
             <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Reset progress</h2>
           </div>
         </div>
-        <div className="lx-card flex flex-col items-start justify-between gap-3 p-5 sm:flex-row sm:items-center sm:p-6">
-          <p className="max-w-xl text-sm text-slate-400">
+        <div className="lx-card flex flex-col items-start justify-between gap-3 border-lx-danger/25 p-5 sm:flex-row sm:items-center sm:p-6">
+          <p className="max-w-xl text-sm text-lx-muted">
             Erase all of your progress, bookmarks, notes, and achievements on this
             browser. There is no undo. Export first if you want a backup.
           </p>
           {showReset ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Confirm reset">
+              <span className="text-sm font-medium text-lx-danger">Erase everything?</span>
               <button
                 type="button"
                 onClick={() => {
                   reset();
                   setShowReset(false);
                 }}
-                className="rounded-md border border-rose-500/50 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/30"
+                className="lx-btn lx-btn-danger lx-btn-sm"
               >
-                Yes, wipe
+                Yes, erase
               </button>
               <button
                 type="button"
                 onClick={() => setShowReset(false)}
-                className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+                className="lx-btn lx-btn-secondary lx-btn-sm"
               >
                 Cancel
               </button>
@@ -392,7 +473,7 @@ export function ProfileClient() {
             <button
               type="button"
               onClick={() => setShowReset(true)}
-              className="lx-btn lx-btn-ghost text-rose-300"
+              className="lx-btn lx-btn-ghost text-lx-danger"
             >
               <TrashIcon size={14} /> Reset progress
             </button>
@@ -416,14 +497,14 @@ function StatCard({
 }) {
   return (
     <div className="lx-card flex flex-col gap-1 p-5 sm:p-6">
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-lx-subtle">
         <span>{label}</span>
-        <span aria-hidden className="text-[var(--lx-accent)]">
+        <span aria-hidden className="text-lx-accent">
           {icon}
         </span>
       </div>
-      <span className="text-2xl font-semibold">{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
+      {sub && <span className="text-xs text-lx-muted">{sub}</span>}
     </div>
   );
 }
@@ -438,9 +519,9 @@ function ToolStat({
   href: string;
 }) {
   return (
-    <Link href={href} className="lx-card flex flex-col gap-1 p-5 transition hover:border-[var(--lx-accent)]/40">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-      <span className="text-2xl font-semibold">{value}</span>
+    <Link href={href} className="lx-card lx-card-interactive flex flex-col gap-1 p-5">
+      <span className="text-xs uppercase tracking-wide text-lx-subtle">{label}</span>
+      <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
     </Link>
   );
 }

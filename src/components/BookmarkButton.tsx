@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BookmarkIcon, CheckCheckIcon } from '@/components/ui/Icon';
+import { BookmarkIcon } from '@/components/ui/Icon';
 import { useProgress } from '@/lib/progress-context';
 
 interface Props {
@@ -28,26 +28,16 @@ export function BookmarkButton({ lessonId, className }: Props) {
   return (
     <button
       type="button"
-      onClick={() => {
-        const added = toggleBookmark(lessonId);
-        setBookmarked(added);
-      }}
+      onClick={() => setBookmarked(toggleBookmark(lessonId))}
       className={
         className ??
-        'lx-btn lx-btn-secondary lx-btn-sm'
+        `lx-btn lx-btn-secondary lx-btn-sm ${bookmarked ? 'border-lx-accent/50 text-lx-accent' : ''}`
       }
       aria-pressed={bookmarked}
-      title={bookmarked ? 'Remove bookmark' : 'Bookmark this lesson'}
+      title={bookmarked ? 'Remove from saved lessons' : 'Save this lesson for later'}
     >
-      {bookmarked ? (
-        <>
-          <CheckCheckIcon size={14} /> Bookmarked
-        </>
-      ) : (
-        <>
-          <BookmarkIcon size={14} /> Bookmark
-        </>
-      )}
+      <BookmarkIcon size={14} fill={bookmarked ? 'currentColor' : 'none'} />
+      {bookmarked ? 'Saved' : 'Save'}
     </button>
   );
 }

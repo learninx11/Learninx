@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllLessons } from '@/lib/lessons';
 import { TRACK_DESCRIPTION, TRACK_LABEL, TRACK_ORDER } from '@/lib/lesson-tracks';
-import type { LessonTrack } from '@/lib/types';
+import { toLessonSummary, type LessonTrack } from '@/lib/types';
 import { LessonsIndexClient } from '../../_lessons-index-client';
 
 interface PageProps {
@@ -28,7 +28,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 export default function TrackLessonsPage({ params }: PageProps) {
   if (!isLessonTrack(params.track)) notFound();
   const track = params.track;
-  const lessons = getAllLessons().filter((l) => l.track === track);
+  const lessons = getAllLessons()
+    .filter((l) => l.track === track)
+    .map((l) => toLessonSummary(l, true));
 
   return <LessonsIndexClient lessons={lessons} track={track} />;
 }

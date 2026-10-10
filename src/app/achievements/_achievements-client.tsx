@@ -41,11 +41,11 @@ export function AchievementsClient() {
   return (
     <div className="space-y-12">
       <header className="space-y-3 pt-6 text-center sm:pt-10">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 font-mono text-xs text-[var(--lx-accent)]">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-lx-border bg-lx-surface px-3 py-1 font-mono text-xs text-lx-accent">
           <AwardIcon size={12} /> ~/badges $ ls
         </div>
         <h1 className="text-balance text-3xl font-bold sm:text-4xl">Achievements</h1>
-        <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
+        <p className="mx-auto max-w-2xl text-pretty text-sm text-lx-muted sm:text-base">
           Earn badges for streaks, perfect quizzes, boss runs, and even for using the
           study tools. Everything is computed from your progress, which lives in
           your browser.
@@ -153,9 +153,9 @@ function SummaryStat({
 }) {
   return (
     <div className="lx-card flex flex-col items-center gap-1 p-4 text-center">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-      <span className="text-2xl font-semibold text-[var(--lx-fg)]">{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      <span className="text-xs uppercase tracking-wide text-lx-subtle">{label}</span>
+      <span className="font-mono text-2xl font-semibold tabular-nums text-lx-fg">{value}</span>
+      {sub && <span className="text-xs text-lx-muted">{sub}</span>}
     </div>
   );
 }
@@ -175,16 +175,16 @@ function AchievementCard({
       className={
         'lx-card relative flex items-start gap-3 p-4 transition ' +
         (unlocked
-          ? 'border-[var(--lx-accent)]/40'
-          : 'opacity-70 grayscale-[0.3]')
+          ? 'border-lx-accent/40'
+          : 'opacity-75')
       }
     >
       <span
         className={
           'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ' +
           (unlocked
-            ? 'border-[var(--lx-accent)]/60 bg-[var(--lx-accent)]/15 text-[var(--lx-accent)]'
-            : 'border-slate-700 bg-slate-900/60 text-slate-500')
+            ? 'border-lx-accent/60 bg-lx-accent/15 text-lx-accent'
+            : 'border-lx-border-strong bg-lx-surface text-lx-subtle')
         }
         aria-hidden
       >
@@ -201,7 +201,7 @@ function AchievementCard({
             <Pill tone="default">Locked</Pill>
           )}
         </div>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-lx-muted">
           {achievement.hidden && !unlocked ? 'Keep going — it will show up here.' : achievement.description}
         </p>
         {showProgress && (
@@ -228,11 +228,11 @@ function NextStep({
   return (
     <Link
       href={href}
-      className="lx-card group flex flex-col gap-2 p-4 transition hover:border-[var(--lx-accent)]/40"
+      className="lx-card lx-card-interactive group flex flex-col gap-2 p-4"
     >
       <h3 className="font-semibold">{title}</h3>
-      <p className="text-sm text-slate-400">{body}</p>
-      <span className="mt-auto inline-flex items-center gap-1 text-xs text-[var(--lx-accent)]">
+      <p className="text-sm text-lx-muted">{body}</p>
+      <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-lx-accent">
         Open <ArrowRightIcon size={12} />
       </span>
     </Link>

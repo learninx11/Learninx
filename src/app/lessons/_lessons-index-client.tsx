@@ -7,16 +7,18 @@ import {
   ArrowRightIcon,
   BookmarkIcon,
   CheckIcon,
-  ChevronLeftIcon,
-  FilterIcon,
+  ChevronRightIcon,
+  CloseIcon,
   SearchIcon,
   SparklesIcon,
 } from '@/components/ui/Icon';
 import { Pill, ProgressBar } from '@/components/ui/Pill';
+import { RichText, plainText } from '@/components/ui/RichText';
 import { StreakWidget } from '@/components/StreakWidget';
+import { TrackIcon } from '@/components/TrackIcon';
 import { useProgress } from '@/lib/progress-context';
 import { TRACK_DESCRIPTION, TRACK_LABEL } from '@/lib/lesson-tracks';
-import type { Difficulty, Lesson, LessonTrack } from '@/lib/types';
+import type { Difficulty, LessonSummary, LessonTrack } from '@/lib/types';
 
 const DIFFICULTY_ORDER: Difficulty[] = ['beginner', 'intermediate', 'advanced', 'expert'];
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
@@ -28,15 +30,15 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 
 type StatusFilter = 'all' | 'completed' | 'todo' | 'bookmarked';
 
-function statusLabel(s: StatusFilter): string {
-  if (s === 'completed') return 'completed';
-  if (s === 'todo') return 'to do';
-  if (s === 'bookmarked') return 'bookmarked';
-  return 'all';
-}
+const STATUS_LABEL: Record<StatusFilter, string> = {
+  all: 'Any status',
+  todo: 'To do',
+  completed: 'Completed',
+  bookmarked: 'Saved',
+};
 
 /** The lesson listing for a single track — `lessons` arrives already filtered to `track`. */
-export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; track: LessonTrack }) {
+export function LessonsIndexClient({ lessons, track }: { lessons: LessonSummary[]; track: LessonTrack }) {
   const { completedSet, state, ready } = useProgress();
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
@@ -58,23 +60,6 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
     if (diff && (DIFFICULTY_ORDER as string[]).includes(diff)) {
       setDifficulty(diff as Difficulty);
     }
-  }, []);
-
-  // Press "/" to focus the search box (skip when typing in another field).
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== '/') return;
-      const target = event.target as HTMLElement | null;
-      const inField =
-        target &&
-        (/^(INPUT|TEXTAREA|SELECT)$/i.test(target.tagName) ||
-          target.isContentEditable);
-      if (inField) return;
-      event.preventDefault();
-      inputRef.current?.focus();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   const router = useRouter();
@@ -99,14 +84,18 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
     return map;
   }, [lessons]);
 
+  // Difficulty chips only for levels this track actually has.
+  const availableDifficulties = useMemo(
+    () => DIFFICULTY_ORDER.filter((d) => lessons.some((l) => l.difficulty === d)),
+    [lessons],
+  );
+
   // Pick a random lesson in this track, preferring ones the user hasn't
   // completed yet. Avoids repeating the same slug twice in a row.
   const surprise = useCallback(() => {
     if (lessonsWithStatus.length === 0) return;
-    const pool =
-      lessonsWithStatus.filter((l) => !l.completed).length > 0
-        ? lessonsWithStatus.filter((l) => !l.completed)
-        : lessonsWithStatus;
+    const todo = lessonsWithStatus.filter((l) => !l.completed);
+    const pool = todo.length > 0 ? todo : lessonsWithStatus;
     const candidates =
       pool.length > 1 && lastSurpriseRef.current
         ? pool.filter((l) => l.slug !== lastSurpriseRef.current)
@@ -132,7 +121,7 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
           l.slug,
           l.trackCommand ?? '',
           l.difficulty,
-          l.content.slice(0, 200),
+          l.excerpt ?? '',
         ]
           .join(' ')
           .toLowerCase();
@@ -146,166 +135,160 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
     () =>
       DIFFICULTY_ORDER.map((d) => ({
         difficulty: d,
-        items: filtered
-          .filter((l) => l.difficulty === d)
-          .sort((a, b) => a.order - b.order),
+        items: filtered.filter((l) => l.difficulty === d).sort((a, b) => a.order - b.order),
       })).filter((g) => g.items.length > 0),
     [filtered],
   );
 
   const completed = lessonsWithStatus.filter((l) => l.completed).length;
-  const quizAttempts = Object.keys(state.quiz).length;
 
   // Pre-hydration: show zero progress so the static HTML matches the
   // first client render and React doesn't warn about mismatches.
   const displayCompleted = ready ? completed : 0;
-  const displayQuizCount = ready ? quizAttempts : 0;
-  const totalMatching = filtered.length;
-  const showResultsHint = query || difficulty !== 'all' || status !== 'all';
+  const filtering = query !== '' || difficulty !== 'all' || status !== 'all';
+
+  function resetFilters() {
+    setQuery('');
+    setDifficulty('all');
+    setStatus('all');
+  }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <header className="space-y-4">
-        <Link
-          href="/lessons"
-          className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--lx-muted)] transition hover:text-[var(--lx-accent)]"
-        >
-          <ChevronLeftIcon size={12} /> All tracks
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          {TRACK_LABEL[track]}
-        </h1>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-2xl text-[var(--lx-muted)]">{TRACK_DESCRIPTION[track]}</p>
+        <nav aria-label="Breadcrumb" className="text-sm text-lx-subtle">
+          <ol className="flex items-center gap-1">
+            <li>
+              <Link href="/lessons" className="transition hover:text-lx-accent">
+                Lessons
+              </Link>
+            </li>
+            <li aria-hidden>
+              <ChevronRightIcon size={13} />
+            </li>
+            <li aria-current="page" className="text-lx-muted">
+              {TRACK_LABEL[track]}
+            </li>
+          </ol>
+        </nav>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-4">
+            <span
+              aria-hidden
+              className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-lx-border bg-lx-surface text-lx-accent sm:inline-flex"
+            >
+              <TrackIcon track={track} size={22} />
+            </span>
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{TRACK_LABEL[track]}</h1>
+              <p className="max-w-2xl text-lx-muted">{TRACK_DESCRIPTION[track]}</p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={surprise}
             disabled={lessons.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--lx-accent)]/40 bg-[var(--lx-accent-glow)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--lx-accent)] transition hover:border-[var(--lx-accent)] hover:bg-[var(--lx-accent)]/15 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Open a random lesson in this track"
-            title="Open a random lesson in this track"
+            className="lx-btn lx-btn-secondary lx-btn-sm"
+            title="Open a random lesson you haven't finished"
           >
-            <SparklesIcon size={12} /> Surprise me
+            <SparklesIcon size={13} /> Surprise me
           </button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <ProgressBar
-            value={displayCompleted}
-            max={lessons.length}
-            label="Track progress"
-          />
-          <div className="text-sm text-[var(--lx-muted)] sm:text-right">
-            <div className="font-mono text-base text-[var(--lx-fg)]">
-              {displayCompleted}
-              <span className="text-[var(--lx-muted)]"> / {lessons.length}</span>
-            </div>
-            <div className="text-xs text-[var(--lx-muted)]">
-              {displayQuizCount} quiz attempt
-              {displayQuizCount === 1 ? '' : 's'}
-            </div>
-          </div>
+        <div className="max-w-xl space-y-3">
+          <ProgressBar value={displayCompleted} max={lessons.length} label="Track progress" />
+          <StreakWidget variant="inline" />
         </div>
-
-        <StreakWidget variant="inline" />
       </header>
 
-      <section className="lx-card flex flex-col gap-3 p-4 sm:p-5">
+      <section aria-label="Filter lessons" className="lx-card space-y-3 p-4 sm:p-5">
         <div className="relative">
           <span
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--lx-muted)]"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lx-subtle"
             aria-hidden
           >
             <SearchIcon size={16} />
           </span>
           <input
             ref={inputRef}
+            type="search"
+            data-lx-page-search
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${TRACK_LABEL[track]} lessons (press / )`}
-            className="lx-input pl-9"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && query) {
+                e.preventDefault();
+                setQuery('');
+              }
+            }}
+            placeholder={`Search ${TRACK_LABEL[track]} lessons`}
+            className="lx-input pl-9 pr-16 font-sans [&::-webkit-search-cancel-button]:hidden"
             aria-label="Search lessons in this track"
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs text-[var(--lx-muted)]">
-            <FilterIcon size={12} /> Difficulty
-          </span>
-          <Chip
-            label="All"
-            active={difficulty === 'all'}
-            onClick={() => setDifficulty('all')}
-          />
-          {DIFFICULTY_ORDER.map((d) => (
-            <Chip
-              key={d}
-              label={DIFFICULTY_LABELS[d]}
-              active={difficulty === d}
-              onClick={() => setDifficulty(d)}
-            />
-          ))}
-          <span className="mx-2 hidden h-4 w-px bg-[var(--lx-border)] sm:inline" />
-          <Chip
-            label="All status"
-            active={status === 'all'}
-            onClick={() => setStatus('all')}
-          />
-          <Chip
-            label="To do"
-            active={status === 'todo'}
-            onClick={() => setStatus('todo')}
-          />
-          <Chip
-            label="Completed"
-            active={status === 'completed'}
-            onClick={() => setStatus('completed')}
-          />
-          <Chip
-            label="Bookmarked"
-            active={status === 'bookmarked'}
-            onClick={() => setStatus('bookmarked')}
-          />
-        </div>
-        {showResultsHint && (
-          <p className="text-xs text-[var(--lx-muted)]">
-            Showing {totalMatching} of {lessons.length} lessons
-            {query ? ` matching “${query}”` : ''}
-            {difficulty !== 'all' ? ` at ${DIFFICULTY_LABELS[difficulty]}` : ''}
-            {status !== 'all' ? ` · ${statusLabel(status)}` : ''}
-            {' · '}
+          {query ? (
             <button
               type="button"
               onClick={() => {
                 setQuery('');
-                setDifficulty('all');
-                setStatus('all');
+                inputRef.current?.focus();
               }}
-              className="text-[var(--lx-accent)] hover:underline"
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-lx-subtle transition hover:text-lx-fg"
             >
-              reset
+              <CloseIcon size={14} />
+            </button>
+          ) : (
+            <kbd className="lx-kbd pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 sm:inline-flex">
+              /
+            </kbd>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <ChipGroup label="Difficulty">
+            <Chip label="All" active={difficulty === 'all'} onClick={() => setDifficulty('all')} />
+            {availableDifficulties.map((d) => (
+              <Chip
+                key={d}
+                label={DIFFICULTY_LABELS[d]}
+                active={difficulty === d}
+                onClick={() => setDifficulty(d)}
+              />
+            ))}
+          </ChipGroup>
+          <ChipGroup label="Status">
+            {(['all', 'todo', 'completed', 'bookmarked'] as StatusFilter[]).map((s) => (
+              <Chip key={s} label={STATUS_LABEL[s]} active={status === s} onClick={() => setStatus(s)} />
+            ))}
+          </ChipGroup>
+        </div>
+        {filtering && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-lx-subtle" aria-live="polite">
+            Showing {filtered.length} of {lessons.length} lessons
+            <button type="button" onClick={resetFilters} className="font-medium text-lx-accent hover:underline">
+              Clear filters
             </button>
           </p>
         )}
       </section>
 
       {grouped.length === 0 ? (
-        <div className="lx-card p-10 text-center text-sm text-[var(--lx-muted)]">
-          No lessons match the current filter.
+        <div className="lx-card flex flex-col items-center gap-3 p-10 text-center">
+          <p className="text-sm text-lx-muted">No lessons match these filters.</p>
+          <button type="button" onClick={resetFilters} className="lx-btn lx-btn-secondary lx-btn-sm">
+            Clear filters
+          </button>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {grouped.map((group) => (
-            <section key={group.difficulty} className="space-y-3">
+            <section key={group.difficulty} aria-label={DIFFICULTY_LABELS[group.difficulty]} className="space-y-3">
               <div className="flex items-center gap-3">
-                <Pill tone={group.difficulty}>
-                  {DIFFICULTY_LABELS[group.difficulty]}
-                </Pill>
-                <span className="text-xs text-[var(--lx-muted)]">
-                  {group.items.filter((l) => l.completed).length}/
-                  {group.items.length} complete
+                <Pill tone={group.difficulty}>{DIFFICULTY_LABELS[group.difficulty]}</Pill>
+                <span className="text-xs text-lx-subtle">
+                  {group.items.filter((l) => l.completed).length} of {group.items.length} complete
                 </span>
               </div>
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {group.items.map((lesson) => (
                   <LessonRow
                     key={lesson.id}
@@ -323,23 +306,25 @@ export function LessonsIndexClient({ lessons, track }: { lessons: Lesson[]; trac
   );
 }
 
-function Chip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function ChipGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 text-xs text-lx-subtle">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
+      aria-pressed={active}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
         active
-          ? 'border-[var(--lx-accent)] bg-[var(--lx-accent-glow)] text-[var(--lx-accent)]'
-          : 'border-[var(--lx-border)] text-[var(--lx-muted)] hover:border-[var(--lx-accent)]/40 hover:text-[var(--lx-accent)]'
+          ? 'border-lx-accent bg-lx-accent-glow text-lx-accent'
+          : 'border-lx-border text-lx-muted hover:border-lx-accent/40 hover:text-lx-fg'
       }`}
     >
       {label}
@@ -352,7 +337,7 @@ function LessonRow({
   position,
   query,
 }: {
-  lesson: Lesson & { completed: boolean; bookmarked: boolean };
+  lesson: LessonSummary & { completed: boolean; bookmarked: boolean };
   position: number;
   query: string;
 }) {
@@ -361,39 +346,47 @@ function LessonRow({
       <Link
         href={`/lessons/${lesson.slug}`}
         className="lx-card lx-card-interactive group flex items-center gap-4 p-4 sm:p-5"
-        aria-label={`Open lesson: ${lesson.title}${lesson.completed ? ' (completed)' : ''}`}
       >
         <span
-          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-mono font-semibold transition ${
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold transition ${
             lesson.completed
-              ? 'border-[var(--lx-success)]/40 bg-[var(--lx-success)]/10 text-[var(--lx-success)]'
-              : 'border-[var(--lx-border)] bg-slate-900/40 text-[var(--lx-muted)] group-hover:border-[var(--lx-accent)]/40 group-hover:text-[var(--lx-accent)]'
+              ? 'border-lx-success/40 bg-lx-success/10 text-lx-success'
+              : 'border-lx-border bg-lx-surface text-lx-muted group-hover:border-lx-accent/40 group-hover:text-lx-accent'
           }`}
-          aria-hidden
         >
-          {lesson.completed ? <CheckIcon size={18} /> : position}
+          {lesson.completed ? (
+            <>
+              <CheckIcon size={18} />
+              <span className="sr-only">Completed:</span>
+            </>
+          ) : (
+            <span aria-hidden>{position}</span>
+          )}
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate font-semibold text-[var(--lx-fg)]">
+            <h3 className="font-semibold text-lx-fg transition group-hover:text-lx-accent">
               <Highlighted text={lesson.title} query={query} />
-            </h2>
-            {lesson.completed && <Pill tone="success">Completed</Pill>}
+            </h3>
             {lesson.bookmarked && (
               <Pill tone="accent">
-                <BookmarkIcon size={10} /> Bookmarked
+                <BookmarkIcon size={10} fill="currentColor" /> Saved
               </Pill>
             )}
           </div>
-          <p className="mt-0.5 line-clamp-2 text-sm text-[var(--lx-muted)]">
-            <Highlighted text={lesson.description} query={query} />
+          <p className="mt-0.5 line-clamp-2 text-sm text-lx-muted">
+            {query ? (
+              <Highlighted text={plainText(lesson.description)} query={query} />
+            ) : (
+              <RichText text={lesson.description} />
+            )}
           </p>
         </div>
 
         <ArrowRightIcon
           size={18}
-          className="shrink-0 text-[var(--lx-muted)] transition group-hover:translate-x-1 group-hover:text-[var(--lx-accent)]"
+          className="shrink-0 text-lx-subtle transition group-hover:translate-x-1 group-hover:text-lx-accent"
         />
       </Link>
     </li>
@@ -402,15 +395,12 @@ function LessonRow({
 
 function Highlighted({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>;
-  const lower = text.toLowerCase();
-  const idx = lower.indexOf(query);
+  const idx = text.toLowerCase().indexOf(query);
   if (idx === -1) return <>{text}</>;
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-[var(--lx-accent)]/30 px-0.5 text-[var(--lx-fg)]">
-        {text.slice(idx, idx + query.length)}
-      </mark>
+      <mark className="rounded bg-lx-accent/25 px-0.5 text-lx-fg">{text.slice(idx, idx + query.length)}</mark>
       {text.slice(idx + query.length)}
     </>
   );

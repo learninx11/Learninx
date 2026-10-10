@@ -30,7 +30,7 @@ export function StreakWidget({ variant = 'card' }: Props) {
   if (variant === 'inline') {
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Pill tone="accent">
+        <Pill tone={visible.current > 0 ? 'warning' : 'default'}>
           <FireIcon size={10} /> {visible.current}-day streak
         </Pill>
         <Pill tone="default">
@@ -43,32 +43,32 @@ export function StreakWidget({ variant = 'card' }: Props) {
     );
   }
 
+  const active = visible.current > 0;
   return (
-    <div className="lx-card p-5 sm:p-6">
-      <div className="flex items-center gap-2">
-        <Pill tone="accent">
-          <FireIcon size={12} /> Streak
-        </Pill>
-      </div>
+    <div className="lx-card flex h-full flex-col p-5 sm:p-6">
+      <Pill tone={active ? 'warning' : 'accent'} className="self-start">
+        <FireIcon size={12} /> Streak
+      </Pill>
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="font-mono text-4xl font-bold text-[var(--lx-accent)]">
+        <span
+          className={`font-mono text-5xl font-bold tabular-nums ${active ? 'text-lx-warning' : 'text-lx-accent'}`}
+        >
           {visible.current}
         </span>
-        <span className="text-sm text-[var(--lx-muted)]">
-          day{visible.current === 1 ? '' : 's'} in a row
-        </span>
+        <span className="text-sm text-lx-muted">day{visible.current === 1 ? '' : 's'} in a row</span>
       </div>
-      <p className="mt-1 text-xs text-[var(--lx-muted)]">
-        Best streak so far: {visible.best} day{visible.best === 1 ? '' : 's'}.
+      <p className="mt-1 text-xs text-lx-subtle">
+        {active
+          ? `Best so far: ${visible.best} day${visible.best === 1 ? '' : 's'}. Come back tomorrow to keep it going.`
+          : 'Finish a lesson today to start a streak.'}
       </p>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+      <div className="mt-auto grid grid-cols-3 gap-2 pt-4 text-center">
         <Stat label="Points" value={visible.points} />
         <Stat label="Lessons" value={visible.totalCompletions} />
         <Stat label="Correct" value={visible.totalCorrect} />
       </div>
-      <p className="mt-3 text-[0.65rem] text-[var(--lx-muted)]">
-        +10 points per lesson, +1 per correct quiz answer. Missing a day
-        resets the streak to 1.
+      <p className="mt-3 text-[0.7rem] leading-relaxed text-lx-subtle">
+        +10 per lesson · +1 per correct quiz answer · +25 per boss
       </p>
     </div>
   );
@@ -76,13 +76,9 @@ export function StreakWidget({ variant = 'card' }: Props) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-[var(--lx-border)] bg-[var(--lx-bg-elevated)]/40 px-2 py-2">
-      <div className="font-mono text-base font-semibold text-[var(--lx-fg)]">
-        {value}
-      </div>
-      <div className="text-[0.6rem] uppercase tracking-wider text-[var(--lx-muted)]">
-        {label}
-      </div>
+    <div className="rounded-lg border border-lx-border bg-lx-surface px-2 py-2.5">
+      <div className="font-mono text-lg font-semibold tabular-nums text-lx-fg">{value}</div>
+      <div className="text-[0.62rem] uppercase tracking-wider text-lx-subtle">{label}</div>
     </div>
   );
 }

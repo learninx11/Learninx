@@ -14,7 +14,7 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: PageProps): Metadata {
   const lesson = getLessonBySlug(params.slug);
   if (!lesson) return { title: 'Lesson' };
-  return { title: lesson.title, description: lesson.description };
+  return { title: lesson.title, description: lesson.description.replace(/`/g, '') };
 }
 
 export default function LessonPage({ params }: PageProps) {
@@ -25,12 +25,19 @@ export default function LessonPage({ params }: PageProps) {
   const previous = idx > 0 ? lessons[idx - 1] : null;
   const next = idx < lessons.length - 1 ? lessons[idx + 1] : null;
   const questions = getQuestionsForLesson(lesson.id);
+  const trackLessons = lessons.filter((l) => l.track === lesson.track);
 
   return (
     <LessonDetailClient
       lesson={lesson}
-      neighbours={{ previous, next }}
-      position={{ index: idx, total: lessons.length }}
+      neighbours={{
+        previous: previous && { slug: previous.slug, title: previous.title, track: previous.track },
+        next: next && { slug: next.slug, title: next.title, track: next.track },
+      }}
+      trackPosition={{
+        index: trackLessons.findIndex((l) => l.id === lesson.id),
+        total: trackLessons.length,
+      }}
       questions={questions}
     />
   );

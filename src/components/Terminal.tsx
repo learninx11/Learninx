@@ -24,11 +24,11 @@ import {
   type EditorState,
 } from '@/lib/shell/editors';
 import {
-  CopyIcon,
   HelpIcon,
   MaximizeIcon,
   MinimizeIcon,
   PlayIcon,
+  ShieldIcon,
   VolumeIcon,
   VolumeOffIcon,
 } from '@/components/ui/Icon';
@@ -79,11 +79,18 @@ export function Terminal({
   suggestion,
   className = '',
   onRunExpected,
+  autoFocus = false,
 }: {
   /** A command the user should be encouraged to try (shown as a hint). */
   suggestion?: Suggestion;
   className?: string;
   onRunExpected?: () => void;
+  /**
+   * Put the cursor in the terminal as soon as it opens. Only for pages
+   * that are just a terminal: elsewhere it would capture the keys the
+   * reader uses to scroll (Space, arrows) and the site's shortcuts.
+   */
+  autoFocus?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -146,7 +153,12 @@ export function Terminal({
   }, [isFullscreen]);
 
   // Re-fit xterm to its container once the fullscreen layout has settled.
+  // Only on an actual toggle — focusing on mount would steal the page's
+  // keyboard.
+  const prevFullscreenRef = useRef(isFullscreen);
   useEffect(() => {
+    if (prevFullscreenRef.current === isFullscreen) return;
+    prevFullscreenRef.current = isFullscreen;
     const raf = requestAnimationFrame(() => {
       fitRef.current?.fit();
       xtermRef.current?.focus();
@@ -203,9 +215,21 @@ export function Terminal({
     };
     ctxRef.current = ctx;
 
+    // The page's self-hosted JetBrains Mono (next/font) is exposed as
+    // `--font-mono`; xterm draws to a canvas, so it needs the resolved
+    // family names rather than the CSS variable.
+    const pageMono = getComputedStyle(document.documentElement)
+      .getPropertyValue('--font-mono')
+      .trim();
+    const fontFamily = pageMono
+      ? `${pageMono}, "JetBrains Mono", Menlo, Consolas, monospace`
+      : '"JetBrains Mono", Menlo, "Courier New", monospace';
+    // A few more columns on a phone, where commands otherwise wrap early.
+    const fontSize = window.matchMedia('(max-width: 639px)').matches ? 12.5 : 14;
+
     const term = new XTerm({
-      fontFamily: '"JetBrains Mono", Menlo, "Courier New", monospace',
-      fontSize: 14,
+      fontFamily,
+      fontSize,
       lineHeight: 1.25,
       theme: {
         background: '#0b0f12',
@@ -259,8 +283,35 @@ export function Terminal({
     let opened = false;
     let viewportOriginal: ((start: number, end: number) => void) | null = null;
 
+    // xterm measures its character cell once, as it opens. Opening before
+    // the web font has loaded would lock in the fallback font's metrics
+    // (visible as gappy letter-spacing), so wait for the font — but not
+    // forever on a slow connection. If it arrives after the terminal opened
+    // anyway, re-applying the family makes xterm measure again and drop
+    // the widths it cached.
+    let fontReady = !pageMono || typeof document.fonts?.load !== 'function';
+    if (!fontReady) {
+      const onFontLoaded = () => {
+        if (disposed) return;
+        if (!fontReady) {
+          fontReady = true;
+          openAndStart();
+        } else if (opened) {
+          term.options.fontFamily = 'monospace';
+          term.options.fontFamily = fontFamily;
+          safeFit();
+        }
+      };
+      document.fonts.load(`14px ${pageMono}`).then(onFontLoaded, onFontLoaded);
+      window.setTimeout(() => {
+        if (fontReady || disposed) return;
+        fontReady = true;
+        openAndStart();
+      }, 1500);
+    }
+
     const openAndStart = () => {
-      if (disposed || opened) return;
+      if (disposed || opened || !fontReady) return;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect || rect.width < 16 || rect.height < 16) return;
       opened = true;
@@ -310,6 +361,7 @@ export function Terminal({
       requestAnimationFrame(() => {
         if (disposed) return;
         safeFit();
+        if (!autoFocus) return;
         try {
           term.focus();
         } catch {
@@ -947,14 +999,14 @@ export function Terminal({
   }
 
   const containerClasses = isFullscreen
-    ? 'lx-card fixed inset-3 z-[200] flex flex-col overflow-hidden border-slate-800/80 shadow-2xl sm:inset-6'
-    : `lx-card flex h-full flex-col overflow-hidden border-slate-800/80 ${className}`;
+    ? 'lx-theme-dark lx-terminal fixed inset-3 z-[200] flex flex-col overflow-hidden sm:inset-6'
+    : `lx-theme-dark lx-terminal flex h-full flex-col overflow-hidden ${className}`;
 
   return (
     <>
       {isFullscreen && (
         <div
-          className="fixed inset-0 z-[199] bg-slate-950/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[199] bg-lx-overlay backdrop-blur-sm"
           onClick={() => setIsFullscreen(false)}
           aria-hidden
         />
@@ -964,91 +1016,83 @@ export function Terminal({
         role="group"
         aria-label="Linux terminal sandbox"
       >
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/70 px-3 py-2 text-xs">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-lx-border bg-lx-bg-elevated/70 px-3 py-1.5 text-xs">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span
-              className="h-2.5 w-2.5 rounded-full bg-red-500/80"
-              aria-hidden
-            />
-            <span
-              className="h-2.5 w-2.5 rounded-full bg-yellow-500/80"
-              aria-hidden
-            />
-            <span
-              className="h-2.5 w-2.5 rounded-full bg-green-500/80"
-              aria-hidden
-            />
-            <span className="ml-3 truncate font-mono text-slate-400">
-              learner@learninx:~
-            </span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#f87171]/80" aria-hidden />
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#fbbf24]/80" aria-hidden />
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#34d399]/80" aria-hidden />
+            <span className="ml-2.5 truncate font-mono text-lx-muted">learner@learninx:~</span>
             {mounted && (
               <span
-                className="ml-2 hidden h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--lx-success)] sm:inline-block"
+                className="ml-1.5 hidden h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-lx-success sm:inline-block"
                 title="Sandbox ready"
                 aria-label="Sandbox ready"
               />
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-0.5">
+            {suggestion && (
+              <button
+                type="button"
+                onClick={runSuggestion}
+                className="lx-btn lx-btn-sm mr-1 max-w-[14rem] border-lx-success/30 bg-lx-success/10 py-1 text-lx-success hover:bg-lx-success/20"
+                title={`Run: ${suggestion.command}`}
+              >
+                <PlayIcon size={12} className="shrink-0" />
+                <span className="hidden sm:inline">Run</span>
+                <code className="truncate font-mono text-[0.8em] opacity-90">
+                  {suggestion.command}
+                </code>
+              </button>
+            )}
             <button
+              type="button"
+              onClick={showHelpText}
+              className="lx-icon-btn h-7 w-7"
+              title="Show the command list"
+              aria-label="Show the command list"
+            >
+              <HelpIcon size={14} />
+            </button>
+            <button
+              type="button"
               onClick={() => setSoundOn((v) => !v)}
-              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
+              className="lx-icon-btn h-7 w-7"
               title={soundOn ? 'Mute keystroke sounds' : 'Enable keystroke sounds'}
-              aria-label="Toggle keystroke sounds"
+              aria-label="Keystroke sounds"
               aria-pressed={soundOn}
             >
               {soundOn ? <VolumeIcon size={14} /> : <VolumeOffIcon size={14} />}
             </button>
             <button
+              type="button"
               onClick={() => setIsFullscreen((v) => !v)}
-              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
+              className="lx-icon-btn h-7 w-7"
               title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen'}
-              aria-label="Toggle fullscreen"
+              aria-label="Fullscreen"
               aria-pressed={isFullscreen}
             >
               {isFullscreen ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
             </button>
-            <button
-              onClick={showHelpText}
-              className="lx-btn lx-btn-ghost lx-btn-sm px-2 py-1 text-slate-400"
-              title="Show help"
-              aria-label="Show help"
-            >
-              <HelpIcon size={14} />
-              <span className="hidden sm:inline">Help</span>
-            </button>
-            {suggestion && (
-              <button
-                onClick={runSuggestion}
-                className="lx-btn lx-btn-secondary lx-btn-sm border-[var(--lx-success)]/30 bg-[var(--lx-success)]/10 text-[var(--lx-success)] hover:bg-[var(--lx-success)]/20 hover:text-[var(--lx-success)]"
-                title={`Run: ${suggestion.command}`}
-              >
-                <PlayIcon size={12} />
-                <span className="hidden sm:inline">Run</span>
-                <code className="font-mono text-[0.8em] opacity-90">
-                  {suggestion.command}
-                </code>
-              </button>
-            )}
           </div>
         </div>
         <div
           ref={containerRef}
-          className="min-h-0 flex-1 bg-[var(--lx-bg)] p-2"
+          className="min-h-0 flex-1 bg-lx-bg p-2"
           onClick={() => xtermRef.current?.focus()}
         />
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-800/80 bg-slate-900/50 px-3 py-1.5 text-[0.7rem] text-slate-500">
-          <span>
-            <CopyIcon size={11} className="-mt-0.5 mr-1 inline" />
-            Sandbox is isolated. Type{' '}
-            <code className="rounded bg-slate-800/80 px-1 py-0.5 font-mono text-[0.75em] text-slate-300">
-              help
-            </code>{' '}
-            for commands.
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-lx-border bg-lx-bg-elevated/50 px-3 py-1.5 text-[0.7rem] text-lx-subtle">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldIcon size={11} />
+            Isolated sandbox · type
+            <code className="rounded bg-lx-surface px-1 py-0.5 font-mono text-[0.95em] text-lx-prose-body">help</code>
+            for commands
           </span>
-          <span className="hidden font-mono sm:inline">
-            <kbd className="lx-kbd">Ctrl</kbd>+<kbd className="lx-kbd">Shift</kbd>+
-            <kbd className="lx-kbd">V</kbd> to paste
+          <span className="hidden items-center gap-0.5 font-mono sm:inline-flex">
+            <kbd className="lx-kbd">Ctrl</kbd>
+            <kbd className="lx-kbd">Shift</kbd>
+            <kbd className="lx-kbd">V</kbd>
+            <span className="ml-1 font-sans">to paste</span>
           </span>
         </div>
       </div>

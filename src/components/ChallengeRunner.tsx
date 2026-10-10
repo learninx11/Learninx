@@ -1,28 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useProgress } from '@/lib/progress-context';
-import { CheckCheckIcon, CheckIcon, CloseIcon } from '@/components/ui/Icon';
+import { CheckCheckIcon, CheckIcon, CloseIcon, LightbulbIcon } from '@/components/ui/Icon';
 
 export function ChallengeRunner({
   lessonId,
   lessonSolution,
 }: {
   lessonId: string;
-  lessonSlug: string;
   lessonSolution?: string;
-  initiallyCompleted: boolean;
-  onSuccess?: () => void;
 }) {
   const { isCompleted, submitChallenge } = useProgress();
   const completed = isCompleted(lessonId);
   const [command, setCommand] = useState('');
-  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(
-    null,
-  );
-  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [reveal, setReveal] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputId = useId();
+  const statusId = useId();
 
   // Build a friendlier hint: show the first accepted form, with everything
   // past the command name masked.
@@ -35,77 +31,92 @@ export function ChallengeRunner({
     if (!completed) setStatus(null);
   }, [completed]);
 
-  function submit(): void {
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
     if (!command.trim()) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      const result = submitChallenge(lessonId, lessonSolution, command);
-      setStatus(result);
-      setSubmitting(false);
-    }, 0);
+    const result = submitChallenge(lessonId, lessonSolution, command);
+    setStatus(result);
+    if (!result.ok) inputRef.current?.select();
   }
 
+  const failed = status !== null && !status.ok;
+
   return (
-    <div className="space-y-3">
+    <form onSubmit={submit} className="space-y-3">
       <div className="flex flex-wrap items-stretch gap-2">
-        <label htmlFor="challenge-cmd" className="sr-only">
-          Solution command
+        <label htmlFor={inputId} className="sr-only">
+          Your command
         </label>
-        <span
-          aria-hidden
-          className="inline-flex items-center rounded-md border border-slate-700 bg-slate-950 px-3 font-mono text-[var(--lx-accent)]"
-        >
-          $
-        </span>
-        <input
-          id="challenge-cmd"
-          ref={inputRef}
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') submit();
-          }}
-          placeholder="type the solution command…"
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          className="lx-input min-w-0 flex-1"
-        />
+        <div className="relative min-w-0 flex-1 basis-56">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-lx-accent"
+          >
+            $
+          </span>
+          <input
+            id={inputId}
+            ref={inputRef}
+            value={command}
+            onChange={(e) => {
+              setCommand(e.target.value);
+              if (failed) setStatus(null);
+            }}
+            placeholder={completed ? 'Solved — try another way if you like' : 'type the command…'}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-invalid={failed || undefined}
+            aria-describedby={status ? statusId : undefined}
+            className="lx-input pl-7"
+          />
+        </div>
         <button
-          onClick={submit}
-          disabled={submitting || completed}
+          type="submit"
+          disabled={completed || !command.trim()}
           className="lx-btn lx-btn-primary"
         >
-          {submitting ? 'Checking…' : completed ? 'Solved' : 'Check'}
+          {completed ? (
+            <>
+              <CheckIcon size={14} /> Solved
+            </>
+          ) : (
+            'Check'
+          )}
         </button>
       </div>
 
       {hint && !completed && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span>Need a nudge?</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-lx-subtle">
           <button
+            type="button"
             onClick={() => setReveal((v) => !v)}
-            className="text-[var(--lx-accent)] hover:underline"
+            aria-expanded={reveal}
+            className="inline-flex items-center gap-1 rounded text-lx-accent hover:underline"
           >
-            {reveal ? 'Hide hint' : 'Show hint'}
+            <LightbulbIcon size={12} /> {reveal ? 'Hide hint' : 'Need a hint?'}
           </button>
           {reveal && (
-            <code className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 font-mono text-slate-200">
-              {hint}
-            </code>
+            <span className="inline-flex items-center gap-1.5">
+              Start with
+              <code className="rounded border border-lx-border bg-lx-code-bg px-2 py-0.5 font-mono text-lx-fg">
+                {hint}
+              </code>
+            </span>
           )}
         </div>
       )}
 
-      {status && (
+      {status && !(status.ok && completed) && (
         <div
+          id={statusId}
           role="status"
           aria-live="polite"
           className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
             status.ok
-              ? 'border-[var(--lx-success)]/30 bg-[var(--lx-success)]/10 text-[var(--lx-success)]'
-              : 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+              ? 'border-lx-success/30 bg-lx-success/10 text-lx-success'
+              : 'border-lx-warning/30 bg-lx-warning/10 text-lx-warning'
           }`}
         >
           <span aria-hidden className="mt-0.5">
@@ -116,12 +127,15 @@ export function ChallengeRunner({
       )}
 
       {completed && (
-        <div className="lx-pulse-success flex items-center gap-2 rounded-md border border-[var(--lx-success)]/30 bg-[var(--lx-success)]/10 px-3 py-2 text-sm text-[var(--lx-success)]">
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-md border border-lx-success/30 bg-lx-success/10 px-3 py-2 text-sm text-lx-success"
+        >
           <CheckCheckIcon size={14} />
-          <span>Lesson marked complete. On to the next one.</span>
+          <span>Challenge solved — the lesson is marked complete.</span>
         </div>
       )}
-    </div>
+    </form>
   );
 }
 

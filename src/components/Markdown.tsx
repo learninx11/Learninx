@@ -46,6 +46,13 @@ export function Markdown({ content }: { content: string }) {
               </h3>
             );
           },
+          table({ children }) {
+            return (
+              <div className="lx-table-scroll">
+                <table>{children}</table>
+              </div>
+            );
+          },
           pre({ children }) {
             // react-markdown wraps fenced code blocks in <pre><code>...
             // unwrap to get the <code> child (so we can read its className)

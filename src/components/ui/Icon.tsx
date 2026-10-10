@@ -427,3 +427,29 @@ export const ShieldIcon = ({ size = 16, ...rest }: IconProps) => (
     <path d="M20 13c0 5-3.5 7.5-8 8.95-4.5-1.45-8-4-8-9V5l8-3 8 3z" />
   </svg>
 );
+
+export const HomeIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M9 22V12h6v10" />
+  </svg>
+);
+
+export const ChevronDownIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+export const ArrowDownIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </svg>
+);
+
+export const ExternalLinkIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M15 3h6v6M10 14 21 3" />
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+  </svg>
+);

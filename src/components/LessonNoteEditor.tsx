@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { NoteIcon, PencilIcon, TrashIcon } from '@/components/ui/Icon';
+import { CheckIcon, NoteIcon, PencilIcon, TrashIcon } from '@/components/ui/Icon';
 import { useProgress } from '@/lib/progress-context';
 import type { LessonNote } from '@/lib/progress-types';
+
+const MAX_LENGTH = 4000;
 
 interface Props {
   lessonId: string;
@@ -20,7 +22,10 @@ export function LessonNoteEditor({ lessonId }: Props) {
   const [text, setText] = useState<string>(initial?.text ?? '');
   const [savedAt, setSavedAt] = useState<number | null>(initial?.updatedAt ?? null);
   const [editing, setEditing] = useState<boolean>(!initial);
+  const [confirmClear, setConfirmClear] = useState(false);
   const textareaId = useId();
+  const headingId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state when the lesson changes (e.g. nav between
@@ -30,6 +35,7 @@ export function LessonNoteEditor({ lessonId }: Props) {
     setText(note?.text ?? '');
     setSavedAt(note?.updatedAt ?? null);
     setEditing(!note);
+    setConfirmClear(false);
   }, [lessonId, state.notes]);
 
   // Debounced save — typing should not pound localStorage on every key.
@@ -46,63 +52,104 @@ export function LessonNoteEditor({ lessonId }: Props) {
     };
   }, [text, lessonId, ready, setNote, state.notes]);
 
+  function startEditing() {
+    setEditing(true);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
   function clear() {
     setText('');
     setNote(lessonId, '');
     setSavedAt(null);
-    setEditing(false);
+    setEditing(true);
+    setConfirmClear(false);
   }
 
-  const savedLabel = savedAt
-    ? `Saved ${formatTimeAgo(savedAt)}`
-    : 'Notes are kept on this browser only.';
+  const hasText = text.trim().length > 0;
 
   return (
-    <section className="lx-card p-5 sm:p-6">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <NoteIcon size={14} />
-          <h3 className="font-semibold">Your notes</h3>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-slate-500">
-          {editing ? null : (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-md px-2 py-1 text-[var(--lx-accent)] transition hover:bg-[var(--lx-accent-glow)]"
-            >
-              <PencilIcon size={12} /> Edit
-            </button>
-          )}
-          {text.length > 0 && (
-            <button
-              type="button"
-              onClick={clear}
-              className="rounded-md px-2 py-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
-            >
-              <TrashIcon size={12} /> Clear
-            </button>
+    <section aria-labelledby={headingId} className="lx-card p-5 sm:p-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 id={headingId} className="flex items-center gap-2 font-semibold">
+          <NoteIcon size={15} className="text-lx-accent" /> Your notes
+        </h2>
+        <div className="flex items-center gap-1 text-xs">
+          {confirmClear ? (
+            <>
+              <span className="mr-1 text-lx-muted">Delete this note?</span>
+              <button type="button" onClick={clear} className="lx-btn lx-btn-danger lx-btn-sm py-1">
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmClear(false)}
+                className="lx-btn lx-btn-ghost lx-btn-sm py-1"
+              >
+                Keep
+              </button>
+            </>
+          ) : (
+            <>
+              {!editing && (
+                <button type="button" onClick={startEditing} className="lx-btn lx-btn-ghost lx-btn-sm py-1">
+                  <PencilIcon size={12} /> Edit
+                </button>
+              )}
+              {hasText && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(true)}
+                  className="lx-btn lx-btn-ghost lx-btn-sm py-1 text-lx-muted"
+                >
+                  <TrashIcon size={12} /> Clear
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
       {editing ? (
-        <textarea
-          id={textareaId}
-          rows={5}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type your notes here. Anything you write stays on your device — no servers involved."
-          className="lx-input w-full resize-y font-mono text-sm"
-          maxLength={4000}
-        />
+        <>
+          <label htmlFor={textareaId} className="sr-only">
+            Notes for this lesson
+          </label>
+          <textarea
+            id={textareaId}
+            ref={textareaRef}
+            rows={5}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Jot down commands, gotchas, or questions. Notes stay on this device."
+            className="lx-input w-full resize-y text-sm leading-relaxed"
+            maxLength={MAX_LENGTH}
+          />
+        </>
       ) : (
-        <p className="whitespace-pre-wrap rounded-md border border-slate-800 bg-slate-900/50 p-3 text-sm leading-relaxed text-slate-200">
-          {text.trim().length === 0
-            ? 'No notes yet — click Edit to add some.'
-            : text}
-        </p>
+        <button
+          type="button"
+          onClick={startEditing}
+          className="block w-full whitespace-pre-wrap rounded-md border border-lx-border bg-lx-surface p-3 text-left text-sm leading-relaxed text-lx-prose-body transition hover:border-lx-accent/40"
+          aria-label="Edit your notes"
+        >
+          {hasText ? text : 'No notes yet — click to add some.'}
+        </button>
       )}
-      <p className="mt-2 text-xs text-slate-500">{savedLabel}</p>
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-lx-subtle">
+        <span className="inline-flex items-center gap-1">
+          {savedAt ? (
+            <>
+              <CheckIcon size={12} className="text-lx-success" /> Saved {formatTimeAgo(savedAt)}
+            </>
+          ) : (
+            'Kept on this browser only.'
+          )}
+        </span>
+        {editing && text.length > MAX_LENGTH * 0.8 && (
+          <span className="tabular-nums">
+            {text.length} / {MAX_LENGTH}
+          </span>
+        )}
+      </div>
     </section>
   );
 }

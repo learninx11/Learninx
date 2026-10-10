@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { CheckIcon, TargetIcon, TerminalIcon } from '@/components/ui/Icon';
+import { ArrowRightIcon, CheckIcon, TargetIcon, TerminalIcon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { RichText } from '@/components/ui/RichText';
 import { useProgress } from '@/lib/progress-context';
 import { getAllBosses } from '@/lib/bosses';
 
@@ -46,8 +47,8 @@ export function BossIndexClient() {
                 <span
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${
                     completed
-                      ? 'border-[var(--lx-success)]/40 bg-[var(--lx-success)]/10 text-[var(--lx-success)]'
-                      : 'border-[var(--lx-border)] bg-slate-900/40 text-[var(--lx-accent)]'
+                      ? 'border-lx-success/40 bg-lx-success/10 text-lx-success'
+                      : 'border-lx-border bg-lx-surface text-lx-accent'
                   }`}
                   aria-hidden
                 >
@@ -62,14 +63,16 @@ export function BossIndexClient() {
                   <Pill tone={b.difficulty}>{b.difficulty}</Pill>
                 </div>
               </div>
-              <h2 className="text-xl font-semibold">{b.title}</h2>
-              <p className="text-sm text-[var(--lx-muted)]">{b.description}</p>
+              <h2 className="text-xl font-semibold transition group-hover:text-lx-accent">{b.title}</h2>
+              <p className="text-sm text-lx-muted">
+                <RichText text={b.description} />
+              </p>
               <div className="mt-auto flex items-center justify-between text-xs text-[var(--lx-muted)]">
                 <span>
                   {b.steps.length} step{b.steps.length === 1 ? '' : 's'}
                 </span>
-                <span className="font-mono text-[var(--lx-accent)]">
-                  {completed ? 'Replay →' : 'Start →'}
+                <span className="inline-flex items-center gap-1 font-medium text-lx-accent">
+                  {completed ? 'Replay' : 'Start'} <ArrowRightIcon size={12} className="transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
             </Link>

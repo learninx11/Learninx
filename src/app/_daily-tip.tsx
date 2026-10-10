@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRightIcon,
+  CheckIcon,
   LightbulbIcon,
   RotateCcwIcon,
   ShuffleIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { RichText } from '@/components/ui/RichText';
 import { useProgress } from '@/lib/progress-context';
 import { getAllTips, getDailyTip } from '@/lib/tips';
 
@@ -23,9 +25,8 @@ export function DailyTipCard() {
   >(null);
   // `view` indexes the TIPS catalogue. `null` means "show today's".
   const [view, setView] = useState<number | null>(null);
-  // Bumped on every shuffle so the "Seen" pill re-renders with a
-  // fresh count even if the underlying state is identical.
-  const [seenVersion, setSeenVersion] = useState(0);
+  // Re-open today's tip after it was dismissed with "Got it".
+  const [reopened, setReopened] = useState(false);
 
   useEffect(() => {
     const t = getDailyTip();
@@ -36,47 +37,32 @@ export function DailyTipCard() {
   const currentIndex = view ?? today?.index ?? 0;
   const currentTip = today != null ? tips[currentIndex] ?? today.tip : null;
 
-  // Once the user has seen today's tip on this browser, we hide the
-  // card. (It comes back tomorrow because the day key changes.) We
-  // only auto-dismiss when the visitor is on today's tip — exploring
-  // older ones shouldn't dismiss the card for the rest of the day.
+  // Once today's tip has been read on this browser the card collapses to
+  // a one-liner (a new tip arrives tomorrow, when the day key changes).
+  // Exploring other tips never counts as reading today's.
   const onToday = today != null && (view ?? today.index) === today.index;
-  const seenToday =
-    ready && today != null && onToday && state.lastTipDay === today.dayKey;
+  const seenToday = ready && today != null && onToday && state.lastTipDay === today.dayKey;
 
   if (today == null || currentTip == null) {
-    return <DailyTipSkeleton />;
-  }
-
-  if (seenToday) {
-    return null;
+    return <div className="lx-card h-full min-h-[12rem] animate-pulse" aria-hidden />;
   }
 
   const shuffle = () => {
     if (tips.length <= 1) return;
     // Prefer a tip the visitor has not seen yet. Fall back to any
-    // other tip; fall back further to a re-shuffle.
+    // other tip.
     const seen = new Set(state.tipsSeen);
-    const unseen = tips
-      .map((_, i) => i)
-      .filter((i) => i !== currentIndex && !seen.has(i));
-    const pool =
-      unseen.length > 0
-        ? unseen
-        : tips.map((_, i) => i).filter((i) => i !== currentIndex);
-    if (pool.length === 0) {
-      // Single-tip catalogue — nothing to shuffle to.
-      return;
-    }
+    const others = tips.map((_, i) => i).filter((i) => i !== currentIndex);
+    const unseen = others.filter((i) => !seen.has(i));
+    const pool = unseen.length > 0 ? unseen : others;
     const next = pool[Math.floor(Math.random() * pool.length)];
+    if (next === undefined) return;
     setView(next);
-    setSeenVersion((v) => v + 1);
     recordTipSeen(next);
   };
 
-  const reset = () => {
+  const backToToday = () => {
     setView(null);
-    setSeenVersion((v) => v + 1);
     // Record today's deterministic tip as seen so it counts toward
     // the Tip explorer achievement if the visitor never shuffled.
     recordTipSeen(today.index);
@@ -85,57 +71,69 @@ export function DailyTipCard() {
   const dismiss = () => {
     // Make sure the day key + today's index get persisted together.
     markTipSeen(today.index);
+    setReopened(false);
   };
 
-  const seenCount = state.tipsSeen.length;
-  const totalCount = tips.length;
+  if (seenToday && !reopened) {
+    return (
+      <article className="lx-card flex h-full flex-col justify-between gap-5 p-5 sm:p-6">
+        <div>
+          <Pill tone="success">
+            <CheckIcon size={11} /> Today&apos;s tip read
+          </Pill>
+          <h2 className="mt-3 text-lg font-semibold">
+            <RichText text={currentTip.title} />
+          </h2>
+          <p className="mt-1 text-sm text-lx-muted">
+            A fresh tip arrives tomorrow. You have explored {state.tipsSeen.length} of{' '}
+            {tips.length} so far.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setReopened(true)} className="lx-btn lx-btn-secondary lx-btn-sm">
+            Read it again
+          </button>
+          <button type="button" onClick={shuffle} className="lx-btn lx-btn-secondary lx-btn-sm">
+            <ShuffleIcon size={12} /> Another tip
+          </button>
+        </div>
+      </article>
+    );
+  }
 
   return (
-    <article className="lx-card relative overflow-hidden p-5 sm:p-6">
+    <article className="lx-card relative h-full overflow-hidden p-5 sm:p-6">
       <div
-        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--lx-accent-glow)] blur-3xl"
         aria-hidden
+        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-lx-accent-glow blur-3xl"
       />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Pill tone="accent">
-          <LightbulbIcon size={12} />{' '}
-          {onToday ? 'Tip of the day' : 'Tip explorer'}
+          <LightbulbIcon size={12} /> {onToday ? 'Tip of the day' : 'Tip explorer'}
         </Pill>
-        <span className="text-xs text-[var(--lx-muted)]">
-          {onToday ? today.dayKey : `Tip ${currentIndex + 1} / ${totalCount}`}
+        <span className="text-xs text-lx-subtle">
+          {onToday ? today.dayKey : `Tip ${currentIndex + 1} of ${tips.length}`}
         </span>
-        <span
-          className="ml-auto text-[0.65rem] uppercase tracking-wider text-[var(--lx-muted)]"
-          // Re-read when shuffle happens so the count refreshes.
-          data-version={seenVersion}
-        >
-          <span suppressHydrationWarning>{seenCount}</span> seen
+        <span className="ml-auto text-[0.65rem] uppercase tracking-wider text-lx-subtle">
+          {state.tipsSeen.length} seen
         </span>
       </div>
       <h2 className="mt-3 text-lg font-semibold sm:text-xl">
-        {currentTip.title}
+        <RichText text={currentTip.title} />
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-[var(--lx-muted)]">
-        {currentTip.body}
+      <p className="mt-2 text-sm leading-relaxed text-lx-muted">
+        <RichText text={currentTip.body} />
       </p>
-      <pre className="mt-3 overflow-x-auto rounded-md border border-[var(--lx-border)] bg-[var(--lx-code-bg)] px-3 py-2 font-mono text-xs text-[var(--lx-fg)]">
+      <pre className="mt-3 overflow-x-auto rounded-md border border-lx-border bg-lx-code-bg px-3 py-2 font-mono text-xs text-lx-fg">
         <code>{currentTip.example}</code>
       </pre>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {onToday ? (
-          <button
-            type="button"
-            onClick={dismiss}
-            className="lx-btn lx-btn-secondary lx-btn-sm"
-          >
-            Got it
+          <button type="button" onClick={dismiss} className="lx-btn lx-btn-secondary lx-btn-sm">
+            <CheckIcon size={12} /> Got it
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={reset}
-            className="lx-btn lx-btn-secondary lx-btn-sm"
-          >
+          <button type="button" onClick={backToToday} className="lx-btn lx-btn-secondary lx-btn-sm">
             <RotateCcwIcon size={12} /> Back to today
           </button>
         )}
@@ -144,23 +142,16 @@ export function DailyTipCard() {
           onClick={shuffle}
           disabled={tips.length <= 1}
           className="lx-btn lx-btn-secondary lx-btn-sm"
-          aria-label="Show a different tip"
         >
-          <ShuffleIcon size={12} /> Shuffle
+          <ShuffleIcon size={12} /> Another tip
         </button>
         <Link
           href="/cheatsheet"
-          className="inline-flex items-center gap-1 text-xs text-[var(--lx-accent)] hover:underline"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-lx-accent hover:underline"
         >
-          See the cheatsheet <ArrowRightIcon size={12} />
+          Cheatsheet <ArrowRightIcon size={12} />
         </Link>
       </div>
     </article>
-  );
-}
-
-function DailyTipSkeleton() {
-  return (
-    <div className="lx-card h-48 animate-pulse p-5 sm:p-6" aria-hidden />
   );
 }

@@ -2,7 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ───────────────────────────────────────── Design tokens ──
+ * Dark is the default palette. `html.light` swaps in the light palette.
+ * `.lx-theme-dark` pins a subtree to the dark palette whatever the page
+ * theme is — the xterm sandbox is always a dark terminal.
+ */
+
+:root,
+.lx-theme-dark {
   color-scheme: dark;
 
   --lx-bg: #0b0f12;
@@ -10,13 +17,17 @@
   --lx-fg: #e2e8f0;
 
   --lx-card: rgba(15, 23, 42, 0.55);
-  --lx-card-hover: rgba(15, 23, 42, 0.75);
+  --lx-card-hover: rgba(15, 23, 42, 0.78);
+  --lx-surface: rgba(15, 23, 42, 0.6);
+  --lx-surface-strong: #0f172a;
   --lx-border: #1f2937;
   --lx-border-strong: #334155;
 
   --lx-accent: #7fdbca;
+  --lx-accent-hover: #a7f3d0;
+  --lx-accent-contrast: #0b0f12;
   --lx-accent-2: #82aaff;
-  --lx-accent-glow: rgba(127, 219, 202, 0.18);
+  --lx-accent-glow: rgba(127, 219, 202, 0.16);
 
   --lx-success: #34d399;
   --lx-warning: #fbbf24;
@@ -28,14 +39,79 @@
   --lx-difficulty-expert: #c4b5fd;
 
   --lx-muted: #94a3b8;
+  --lx-subtle: #7b8aa1;
   --lx-code-bg: #0a0f17;
   --lx-grid-line: rgba(255, 255, 255, 0.015);
   --lx-prose-body: #cbd5e1;
   --lx-prose-strong: #f1f5f9;
   --lx-prose-th: #111827;
-  --lx-nav-bg: rgba(2, 6, 23, 0.8);
+  --lx-nav-bg: rgba(2, 6, 23, 0.78);
+  --lx-overlay: rgba(2, 6, 23, 0.72);
+  --lx-track: rgba(255, 255, 255, 0.06);
+  --lx-input-bg: rgba(11, 15, 18, 0.7);
+  --lx-btn-secondary-bg: rgba(15, 23, 42, 0.7);
+  --lx-btn-secondary-hover: rgba(15, 23, 42, 0.95);
 
+  --lx-shadow-sm: 0 0 #0000;
+  --lx-shadow-lg: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+}
+
+:root.light {
+  color-scheme: light;
+
+  --lx-bg: #f6f8fa;
+  --lx-bg-elevated: #ffffff;
+  --lx-fg: #0f172a;
+
+  --lx-card: rgba(255, 255, 255, 0.85);
+  --lx-card-hover: #ffffff;
+  --lx-surface: #f1f5f9;
+  --lx-surface-strong: #ffffff;
+  --lx-border: #e2e8f0;
+  --lx-border-strong: #cbd5e1;
+
+  --lx-accent: #0f766e;
+  --lx-accent-hover: #115e59;
+  --lx-accent-contrast: #ffffff;
+  --lx-accent-2: #2563eb;
+  --lx-accent-glow: rgba(13, 148, 136, 0.11);
+
+  --lx-success: #047857;
+  --lx-warning: #b45309;
+  --lx-danger: #dc2626;
+
+  --lx-difficulty-beginner: #047857;
+  --lx-difficulty-intermediate: #b45309;
+  --lx-difficulty-advanced: #dc2626;
+  --lx-difficulty-expert: #7c3aed;
+
+  --lx-muted: #475569;
+  --lx-subtle: #64748b;
+  --lx-code-bg: #f1f5f9;
+  --lx-grid-line: rgba(15, 23, 42, 0.035);
+  --lx-prose-body: #334155;
+  --lx-prose-strong: #0f172a;
+  --lx-prose-th: #f1f5f9;
+  --lx-nav-bg: rgba(255, 255, 255, 0.82);
+  --lx-overlay: rgba(15, 23, 42, 0.38);
+  --lx-track: rgba(15, 23, 42, 0.08);
+  --lx-input-bg: #ffffff;
+  --lx-btn-secondary-bg: #ffffff;
+  --lx-btn-secondary-hover: #f8fafc;
+
+  --lx-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --lx-shadow-lg: 0 24px 48px -16px rgba(15, 23, 42, 0.28);
+}
+
+/* A pinned-dark subtree inherits the page's computed text color, which is
+   dark ink in light mode — reset it from the subtree's own palette. */
+.lx-theme-dark {
+  color: var(--lx-fg);
+}
+
+:root {
   --radius-lx: 0.875rem;
+  --font-mono-stack: var(--font-mono), 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
 }
 
 html,
@@ -45,12 +121,24 @@ body {
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+  /* Anchor jumps land below the sticky header instead of under it. */
+  scroll-padding-top: 5rem;
+}
+
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
 /* Subtle ambient gradient + grid background for the app shell. */
@@ -78,34 +166,42 @@ body::after {
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 ::selection {
   background: var(--lx-accent-glow);
   color: var(--lx-accent);
 }
 
 :focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--lx-accent) 70%, white 0%);
+  outline: 2px solid var(--lx-accent);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
-/* Respect users who prefer less motion. */
+/* Theme switches swap every token at once; suppress transitions for that
+   one frame so cards and buttons don't all fade between palettes. */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+
+/* Respect users who prefer less motion. Transitions are switched off (0s),
+   not shortened: `transition-property` defaults to `all`, so a tiny
+   non-zero duration would make every style change on every element a
+   transition, and code that measures right after restyling (xterm's
+   character sizing) would read the old values. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
 
-/* ───────────────────────────────────────── Markdoc / Markdown styling ── */
+/* ───────────────────────────────────────── Markdown styling ── */
 
 .prose-lx {
   line-height: 1.75;
@@ -130,18 +226,17 @@ html {
 .prose-lx h2 {
   font-size: 1.4rem;
   font-weight: 600;
-  margin: 1.75rem 0 0.75rem;
+  margin: 2rem 0 0.75rem;
   color: var(--lx-accent);
   letter-spacing: -0.005em;
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.45rem;
   border-bottom: 1px solid var(--lx-border);
 }
 .prose-lx h3 {
   font-size: 1.15rem;
   font-weight: 600;
-  margin: 1.25rem 0 0.5rem;
-  color: var(--lx-accent);
-  opacity: 0.9;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--lx-prose-strong);
 }
 .prose-lx p {
   margin: 0.85rem 0;
@@ -152,8 +247,15 @@ html {
   margin: 0.85rem 0 0.85rem 1.5rem;
   color: var(--lx-prose-body);
 }
+.prose-lx ul {
+  list-style: disc;
+}
+.prose-lx ol {
+  list-style: decimal;
+}
 .prose-lx li {
   margin: 0.3rem 0;
+  padding-left: 0.2rem;
 }
 .prose-lx li::marker {
   color: var(--lx-accent);
@@ -177,7 +279,7 @@ html {
   color: var(--lx-prose-strong);
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-family: var(--font-mono-stack);
   font-size: 0.88em;
   border: 1px solid color-mix(in oklab, var(--lx-accent) 18%, transparent);
 }
@@ -185,11 +287,10 @@ html {
   position: relative;
   background: var(--lx-code-bg);
   border: 1px solid var(--lx-border);
-  padding: 1rem 1rem 1rem;
+  padding: 1rem;
   border-radius: 10px;
   overflow-x: auto;
   margin: 1.1rem 0;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
 }
 .prose-lx pre code {
   background: transparent;
@@ -205,26 +306,44 @@ html {
   padding: 0.6rem 1rem;
   margin: 1rem 0;
   border-radius: 0 6px 6px 0;
-  color: var(--lx-accent);
-  font-style: italic;
+  color: var(--lx-prose-body);
 }
 .prose-lx blockquote p {
   margin: 0;
 }
-.prose-lx table {
-  border-collapse: collapse;
+/* Markdown tables are wrapped in `.lx-table-scroll` (see Markdown.tsx) so a
+   wide table scrolls sideways on a phone instead of overflowing the page,
+   and the wrapper carries the rounded outer border. */
+.prose-lx .lx-table-scroll {
   margin: 1.1rem 0;
-  width: 100%;
-  font-size: 0.92rem;
+  overflow-x: auto;
   border: 1px solid var(--lx-border);
   border-radius: 8px;
-  overflow: hidden;
+}
+.prose-lx table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
 }
 .prose-lx th,
 .prose-lx td {
   border: 1px solid var(--lx-border);
   padding: 0.5rem 0.85rem;
   text-align: left;
+  vertical-align: top;
+}
+.prose-lx tr > :first-child {
+  border-left: 0;
+}
+.prose-lx tr > :last-child {
+  border-right: 0;
+}
+.prose-lx thead tr:first-child > *,
+.prose-lx table > tr:first-child > * {
+  border-top: 0;
+}
+.prose-lx tbody tr:last-child > * {
+  border-bottom: 0;
 }
 .prose-lx th {
   background: var(--lx-prose-th);
@@ -247,17 +366,37 @@ html {
     background: var(--lx-card);
     border: 1px solid var(--lx-border);
     border-radius: var(--radius-lx);
+    box-shadow: var(--lx-shadow-sm);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    transition: border-color 200ms ease, background 200ms ease, transform 200ms ease;
+    transition: border-color 200ms ease, background 200ms ease, transform 200ms ease,
+      box-shadow 200ms ease;
   }
   .lx-card-interactive {
     cursor: pointer;
   }
   .lx-card-interactive:hover {
-    border-color: color-mix(in oklab, var(--lx-accent) 60%, var(--lx-border));
+    border-color: color-mix(in oklab, var(--lx-accent) 55%, var(--lx-border));
     background: var(--lx-card-hover);
     transform: translateY(-1px);
+  }
+
+  /* Opaque panel for menus, dialogs and toasts that float over content. */
+  .lx-popover {
+    background: var(--lx-surface-strong);
+    border: 1px solid var(--lx-border-strong);
+    border-radius: var(--radius-lx);
+    box-shadow: var(--lx-shadow-lg);
+  }
+
+  /* The sandbox frame. Pair with `.lx-theme-dark` so it stays a dark
+     terminal in light mode; the opaque background keeps the page from
+     showing through the frame. */
+  .lx-terminal {
+    background: var(--lx-bg);
+    border: 1px solid var(--lx-border);
+    border-radius: var(--radius-lx);
+    box-shadow: var(--lx-shadow-lg);
   }
 
   .lx-pill {
@@ -271,14 +410,20 @@ html {
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     border: 1px solid var(--lx-border);
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--lx-surface);
     color: var(--lx-fg);
     line-height: 1;
+    white-space: nowrap;
   }
   .lx-pill-success {
     color: var(--lx-success);
     background: color-mix(in oklab, var(--lx-success) 12%, transparent);
     border-color: color-mix(in oklab, var(--lx-success) 30%, transparent);
+  }
+  .lx-pill-warning {
+    color: var(--lx-warning);
+    background: color-mix(in oklab, var(--lx-warning) 12%, transparent);
+    border-color: color-mix(in oklab, var(--lx-warning) 30%, transparent);
   }
   .lx-pill-accent {
     color: var(--lx-accent);
@@ -322,7 +467,7 @@ html {
     user-select: none;
     white-space: nowrap;
   }
-  .lx-btn:active {
+  .lx-btn:active:not(:disabled) {
     transform: translateY(1px);
   }
   .lx-btn:disabled {
@@ -332,20 +477,19 @@ html {
   }
   .lx-btn-primary {
     background: var(--lx-accent);
-    color: #0b0f12;
-    box-shadow: 0 0 0 0 var(--lx-accent-glow);
+    color: var(--lx-accent-contrast);
   }
   .lx-btn-primary:hover:not(:disabled) {
-    background: #a7f3d0;
-    box-shadow: 0 4px 18px -6px var(--lx-accent-glow);
+    background: var(--lx-accent-hover);
+    box-shadow: 0 6px 20px -8px color-mix(in oklab, var(--lx-accent) 70%, transparent);
   }
   .lx-btn-secondary {
-    background: rgba(15, 23, 42, 0.7);
+    background: var(--lx-btn-secondary-bg);
     color: var(--lx-fg);
     border-color: var(--lx-border-strong);
   }
   .lx-btn-secondary:hover:not(:disabled) {
-    background: rgba(15, 23, 42, 0.9);
+    background: var(--lx-btn-secondary-hover);
     border-color: var(--lx-accent);
     color: var(--lx-accent);
   }
@@ -354,22 +498,46 @@ html {
     color: var(--lx-fg);
   }
   .lx-btn-ghost:hover:not(:disabled) {
-    background: rgba(127, 219, 202, 0.08);
+    background: var(--lx-accent-glow);
     color: var(--lx-accent);
+  }
+  .lx-btn-danger {
+    background: color-mix(in oklab, var(--lx-danger) 14%, transparent);
+    color: var(--lx-danger);
+    border-color: color-mix(in oklab, var(--lx-danger) 40%, transparent);
+  }
+  .lx-btn-danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--lx-danger) 22%, transparent);
   }
   .lx-btn-sm {
     padding: 0.4rem 0.7rem;
     font-size: 0.85rem;
   }
 
+  /* Square, icon-only button (header actions, toolbars). */
+  .lx-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.6rem;
+    color: var(--lx-muted);
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .lx-icon-btn:hover {
+    background: var(--lx-accent-glow);
+    color: var(--lx-accent);
+  }
+
   .lx-input {
     width: 100%;
-    background: rgba(11, 15, 18, 0.7);
+    background: var(--lx-input-bg);
     border: 1px solid var(--lx-border-strong);
     border-radius: 0.55rem;
     padding: 0.55rem 0.75rem;
     color: var(--lx-fg);
-    font-family: 'JetBrains Mono', Menlo, monospace;
+    font-family: var(--font-mono-stack);
     transition: border-color 150ms ease, box-shadow 150ms ease;
   }
   .lx-input:focus {
@@ -378,12 +546,19 @@ html {
     box-shadow: 0 0 0 3px var(--lx-accent-glow);
   }
   .lx-input::placeholder {
-    color: #64748b;
+    color: var(--lx-subtle);
+  }
+  .lx-input:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+  }
+  .lx-input[aria-invalid='true'] {
+    border-color: color-mix(in oklab, var(--lx-danger) 60%, transparent);
   }
 
   .lx-progress {
     height: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--lx-track);
     border-radius: 999px;
     overflow: hidden;
   }
@@ -401,13 +576,16 @@ html {
   .lx-kbd {
     display: inline-flex;
     align-items: center;
-    font-family: 'JetBrains Mono', Menlo, monospace;
+    justify-content: center;
+    min-width: 1.4em;
+    font-family: var(--font-mono-stack);
     font-size: 0.75em;
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
     border: 1px solid var(--lx-border-strong);
-    background: rgba(15, 23, 42, 0.8);
-    color: #cbd5e1;
+    border-bottom-width: 2px;
+    background: var(--lx-surface-strong);
+    color: var(--lx-prose-body);
     line-height: 1.2;
   }
 
@@ -418,24 +596,45 @@ html {
     z-index: 100;
     padding: 0.5rem 0.9rem;
     background: var(--lx-accent);
-    color: #0b0f12;
+    color: var(--lx-accent-contrast);
     border-radius: 0 0 8px 0;
     font-weight: 600;
   }
   .lx-skip-link:focus {
     left: 0;
   }
+
+  /* Small uppercase section label that sits above a heading. */
+  .lx-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lx-subtle);
+  }
 }
 
-/* Tiny utilities used by the ScrollProgress bar. */
+/* iOS Safari zooms the whole page into any field under 16px when it is
+   focused; keep text fields at 16px on touch screens. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Reading-position bar used on lesson pages. */
 .lx-scroll-progress {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
   height: 2px;
   background: linear-gradient(90deg, var(--lx-accent), var(--lx-accent-2));
+  transform-origin: 0 50%;
   z-index: 60;
-  transition: width 80ms linear;
+  pointer-events: none;
 }
 
 /* Confetti / success pulse used on completion. */

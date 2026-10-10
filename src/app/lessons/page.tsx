@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getAllLessons } from '@/lib/lessons';
+import { toLessonSummary } from '@/lib/types';
 import { LessonsHubClient } from './_lessons-hub-client';
 
 export const metadata: Metadata = {
@@ -9,6 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default function LessonsIndexPage() {
-  const lessons = getAllLessons();
+  const lessons = getAllLessons().map((l) => toLessonSummary(l));
   return <LessonsHubClient lessons={lessons} />;
 }

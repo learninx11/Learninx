@@ -12,6 +12,7 @@ import {
   TrophyIcon,
 } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { RichText } from '@/components/ui/RichText';
 import { CHEAT_CATEGORIES, type CheatCategory } from '@/lib/cheatsheet';
 import {
   buildSession,
@@ -224,7 +225,7 @@ export function FlashcardsClient() {
                     resetFlashcards();
                     setConfirmReset(false);
                   }}
-                  className="lx-btn lx-btn-sm lx-btn-secondary text-rose-300"
+                  className="lx-btn lx-btn-sm lx-btn-danger"
                 >
                   Yes, reset cards
                 </button>
@@ -312,7 +313,9 @@ export function FlashcardsClient() {
           <Pill tone="accent">{current.entry.category}</Pill>
           <Pill>{BOX_LABELS[state.flashcards[current.id]?.box ?? 0]}</Pill>
         </div>
-        <p className="text-balance text-xl font-medium sm:text-2xl">{current.prompt.replace(/`/g, '')}</p>
+        <p className="text-balance text-xl font-medium leading-snug sm:text-2xl">
+          <RichText text={current.prompt} />
+        </p>
 
         {phase === 'question' ? (
           <form
@@ -354,8 +357,8 @@ export function FlashcardsClient() {
               role="status"
               className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
                 wasCorrect || overridden
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-[var(--lx-success)]'
-                  : 'border-rose-500/30 bg-rose-500/10 text-[var(--lx-danger)]'
+                  ? 'border-lx-success/30 bg-lx-success/10 text-lx-success'
+                  : 'border-lx-danger/30 bg-lx-danger/10 text-lx-danger'
               }`}
             >
               {wasCorrect || overridden ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
@@ -370,16 +373,8 @@ export function FlashcardsClient() {
             <p className="font-mono text-2xl font-semibold text-[var(--lx-accent)]">
               {current.display}
             </p>
-            <p className="text-sm text-[var(--lx-prose-body)]">
-              {current.entry.long.split('`').map((p, i) =>
-                i % 2 === 1 ? (
-                  <code key={i} className="rounded bg-[var(--lx-code-bg)] px-1 py-0.5 font-mono text-[0.85em]">
-                    {p}
-                  </code>
-                ) : (
-                  <span key={i}>{p}</span>
-                ),
-              )}
+            <p className="text-sm leading-relaxed text-lx-prose-body">
+              <RichText text={current.entry.long} />
             </p>
             {current.entry.examples.length > 0 && (
               <ul className="space-y-1">
@@ -428,7 +423,7 @@ function Stat({
   return (
     <div className="lx-card flex flex-col gap-1 p-4 text-left">
       <span className="text-xs uppercase tracking-wide text-[var(--lx-muted)]">{label}</span>
-      <span className={`text-2xl font-semibold ${accent ? 'text-[var(--lx-accent)]' : ''}`}>
+      <span className={`font-mono text-2xl font-semibold tabular-nums ${accent ? 'text-lx-accent' : ''}`}>
         {value}
         {suffix}
       </span>
@@ -456,7 +451,7 @@ function Chip({
       className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? 'border-[var(--lx-accent)] bg-[var(--lx-accent-glow)] text-[var(--lx-accent)]'
-          : 'border-[var(--lx-border)] text-[var(--lx-muted)] hover:border-[var(--lx-accent)]/40 hover:text-[var(--lx-accent)]'
+          : 'border-lx-border text-lx-muted hover:border-lx-accent/40 hover:text-lx-fg'
       }`}
     >
       {label} {count !== undefined && <span className="opacity-60">{count}</span>}

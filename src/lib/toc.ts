@@ -27,7 +27,8 @@ export function extractToc(markdown: string): TocEntry[] {
     if (line.startsWith('### ')) continue;
     const text = line.slice(3).trim();
     if (!text) continue;
-    entries.push({ id: slugify(text), text });
+    // Display text drops inline-markdown markers (`code`, **bold**).
+    entries.push({ id: slugify(text), text: text.replace(/[`*]/g, '') });
   }
   return entries;
 }

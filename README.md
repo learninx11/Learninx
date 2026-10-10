@@ -28,17 +28,18 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Explain a command** — paste a shell one-liner and get a breakdown of every command, option, value, pipe, and redirect, with links into the cheatsheet. `/explain?cmd=...` links share an explanation.
 - **Activity heatmap** — a year-long calendar on the profile page showing which days you learned something (lessons, quizzes, bosses, typing tests, and flashcards all count).
 - **Bookmarks & per-lesson notes** — bookmark lessons to revisit and keep a private scratchpad for each one. Saved lessons from every track are listed on `/lessons`. Everything is stored in your browser only.
-- **Achievements** — 19 unlockable badges (streaks, perfect quizzes, boss runs, study tools, tip exploration, typing speed, flashcards, active days, and a hidden *Completionist*). A toast pops up the moment a new one unlocks.
+- **Achievements** — 19 unlockable badges (streaks, perfect quizzes, boss runs, study tools, tip exploration, typing speed, flashcards, active days, and a hidden *Completionist*). A toast pops up the moment a new one unlocks (hover it to keep it on screen).
 - **Profile + export/import** — lifetime stats and a JSON backup you can take to another browser.
-- **Cmd/Ctrl+K command palette** for fast navigation across the site.
-- **Light & dark themes** with automatic detection and a per-browser toggle.
+- **Cmd/Ctrl+K command palette** — jump to any page, track, lesson, or sandbox command, pick up where you left off, or switch theme. The header's search button opens it too, and so does `/` on pages without their own search box.
+- **Light & dark themes** — follows the OS setting by default; the header toggle and the menu's System / Light / Dark switch remember a choice per browser. The sandbox terminal stays dark in both. Add `?theme=light` or `?theme=dark` to a URL to preview a theme without saving it.
+- **Responsive navigation** — active-page highlighting, a grouped menu on smaller screens, a streak chip in the header, and a footer site map.
 - **Streaks & points** (10 per lesson, 1 per correct quiz, 25 per boss, 5 per badge) tracked in a signed per-browser cookie / localStorage.
 - **Daily Linux tip** card on the home page, deterministic by UTC day. Includes a "Shuffle" button so visitors can browse the rest of the tip catalogue and an "N seen" counter that tracks unique tips surfaced.
 - **Table of contents** on long lessons, with active-section highlighting.
 - **Track-based lesson hub** — pick a track from `/lessons`, then search and filter within it (text + difficulty + completed / to-do / bookmarked). Filters can be deep-linked: `?hl=grep`, `?difficulty=beginner`, `?bookmarks=1`, or `?status=todo`.
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
-- Polished, terminal-inspired dark/light UI with a shared design-token system (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`).
-- Keyboard shortcuts: `g l` lessons, `g h` home, `g b` boss, `g c` cheatsheet, `g a` achievements, `g p` profile, `g t` typing, `g f` flashcards, `g e` explain, `/` focuses search, `Cmd/Ctrl+K` opens the palette.
+- Polished, terminal-inspired UI built on design tokens: theme colors are CSS variables, exposed to Tailwind as `lx-*` colors (`bg-lx-card`, `text-lx-muted`, `border-lx-accent/40`), plus a small component layer (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`). Inter and JetBrains Mono are self-hosted at build time by `next/font`.
+- Keyboard shortcuts: `g` then a letter jumps to a page (`g h` home, `g l` lessons, `g s` terminal, `g b` boss, `g c` cheatsheet, `g f` flashcards, `g t` typing, `g e` explain, `g a` achievements, `g p` profile), `[` / `]` step through lessons, `t` puts the cursor in a lesson's sandbox, `/` searches, `Cmd/Ctrl+K` opens the palette, and `?` lists them all.
 - Ships with Docker support for production-style deployments.
 
 ## Stack
@@ -122,12 +123,12 @@ learninx/
 │   └── copy-standalone-assets.mjs   # Idempotent post-build step
 └── src/
     ├── app/
-    │   ├── layout.tsx     # Root layout: skip link, nav, footer, theme + keyboard shortcuts + palette + toaster
+    │   ├── layout.tsx     # Root layout: fonts, pre-paint theme script, header, main, footer, shortcuts, palette, toaster
     │   ├── page.tsx       # Landing page (reads progress cookie, daily tip, streak widget)
     │   ├── loading.tsx    # Global loading state
     │   ├── not-found.tsx  # 404 page
     │   ├── _daily-tip.tsx # Client: daily Linux tip card
-    │   ├── _home-progress.tsx  # Client: home progress widgets
+    │   ├── _home-progress.tsx  # Client: hero CTA, welcome-back panel, closing CTA
     │   ├── achievements/
     │   │   ├── page.tsx              # Server shell
     │   │   └── _achievements-client.tsx # Client: badge grid + summary stats
@@ -160,17 +161,21 @@ learninx/
     │   ├── CompleteButton.tsx      # Manual "Mark complete" button
     │   ├── Markdown.tsx            # react-markdown wrapper (uses CodeBlock, adds heading ids)
     │   ├── CodeBlock.tsx           # Fenced code block with copy + language label
-    │   ├── ResetProgressButton.tsx # Wipes the progress cookie
-    │   ├── KeyboardShortcuts.tsx   # `g l`, `g h`, `g b`, `g c`, `g a`, `g p`, `g t` shortcuts
-    │   ├── CommandPalette.tsx      # Cmd/Ctrl+K palette with lesson + nav search
-    │   ├── ThemeToggle.tsx         # Dark/light theme switch
+    │   ├── SiteHeader.tsx          # Sticky header: nav with active state, search, theme, streak, menu
+    │   ├── SiteMain.tsx            # Page column (wider on lesson / boss / terminal pages)
+    │   ├── SiteFooter.tsx          # Footer site map
+    │   ├── Brand.tsx               # `~$ learninx` wordmark
+    │   ├── KeyboardShortcuts.tsx   # `g <letter>`, `[`/`]`, `t`, `/`, `?` shortcuts
+    │   ├── ShortcutsDialog.tsx     # `?` keyboard reference sheet
+    │   ├── CommandPalette.tsx      # Cmd/Ctrl+K palette: pages, tracks, lessons, commands, actions
+    │   ├── ThemeToggle.tsx         # Header light/dark toggle + System/Light/Dark switch
     │   ├── StreakWidget.tsx        # Card + inline variants of the streak widget
     │   ├── TableOfContents.tsx     # Sticky ToC for long lessons
     │   ├── BookmarkButton.tsx      # Per-lesson bookmark toggle
     │   ├── LessonNoteEditor.tsx    # Per-lesson scratchpad with autosave
     │   ├── AchievementBadge.tsx    # Inline-SVG medallion for a single achievement
     │   ├── AchievementToaster.tsx  # Bottom-right toast when a badge unlocks
-    │   └── ui/                     # Shared primitives (Icon, Pill, Card, ProgressBar, ScrollProgress)
+    │   └── ui/                     # Shared primitives (Icon, Pill, Card, ProgressBar, ScrollProgress, RichText)
     └── lib/
         ├── lessons.ts          # Lesson + quiz catalogue (plain TypeScript)
         ├── cheatsheet.ts       # Structured reference of every sandbox command
@@ -184,6 +189,11 @@ learninx/
         ├── progress-types.ts   # Shared ProgressState / QuizScore / StreakState types
         ├── progress-context.tsx # React context for progress
         ├── types.ts            # Shared types
+        ├── site-nav.ts         # Page list shared by header, menu, footer, palette, shortcuts
+        ├── theme.ts            # Theme preference hook (+ theme-script.ts, the pre-paint script)
+        ├── next-lesson.ts      # "Continue learning" target
+        ├── ui-events.ts        # Cross-component events (open palette / shortcuts, focus sandbox)
+        ├── use-modal.ts        # Escape, focus trap, scroll lock, focus restore for overlays
         └── shell/
             ├── fs.ts          # In-memory virtual filesystem
             └── evaluator.ts   # POSIX-style shell interpreter
@@ -237,27 +247,35 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 | `/cheatsheet`      | Searchable command reference                              |
 | `/boss`            | Index of multi-step boss challenges                       |
 | `/boss/[slug]`     | One boss level with per-step grading + sandbox            |
+| `/terminal`        | Free-practice sandbox with no lesson attached             |
 | `/typing`          | Typing test — type real shell commands against the clock  |
-| `/achievements`    | Grid of 16 unlockable badges                              |
-| `/profile`         | Lifetime stats, export / import, reset                    |
+| `/flashcards`      | Spaced-repetition review of every sandbox command         |
+| `/explain`         | Explain a shell one-liner, token by token                 |
+| `/achievements`    | Grid of 19 unlockable badges                              |
+| `/profile`         | Lifetime stats, activity heatmap, export / import, reset  |
 
 ## Key bindings
 
 | Shortcut                | Action                                  |
 | ----------------------- | --------------------------------------- |
-| `g` then `l`            | Jump to lessons                         |
 | `g` then `h`            | Jump to home                            |
+| `g` then `l`            | Jump to lessons                         |
+| `g` then `s`            | Jump to the terminal                    |
 | `g` then `b`            | Jump to boss levels                     |
 | `g` then `c`            | Jump to cheatsheet                      |
+| `g` then `f`            | Jump to flashcards                      |
+| `g` then `t`            | Jump to typing test                     |
+| `g` then `e`            | Jump to explain                         |
 | `g` then `a`            | Jump to achievements                    |
 | `g` then `p`            | Jump to profile                         |
-| `g` then `t`            | Jump to typing test                     |
+| `[` / `]` (on a lesson) | Previous / next lesson (`g n` also goes next) |
+| `t` (on a lesson)       | Put the cursor in the sandbox terminal  |
 | `Cmd` / `Ctrl` + `K`    | Open the command palette                |
-| `/`                     | Focus the search box on the current page|
-| `Esc`                   | Close the command palette               |
-| `↑` / `↓`               | Move within the palette / ToC           |
+| `/`                     | Focus the page's search box, or open the palette |
+| `?`                     | Show every shortcut                     |
+| `Esc`                   | Close the palette, a dialog, or the menu |
+| `↑` / `↓`               | Move within the palette                 |
 | `Enter`                 | Open the highlighted palette item       |
-| `t` (on a lesson)       | Focus the sandbox terminal              |
 
 ## Available shell commands
 
@@ -436,15 +454,15 @@ A few choices are deliberate and worth knowing if you plan to extend the project
 - **No xterm.js on the server.** The terminal is loaded client-side via dynamic imports inside a `useEffect` so xterm's browser-only globals never reach the server bundle. This is why the lesson page is small on the client initial payload.
 - **`output: 'standalone'`.** The Next.js config emits a runnable `server.js` plus a traced `node_modules/` directory. The Dockerfile's runtime stage copies just that.
 - **Server actions, not API routes.** All writes (lesson completion, challenge submission, quiz grading, progress reset) are Next.js Server Actions colocated with the lesson route under `src/app/lessons/[slug]/actions.ts`. This keeps the data flow explicit and visible.
-- **Design tokens, not magic colors.** `src/app/globals.css` defines `--lx-bg`, `--lx-card`, `--lx-accent`, etc. and a small component library (`.lx-card`, `.lx-btn`, `.lx-pill`, `.lx-input`, `.lx-progress`) is registered in `@layer components`. New pages should compose these instead of inventing one-off styles.
+- **Design tokens, not magic colors.** `src/app/globals.css` defines the palette (`--lx-bg`, `--lx-card`, `--lx-accent`, …) once for dark (`:root`) and once for light (`:root.light`); `.lx-theme-dark` pins a subtree, such as the terminal, to the dark palette. `tailwind.config.js` exposes every token as an `lx-*` color, so utilities like `bg-lx-surface` or `border-lx-success/30` follow the theme and accept opacity modifiers (a bare `bg-[var(--lx-success)]/10` silently generates no CSS in Tailwind 3). A small component library (`.lx-card`, `.lx-btn`, `.lx-pill`, `.lx-input`, `.lx-progress`) is registered in `@layer components`. New pages should compose these instead of inventing one-off styles.
 
 ## Keyboard shortcuts
 
+Press `?` anywhere for the full list. Inside the sandbox terminal:
+
 | Shortcut          | Action                       |
 | ----------------- | ---------------------------- |
-| `g` then `l`      | Jump to the lessons index    |
-| `g` then `h`      | Jump to the home page        |
-| `Tab` (in sandbox)| Autocomplete a command name  |
+| `Tab` (in sandbox)| Complete a command or path   |
 | `Ctrl+L` (sandbox)| Clear the terminal screen    |
 | `Ctrl+C` (sandbox)| Abandon the current line     |
 | `Ctrl+Shift+V`    | Paste from the clipboard     |

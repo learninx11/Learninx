@@ -432,6 +432,19 @@ export function getLessonNote(lessonId: string): LessonNote | null {
 
 // ──────────────────────────────────────── achievements ──
 
+/**
+ * Record achievements the learner had already earned without awarding
+ * points — used to catch up snapshots from before unlocks were saved.
+ */
+export function recordAchievements(ids: string[]): ProgressState {
+  const state = readRaw();
+  const missing = ids.filter((id) => !state.achievements.includes(id));
+  if (missing.length === 0) return state;
+  state.achievements.push(...missing);
+  writeRaw(state);
+  return state;
+}
+
 /** Unlock an achievement. Idempotent. Returns `true` if it was new. */
 export function unlockAchievement(id: string): { state: ProgressState; unlocked: boolean } {
   const state = readRaw();

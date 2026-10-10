@@ -3,135 +3,120 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getLessonNeighbours } from '@/lib/lesson-nav';
+import { NAV_GROUPS } from '@/lib/site-nav';
+import {
+  focusSandbox,
+  isModalOpen,
+  isTypingTarget,
+  openCommandPalette,
+  openShortcuts,
+  pageSearchInput,
+} from '@/lib/ui-events';
 
-/** Two-key keyboard shortcut handler. `g l` -> /lessons, `g h` -> /. */
+/** `g` + letter jumps, built from the site nav so the two never disagree. */
+const GO_TO: Record<string, string> = {
+  h: '/',
+  ...Object.fromEntries(NAV_GROUPS.flatMap((g) => g.items).map((i) => [i.shortcut, i.href])),
+};
+
+/**
+ * Site-wide single-key shortcuts (the full list lives in ShortcutsDialog):
+ * `g <letter>` jumps to a page, `/` searches, `?` shows the cheat sheet,
+ * and on a lesson `[` / `]` step through the catalogue and `t` focuses
+ * the sandbox. Nothing fires while typing in a field or with a dialog open.
+ */
 export function KeyboardShortcuts() {
   const router = useRouter();
 
   useEffect(() => {
-    let pending: ReturnType<typeof setTimeout> | null = null;
-    let last: string | null = null;
+    let awaitingGo = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // Shortcuts that move focus into a field do it when the key comes back
+    // up, so the keystroke's own character can't land in that field.
+    let focusOnKeyUp: (() => void) | null = null;
 
-    function isTextTarget(t: EventTarget | null) {
-      if (!(t instanceof HTMLElement)) return false;
-      const tag = t.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-      if (t.isContentEditable) return true;
-      return false;
+    function goToLesson(which: 'previous' | 'next', event: KeyboardEvent) {
+      const target = getLessonNeighbours()?.[which];
+      if (!target) return;
+      event.preventDefault();
+      router.push(`/lessons/${target.slug}`);
     }
 
-    function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (isTextTarget(e.target)) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isTypingTarget(event.target) || isModalOpen()) return;
+      const key = event.key;
 
-      const key = e.key.toLowerCase();
-
-      if (last === 'g' && key === 'l') {
-        e.preventDefault();
-        router.push('/lessons');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'h') {
-        e.preventDefault();
-        router.push('/');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'b') {
-        e.preventDefault();
-        router.push('/boss');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'a') {
-        e.preventDefault();
-        router.push('/achievements');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'p') {
-        e.preventDefault();
-        router.push('/profile');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 't') {
-        e.preventDefault();
-        router.push('/typing');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'c') {
-        e.preventDefault();
-        router.push('/cheatsheet');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'f') {
-        e.preventDefault();
-        router.push('/flashcards');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'e') {
-        e.preventDefault();
-        router.push('/explain');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 's') {
-        e.preventDefault();
-        router.push('/terminal');
-        last = null;
-        if (pending) clearTimeout(pending);
-        return;
-      }
-      if (last === 'g' && key === 'n') {
-        const next = getLessonNeighbours()?.next;
-        if (next) {
-          e.preventDefault();
-          router.push(`/lessons/${next.slug}`);
-          last = null;
-          if (pending) clearTimeout(pending);
+      if (awaitingGo) {
+        awaitingGo = false;
+        if (timer) clearTimeout(timer);
+        const lower = key.toLowerCase();
+        if (lower === 'n') {
+          goToLesson('next', event);
           return;
         }
-      }
-      if (last === 'g' && key === 'p') {
-        const prev = getLessonNeighbours()?.previous;
-        if (prev) {
-          e.preventDefault();
-          router.push(`/lessons/${prev.slug}`);
-          last = null;
-          if (pending) clearTimeout(pending);
-          return;
+        const href = GO_TO[lower];
+        if (href) {
+          event.preventDefault();
+          router.push(href);
         }
-      }
-
-      if (key === 'g') {
-        last = 'g';
-        if (pending) clearTimeout(pending);
-        pending = setTimeout(() => {
-          last = null;
-        }, 800);
         return;
       }
-      last = null;
+
+      switch (key) {
+        case 'g':
+          awaitingGo = true;
+          timer = setTimeout(() => {
+            awaitingGo = false;
+          }, 1000);
+          return;
+        case '?':
+          event.preventDefault();
+          openShortcuts();
+          return;
+        case '/': {
+          event.preventDefault();
+          const input = pageSearchInput();
+          if (input) {
+            focusOnKeyUp = () => {
+              input.focus();
+              input.select();
+            };
+          } else {
+            openCommandPalette();
+          }
+          return;
+        }
+        case '[':
+          goToLesson('previous', event);
+          return;
+        case ']':
+          goToLesson('next', event);
+          return;
+        case 't':
+          if (document.querySelector('[data-lx-sandbox]')) {
+            event.preventDefault();
+            focusOnKeyUp = () => {
+              focusSandbox();
+            };
+          }
+          return;
+      }
+    }
+
+    function onKeyUp() {
+      if (!focusOnKeyUp) return;
+      const run = focusOnKeyUp;
+      focusOnKeyUp = null;
+      run();
     }
 
     window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
     return () => {
       window.removeEventListener('keydown', onKey);
-      if (pending) clearTimeout(pending);
+      window.removeEventListener('keyup', onKeyUp);
+      if (timer) clearTimeout(timer);
     };
   }, [router]);
 

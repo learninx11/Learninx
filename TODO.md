@@ -219,6 +219,49 @@ ships in the GitHub Pages static export — no server required.
 - [x] `gcloud` cheatsheet entry (new **Cloud** category), explainer flags
       and subcommands, and three typing-test snippets.
 
+## Done in this pass (6) — UI/UX overhaul
+
+- [x] **Light theme for real** — the README promised one, but there was no
+      light palette, toggle, or pre-paint script. Now: dark and light token
+      sets, System / Light / Dark preference, no flash on load, and the
+      sandbox terminal pinned dark in both.
+- [x] **Fixed ~50 invisible styles** — classes like `bg-[var(--lx-success)]/10`
+      generate no CSS in Tailwind 3, so success tints, completed-lesson tiles,
+      and accent borders never rendered. Tokens are now Tailwind `lx-*` colors
+      that accept opacity modifiers.
+- [x] **New header, menu, and footer** — active-page indicator, header search
+      button (it used to render above the header), grouped menu for smaller
+      screens (the phone header only linked Lessons and Profile), streak chip,
+      footer site map. Reset moved out of the header to the profile page's
+      danger zone.
+- [x] **Command palette** — combobox/listbox semantics, focus trap and restore,
+      scroll-follow fix, title-weighted ranking, sandbox commands as results,
+      "Continue learning", theme and shortcut actions.
+- [x] **Keyboard** — `?` shortcuts sheet, `[` / `]` lesson navigation (the old
+      `g p` hint for "previous" actually went to Profile), one owner for `/`
+      (it used to open the palette over the page's own search), `t` without
+      typing a stray "t".
+- [x] **Lesson page** — wider reading column with a left table-of-contents rail
+      (collapsible on smaller screens), breadcrumb, position within the track,
+      sandbox placed under the challenge on phones with a jump button, quiz
+      submits with Enter and keeps right answers on retry, filled bookmark
+      state, notes with confirm-before-clear. The terminal no longer grabs
+      keyboard focus on load.
+- [x] **Home** — hero with an illustrative sandbox session, stats strip,
+      welcome-back panel, calls to action that go to the actual next lesson,
+      daily tip that collapses instead of leaving an empty column.
+- [x] **Content** — backticked text in lesson descriptions, challenges, tips,
+      cheatsheet, flashcards, and boss steps renders as inline code instead of
+      showing raw backticks; markdown lists show bullets; tables scroll on phones.
+- [x] **Fixes found along the way** — achievement toasts never fired, badges
+      were never saved, and the +5 points per badge were never awarded (the
+      unlock check compared the state from before each change); existing
+      badges are now recorded quietly on load. Reduced-motion users got
+      `transition: all 0.01ms` on
+      every element, which broke xterm's character measuring (gappy terminal
+      text); mobile grid overflow on the home page and cheatsheet; iOS zoom on
+      small inputs; Mac hydration mismatch in the shortcut label.
+
 ## Future ideas
 
 - [ ] Optional syntax highlighting in markdown via `rehype-pretty-code`

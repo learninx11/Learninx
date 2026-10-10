@@ -415,58 +415,61 @@ export function TypingTestClient() {
     <>
       {isZen && (
         <div
-          className="fixed inset-0 z-[199] bg-slate-950/90 backdrop-blur-sm"
+          className="fixed inset-0 z-[199] bg-lx-bg/95 backdrop-blur-sm"
           onClick={() => setIsZen(false)}
           aria-hidden
         />
       )}
-      <div className="space-y-12">
+      <div className="space-y-10">
         <header className="space-y-3 pt-6 text-center sm:pt-10">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 font-mono text-xs text-[var(--lx-accent)]">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-lx-border bg-lx-surface px-3 py-1 font-mono text-xs text-lx-accent">
             <GamepadIcon size={12} /> ~/typing $ time bash
           </div>
           <h1 className="text-balance text-3xl font-bold sm:text-4xl">Typing test</h1>
-          <p className="mx-auto max-w-2xl text-pretty text-sm text-slate-400 sm:text-base">
-            Type the command exactly as shown, as fast and as accurately as you can.
-            <strong className="text-slate-300"> Practice</strong> is one snippet at a time,
-            no pressure. <strong className="text-slate-300">Take Test</strong> is a focused
-            3-minute sprint across as many snippets as you can get through. Commands start{' '}
-            <strong className="text-slate-300">Beginner</strong> and ramp up through{' '}
-            <strong className="text-slate-300">Intermediate</strong>,{' '}
-            <strong className="text-slate-300">Advanced</strong>, and{' '}
-            <strong className="text-slate-300">Expert</strong> as you clear rounds. Hitting 30
-            WPM unlocks the <em>Fast fingers</em> badge; 60 WPM unlocks <em>Lightning</em> —
-            either mode counts.
+          <p className="mx-auto max-w-2xl text-pretty text-sm text-lx-muted sm:text-base">
+            Type real shell commands exactly as shown, as fast and as accurately as you can.
+            Commands ramp up from Beginner to Expert as you clear rounds. 30 WPM unlocks the{' '}
+            <em className="text-lx-fg">Fast fingers</em> badge and 60 WPM unlocks{' '}
+            <em className="text-lx-fg">Lightning</em> — in either mode.
           </p>
         </header>
 
-        <div className="mx-auto flex w-fit gap-1 rounded-full border border-[var(--lx-border)] bg-slate-900/40 p-1">
-          <button
-            type="button"
-            onClick={() => switchMode('practice')}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              mode === 'practice'
-                ? 'bg-[var(--lx-accent)] text-slate-950'
-                : 'text-slate-400 hover:text-[var(--lx-fg)]'
-            }`}
+        <div className="flex flex-col items-center gap-2">
+          <div
+            role="group"
+            aria-label="Mode"
+            className="flex w-fit gap-1 rounded-full border border-lx-border bg-lx-surface p-1"
           >
-            Practice
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode('test')}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              mode === 'test'
-                ? 'bg-[var(--lx-accent)] text-slate-950'
-                : 'text-slate-400 hover:text-[var(--lx-fg)]'
-            }`}
-          >
-            Take Test · 3 min
-          </button>
+            <button
+              type="button"
+              onClick={() => switchMode('practice')}
+              aria-pressed={mode === 'practice'}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                mode === 'practice' ? 'bg-lx-accent text-lx-accent-contrast' : 'text-lx-muted hover:text-lx-fg'
+              }`}
+            >
+              Practice
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('test')}
+              aria-pressed={mode === 'test'}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                mode === 'test' ? 'bg-lx-accent text-lx-accent-contrast' : 'text-lx-muted hover:text-lx-fg'
+              }`}
+            >
+              Take Test · 3 min
+            </button>
+          </div>
+          <p className="text-xs text-lx-subtle">
+            {mode === 'practice'
+              ? 'One snippet at a time, no clock pressure.'
+              : 'A three-minute sprint through as many snippets as you can.'}
+          </p>
         </div>
 
         <section className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             <Stat label="WPM" value={liveWpm} />
             <Stat label="Accuracy" value={`${accuracy}%`} />
             <Stat
@@ -529,7 +532,7 @@ export function TypingTestClient() {
           </div>
 
           {isZen && (
-            <div className="flex flex-wrap items-center gap-4 font-mono text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-4 font-mono text-xs tabular-nums text-lx-muted">
               <span>{liveWpm} WPM</span>
               <span>{accuracy}% accuracy</span>
               <span>{formatSeconds(mode === 'test' ? testRemainingMs : elapsedMs)}</span>
@@ -560,10 +563,10 @@ export function TypingTestClient() {
                   <span
                     className={
                       state === 'correct'
-                        ? 'text-emerald-300'
+                        ? 'text-lx-success'
                         : state === 'wrong'
-                          ? 'text-rose-400 underline decoration-rose-500/60 underline-offset-2'
-                          : 'text-slate-500'
+                          ? 'rounded-sm bg-lx-danger/15 text-lx-danger underline decoration-lx-danger/60 underline-offset-2'
+                          : 'text-lx-subtle'
                     }
                   >
                     {ch}
@@ -579,7 +582,7 @@ export function TypingTestClient() {
             )}
           </p>
 
-          <p className="text-sm text-slate-400">{snippet.usage}</p>
+          <p className="text-sm text-lx-muted">{snippet.usage}</p>
 
           <input
             ref={inputRef}
@@ -603,7 +606,7 @@ export function TypingTestClient() {
             disabled={status === 'finished'}
           />
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-lx-subtle">
             {mode === 'practice' && status === 'idle' && 'Press a key to start the timer.'}
             {mode === 'practice' && status === 'running' && typed === snippet.text && (
               <>Press <kbd className="lx-kbd">Enter</kbd> to submit.</>
@@ -668,7 +671,7 @@ export function TypingTestClient() {
                 <Stat label="Characters typed" value={state.bestTyping.length} />
               </div>
             ) : (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-lx-muted">
                 No runs yet on this browser. Finish a snippet (or a full test) to set a baseline.
               </p>
             )}
@@ -681,9 +684,9 @@ export function TypingTestClient() {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="lx-card flex flex-col items-center gap-1 p-4 text-center">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-      <span className="text-2xl font-semibold text-[var(--lx-fg)]">{value}</span>
+    <div className="lx-card flex flex-col items-center gap-1 px-2 py-4 text-center sm:p-4">
+      <span className="text-[0.7rem] uppercase tracking-wide text-lx-subtle sm:text-xs">{label}</span>
+      <span className="font-mono text-xl font-semibold tabular-nums text-lx-fg sm:text-2xl">{value}</span>
     </div>
   );
 }
