@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ChallengeRunner } from '@/components/ChallengeRunner';
 import { CompleteButton } from '@/components/CompleteButton';
 import { LessonQuiz } from '@/components/LessonQuiz';
 import { Markdown } from '@/components/Markdown';
 import { useProgress } from '@/lib/progress-context';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
-import { TerminalClient as Terminal } from '@/components/TerminalClient';
 import { Pill } from '@/components/ui/Pill';
 import { RichText } from '@/components/ui/RichText';
 import { TableOfContents } from '@/components/TableOfContents';
@@ -18,7 +17,6 @@ import { BookmarkButton } from '@/components/BookmarkButton';
 import { LessonNoteEditor } from '@/components/LessonNoteEditor';
 import { ShareButton } from '@/components/ShareButton';
 import {
-  ArrowDownIcon,
   ArrowRightIcon,
   BoltIcon,
   BrainIcon,
@@ -27,12 +25,9 @@ import {
   ChevronRightIcon,
   ClockIcon,
   SparklesIcon,
-  TerminalIcon,
 } from '@/components/ui/Icon';
 import { TrackIcon } from '@/components/TrackIcon';
 import { TRACK_LABEL, TRACK_SHORT_LABEL } from '@/lib/lesson-tracks';
-import { focusSandbox } from '@/lib/ui-events';
-import { useMediaQuery } from '@/lib/use-media-query';
 import type { Lesson, LessonTrack, QuizQuestion } from '@/lib/types';
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -64,9 +59,6 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
   const readingMinutes = Math.max(1, Math.round(lesson.content.length / 1100));
   const toc = useMemo(() => extractToc(lesson.content), [lesson.content]);
   const hasToc = toc.length >= 2;
-  // The sandbox sits in its own sticky column from `lg` up. Below that it
-  // is placed right under the challenge, where the learner needs it.
-  const sideBySide = useMediaQuery('(min-width: 1024px)', true);
   const { previous, next } = neighbours;
 
   // Publish this lesson's prev/next neighbours so the global
@@ -79,57 +71,12 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
     return () => setLessonNeighbours(null);
   }, [previous, next]);
 
-  const sandbox = (
-    <aside
-      id="sandbox"
-      data-lx-sandbox
-      aria-label="Practice sandbox"
-      className="scroll-mt-20 space-y-3 lg:sticky lg:top-20 lg:self-start"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-medium text-lx-muted">
-          <TerminalIcon size={14} /> Sandbox
-        </h2>
-        {completed ? (
-          <Pill tone="success">
-            <CheckIcon size={10} /> Challenge solved
-          </Pill>
-        ) : (
-          <span className="hidden text-xs text-lx-subtle lg:inline">
-            Press <kbd className="lx-kbd">t</kbd> to type here
-          </span>
-        )}
-      </div>
-      <div className="h-[60vh] min-h-[380px] lg:h-[calc(100vh-8rem)] lg:min-h-[420px]">
-        <Terminal
-          className="h-full"
-          suggestion={
-            lesson.solution
-              ? {
-                  command: lesson.trackCommand ?? lesson.solution,
-                  expected: lesson.solution,
-                }
-              : lesson.trackCommand
-                ? { command: lesson.trackCommand, expected: lesson.trackCommand }
-                : undefined
-          }
-        />
-      </div>
-    </aside>
-  );
-
   const nextIsNewTrack = next !== null && next.track !== lesson.track;
 
   return (
     <>
       <ScrollProgress />
-      <div
-        className={`grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] ${
-          hasToc
-            ? 'xl:grid-cols-[13rem_minmax(0,1fr)_minmax(0,460px)]'
-            : 'xl:grid-cols-[minmax(0,1fr)_minmax(0,500px)]'
-        }`}
-      >
+      <div className={`grid gap-8 ${hasToc ? 'xl:grid-cols-[13rem_minmax(0,1fr)]' : ''}`}>
         {hasToc && <TableOfContents entries={toc} variant="rail" />}
 
         <article className="min-w-0 space-y-8">
@@ -214,16 +161,8 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
                 <RichText text={lesson.challenge} />
               </p>
               <ChallengeRunner lessonId={lesson.id} lessonSolution={lesson.solution} />
-              <p className="mt-3 text-xs text-lx-subtle">
-                Try it in the sandbox
-                <span className="hidden lg:inline"> on the right</span>
-                <span className="lg:hidden"> below</span>, then enter the command you
-                ended up with here.
-              </p>
             </section>
           )}
-
-          {!sideBySide && sandbox}
 
           {questions.length > 0 && (
             <section id="quiz" aria-labelledby="quiz-heading" className="lx-card scroll-mt-24 p-5 sm:p-6">
@@ -332,42 +271,8 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
           </nav>
         </article>
 
-        {sideBySide && sandbox}
       </div>
 
-      {!sideBySide && <SandboxJumpButton />}
     </>
-  );
-}
-
-/**
- * Below `lg` the sandbox lives in the page flow, so offer a floating
- * shortcut to it whenever it is off screen.
- */
-function SandboxJumpButton() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = document.querySelector('[data-lx-sandbox]');
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => setVisible(!entry.isIntersecting), {
-      threshold: 0.1,
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <button
-      type="button"
-      onClick={() => focusSandbox()}
-      tabIndex={visible ? 0 : -1}
-      aria-hidden={!visible}
-      className={`fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-lx-accent/40 bg-lx-surface-strong px-4 py-2.5 text-sm font-semibold text-lx-accent shadow-lx-lg transition duration-200 ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
-      }`}
-    >
-      <TerminalIcon size={15} /> Sandbox <ArrowDownIcon size={14} />
-    </button>
   );
 }

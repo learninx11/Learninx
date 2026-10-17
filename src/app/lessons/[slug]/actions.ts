@@ -64,7 +64,7 @@ export async function submitChallengeAction(
 
   return {
     ok: false,
-    message: 'Not quite — try again, or peek at the hint in the sandbox.',
+    message: 'Not quite — try again.',
   };
 }
 
