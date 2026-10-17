@@ -1,8 +1,8 @@
 /**
  * Window-level events that let unrelated client components talk without
  * prop drilling: the header's search button opens the palette, the
- * palette opens the shortcuts sheet, the global key handler focuses a
- * lesson's sandbox, and so on.
+ * palette opens the shortcuts sheet, the global key handler focuses the
+ * practice terminal, and so on.
  */
 
 export const OPEN_PALETTE_EVENT = 'lx:open-palette';

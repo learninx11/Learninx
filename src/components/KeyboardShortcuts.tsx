@@ -22,8 +22,9 @@ const GO_TO: Record<string, string> = {
 /**
  * Site-wide single-key shortcuts (the full list lives in ShortcutsDialog):
  * `g <letter>` jumps to a page, `/` searches, `?` shows the cheat sheet,
- * and on a lesson `[` / `]` step through the catalogue and `t` focuses
- * the sandbox. Nothing fires while typing in a field or with a dialog open.
+ * on a lesson `[` / `]` step through the catalogue, and on the terminal
+ * page `t` focuses the terminal. Nothing fires while typing in a field or
+ * with a dialog open.
  */
 export function KeyboardShortcuts() {
   const router = useRouter();

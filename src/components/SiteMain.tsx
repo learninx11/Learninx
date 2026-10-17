@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { isWideRoute } from '@/lib/site-nav';
 
-/** The page column — wider on pages that put a sandbox beside the content. */
+/** The page column — wider on pages that put a terminal beside the content. */
 export function SiteMain({ children }: { children: ReactNode }) {
   const wide = isWideRoute(usePathname() ?? '/');
   return (

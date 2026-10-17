@@ -24,7 +24,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
+  ExternalLinkIcon,
   SparklesIcon,
+  TerminalIcon,
 } from '@/components/ui/Icon';
 import { TrackIcon } from '@/components/TrackIcon';
 import { TRACK_LABEL, TRACK_SHORT_LABEL } from '@/lib/lesson-tracks';
@@ -76,7 +78,12 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
   return (
     <>
       <ScrollProgress />
-      <div className={`grid gap-8 ${hasToc ? 'xl:grid-cols-[13rem_minmax(0,1fr)]' : ''}`}>
+      {/* A readable column, with the table of contents beside it on wide screens. */}
+      <div
+        className={`mx-auto grid max-w-3xl gap-8 ${
+          hasToc ? 'xl:max-w-none xl:grid-cols-[13rem_minmax(0,48rem)] xl:justify-center' : ''
+        }`}
+      >
         {hasToc && <TableOfContents entries={toc} variant="rail" />}
 
         <article className="min-w-0 space-y-8">
@@ -137,7 +144,7 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
 
           <TableOfContents entries={toc} variant="inline" />
 
-          <Markdown content={lesson.content} />
+          <Markdown content={lesson.content} afterHeading={{ 'Try it': <TryItNote /> }} />
 
           {lesson.challenge && (
             <section
@@ -161,6 +168,11 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
                 <RichText text={lesson.challenge} />
               </p>
               <ChallengeRunner lessonId={lesson.id} lessonSolution={lesson.solution} />
+              <p className="mt-3 text-xs text-lx-subtle">
+                Want to experiment first? Try things in the{' '}
+                <PracticeTerminalLink className="font-medium text-lx-accent hover:underline" />, then
+                enter the command that solves the task here.
+              </p>
             </section>
           )}
 
@@ -274,5 +286,29 @@ export function LessonDetailClient({ lesson, neighbours, trackPosition, question
       </div>
 
     </>
+  );
+}
+
+/** Shown under each "Try it" heading, where the lesson asks the reader to run commands. */
+function TryItNote() {
+  return (
+    <div className="flex items-start gap-2 text-sm text-lx-muted">
+      <TerminalIcon size={15} className="mt-0.5 shrink-0 text-lx-accent" />
+      <span>
+        Run these in the <PracticeTerminalLink />. It opens in a new tab, so you keep your
+        place here.
+      </span>
+    </div>
+  );
+}
+
+/** A link to the free-practice terminal that opens beside the lesson, in a new tab. */
+function PracticeTerminalLink({ className }: { className?: string }) {
+  return (
+    <a href="/terminal" target="_blank" rel="noreferrer" className={className}>
+      practice terminal
+      <ExternalLinkIcon size={12} className="ml-1 inline-block align-[-0.1em]" />
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
   );
 }

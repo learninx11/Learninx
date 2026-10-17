@@ -34,7 +34,7 @@ export interface Lesson {
   order: number;
   /** Markdown body. */
   content: string;
-  /** A command the sandbox surfaces as a "Run hint" button. Optional. */
+  /** The lesson's headline command, matched by lesson search. Optional. */
   trackCommand?: string;
   /** Challenge prompt shown to the learner. Optional. */
   challenge?: string;

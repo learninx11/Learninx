@@ -1,6 +1,8 @@
+import { isValidElement, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './CodeBlock';
+import { ExternalLinkIcon } from './ui/Icon';
 import { slugify } from '@/lib/toc';
 
 /**
@@ -16,7 +18,18 @@ function cleanHeading(text: string): string {
     .trim();
 }
 
-export function Markdown({ content }: { content: string }) {
+/**
+ * `afterHeading` maps an h2's text to something rendered right below it —
+ * the lesson page uses it to point each "Try it" section at the practice
+ * terminal.
+ */
+export function Markdown({
+  content,
+  afterHeading,
+}: {
+  content: string;
+  afterHeading?: Record<string, ReactNode>;
+}) {
   return (
     <div className="prose-lx">
       <ReactMarkdown
@@ -32,9 +45,12 @@ export function Markdown({ content }: { content: string }) {
             const text = cleanHeading(extractText(children));
             const id = text ? slugify(text) : undefined;
             return (
-              <h2 id={id} className="scroll-mt-24">
-                {children}
-              </h2>
+              <>
+                <h2 id={id} className="scroll-mt-24">
+                  {children}
+                </h2>
+                {text && afterHeading?.[text]}
+              </>
             );
           },
           h3({ children }) {
@@ -44,6 +60,17 @@ export function Markdown({ content }: { content: string }) {
               <h3 id={id} className="scroll-mt-24">
                 {children}
               </h3>
+            );
+          },
+          a({ href, children }) {
+            // Links in lesson text are references to read alongside the
+            // lesson, so they open in a new tab and the reader keeps their place.
+            return (
+              <a href={href} target="_blank" rel="noreferrer">
+                {children}
+                <ExternalLinkIcon size={12} className="ml-1 inline-block align-[-0.1em]" />
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
             );
           },
           table({ children }) {
@@ -56,21 +83,13 @@ export function Markdown({ content }: { content: string }) {
           pre({ children }) {
             // react-markdown wraps fenced code blocks in <pre><code>...
             // unwrap to get the <code> child (so we can read its className)
-            // and forward to our CodeBlock for the copy button.
-            if (
-              children &&
-              Array.isArray(children) &&
-              children[0] &&
-              typeof children[0] === 'object' &&
-              'props' in children[0]
-            ) {
-              const child = children[0] as React.ReactElement<{
-                className?: string;
-                children?: React.ReactNode;
-              }>;
+            // and forward to our CodeBlock for the copy button. A lone child
+            // arrives as the element itself, not a one-item array.
+            const code = Array.isArray(children) ? children[0] : children;
+            if (isValidElement<{ className?: string; children?: ReactNode }>(code)) {
               return (
-                <CodeBlock className={child.props.className}>
-                  {child.props.children}
+                <CodeBlock className={code.props.className}>
+                  {code.props.children}
                 </CodeBlock>
               );
             }

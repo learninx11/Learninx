@@ -6,9 +6,9 @@ import { TerminalClient } from '@/components/TerminalClient';
 import { ListIcon, ResetIcon, TerminalIcon } from '@/components/ui/Icon';
 
 /**
- * A dedicated, lesson-free terminal. Unlike the sandbox embedded on a
- * lesson page, this one has no challenge and no suggested command — it's
- * just a shell to practice in. "New session" remounts <TerminalClient>
+ * A dedicated, lesson-free terminal: no challenge and no suggested
+ * command, just a shell to practice in. Lessons link here (in a new tab)
+ * from their "Try it" sections and challenges. "New session" remounts <TerminalClient>
  * (via `key`) to get a fresh filesystem, history, and job list.
  */
 export function TerminalPageClient() {

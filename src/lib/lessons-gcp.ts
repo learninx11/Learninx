@@ -58,7 +58,7 @@ export const GCP_LESSONS: Lesson[] = [
 
 The earlier cloud lessons covered ideas every provider shares. This lesson and the seven after it make those ideas concrete on **Google Cloud** (often called GCP), using the official documentation's own terms and the real \`gcloud\` commands.
 
-> The sandbox simulates \`gcloud\`. Nothing you type here touches a real Google Cloud account, but every command works the same way on a real project.
+> The practice terminal simulates \`gcloud\`. Nothing you type there touches a real Google Cloud account, but every command works the same way on a real project.
 
 ## The resource hierarchy
 

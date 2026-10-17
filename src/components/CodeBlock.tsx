@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { CheckCheckIcon, CopyIcon } from '@/components/ui/Icon';
 
 /**
- * Renders a fenced code block with a small "Copy" button in the top-right
- * corner and a language label. react-markdown passes the inner <code>
- * element as children; we extract its className to read the language tag.
+ * Renders a fenced code block under a slim toolbar with the language label
+ * and a "Copy" button, so neither ever covers the code. react-markdown
+ * passes the inner <code> element as children; we extract its className to
+ * read the language tag.
  */
 export function CodeBlock({
   className,
@@ -35,18 +36,19 @@ export function CodeBlock({
   }
 
   return (
-    <div className="group relative">
-      <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
+    <div className="lx-codeblock">
+      <div className="flex items-center gap-2 border-b border-lx-border px-3 py-1">
         {lang && (
-          <span className="pointer-events-none rounded border border-lx-border bg-lx-surface-strong px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-lx-subtle">
+          <span className="font-mono text-[0.65rem] uppercase tracking-wider text-lx-subtle">
             {lang}
           </span>
         )}
-        {/* Hover-only on devices that can hover; always visible on touch screens. */}
         <button
           type="button"
           onClick={copy}
-          className="inline-flex items-center gap-1 rounded border border-lx-border bg-lx-surface-strong px-1.5 py-1 text-[0.7rem] text-lx-muted transition hover:border-lx-accent hover:text-lx-accent focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
+          className={`-mr-1.5 ml-auto inline-flex items-center gap-1 rounded px-1.5 py-1 text-[0.7rem] transition hover:text-lx-accent ${
+            copied ? 'text-lx-success' : 'text-lx-muted'
+          }`}
           aria-label={copied ? 'Copied' : 'Copy code'}
         >
           {copied ? (

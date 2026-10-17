@@ -262,6 +262,25 @@ ships in the GitHub Pages static export — no server required.
       text); mobile grid overflow on the home page and cheatsheet; iOS zoom on
       small inputs; Mac hydration mismatch in the shortcut label.
 
+## Done in this pass (7) — Lessons without the sandbox
+
+- [x] **Lesson page** — the embedded sandbox is gone, so the lesson is a
+      single reading column (about 48rem) beside the table of contents, in
+      the standard-width container instead of the wide one.
+- [x] **Somewhere to practise** — every `## Try it` heading gets a note
+      linking to the practice terminal (`/terminal`), and the challenge
+      card links there too. Both open in a new tab so the reader keeps
+      their place; so do links inside lesson markdown.
+- [x] **Code blocks** — the copy button and language label never rendered
+      (react-markdown passes a lone `<code>` child, not a one-item array).
+      They now sit in a slim toolbar above the code, so they never cover it
+      and Copy is visible on touch screens.
+- [x] **Wording** — lesson notes say "the practice terminal" instead of
+      "this sandbox" or "the terminal on the right"; the vim challenge no
+      longer asks for an in-lesson preview; the shortcuts sheet, home page,
+      and README no longer promise a sandbox on every lesson. `t` now only
+      applies on `/terminal`.
+
 ## Future ideas
 
 - [ ] Optional syntax highlighting in markdown via `rehype-pretty-code`

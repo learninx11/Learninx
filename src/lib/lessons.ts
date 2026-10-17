@@ -38,7 +38,7 @@ When you open a terminal, you see a *prompt* that ends with a dollar sign \`$\`.
 
 ## Your first commands
 
-Try these in the terminal on the right:
+Try these in the [practice terminal](/terminal):
 
 \`\`\`bash
 whoami          # show your current user
@@ -213,7 +213,7 @@ history | grep cd        # find cd commands you've already run
 
 You can chain more than two: \`cat access.log | grep ERROR | wc -l\` counts how many lines mention "ERROR".
 
-> This sandbox keeps things approachable and does not separately model stderr (\`2>\`) - everything a command prints goes through the same stream you see redirected with \`>\`.
+> The practice terminal keeps things approachable and does not separately model stderr (\`2>\`) - everything a command prints goes through the same stream you see redirected with \`>\`.
 
 ## Try it
 
@@ -884,7 +884,7 @@ exit 0
 
 By convention, \`0\` means success and any non-zero number means failure. This is exactly how the \`&&\` and \`||\` chains you learned earlier, and every CI pipeline, decide whether a step "worked."
 
-> This browser sandbox is a small teaching REPL, not a full shell interpreter - it does not execute \`if\`, \`for\`, \`while\`, or \`./script.sh\`. Use it to build and inspect script *files*; run them for real in an actual Linux terminal or WSL to see the control flow in action.
+> The practice terminal is a small teaching REPL, not a full shell interpreter - it does not execute \`if\`, \`for\`, \`while\`, or \`./script.sh\`. Use it to build and inspect script *files*; run them for real in an actual Linux terminal or WSL to see the control flow in action.
 
 ## Try it
 
@@ -1070,7 +1070,7 @@ journalctl -u nginx -f       # follow new lines live, like tail -f
 journalctl -b                # everything logged since the last boot
 \`\`\`
 
-> This sandbox simulates both \`systemctl\` and \`journalctl\` so you can practice the full workflow below - just keep in mind \`journalctl\`'s log lines are generated on the spot rather than reflecting anything \`systemctl\` actually did, and \`-f\` can't truly stream new lines the way it does on a real system.
+> The practice terminal simulates both \`systemctl\` and \`journalctl\` so you can practice the full workflow below - just keep in mind \`journalctl\`'s log lines are generated on the spot rather than reflecting anything \`systemctl\` actually did, and \`-f\` can't truly stream new lines the way it does on a real system.
 
 ## Try it
 
@@ -1264,7 +1264,7 @@ WantedBy=timers.target
 
 Which one you reach for is mostly a matter of what the system already uses: cron is simpler and universal across every Unix-like system; systemd timers integrate better if everything else on the box is already a systemd service.
 
-> This sandbox simulates \`crontab\` and \`at\` well enough to practice the real commands below - just keep in mind nothing is actually scheduled in the background afterward, since a browser tab has no daemon sitting behind it the way a real system does.
+> The practice terminal simulates \`crontab\` and \`at\` well enough to practice the real commands below - just keep in mind nothing is actually scheduled in the background afterward, since a browser tab has no daemon sitting behind it the way a real system does.
 
 ## Try it
 
@@ -1400,7 +1400,7 @@ umount /mnt/data
     order: 18,
     trackCommand: 'vim',
     challenge:
-      'Create `notes.txt` containing the line `first draft`, open it in vim to see the sandbox preview, then append the line `reviewed` to it - all using commands this sandbox actually runs.',
+      'Create `notes.txt` containing the line `first draft`, then append the line `reviewed` to it - in one line, without opening an editor. Open the file in vim in the practice terminal afterwards to check your work.',
     solution: 'echo "first draft" > notes.txt && echo "reviewed" >> notes.txt',
     content: `# Vim Editor Mastery
 
@@ -1466,7 +1466,7 @@ That last one is the command you'll type most often once you're comfortable - it
 | \`:wq\` or \`ZZ\` | save and quit |
 | \`:q!\` | quit and discard changes |
 
-> Typing \`vim <file>\` (or \`vi <file>\`) on its own line in this sandbox opens a **real, interactive vim session** - the modes and motions above all work for real. Two simplifications versus real vim: Visual mode (\`v\`/\`V\`/\`Ctrl-v\`) always selects whole lines here, like real vim's Visual *Line* mode specifically, and \`.\` (repeat last change) isn't implemented. Piping or chaining \`vim\` with another command falls back to a read-only preview instead, since a full-screen app doesn't compose with pipes in a way that means anything.
+> Typing \`vim <file>\` (or \`vi <file>\`) on its own line in the practice terminal opens a **real, interactive vim session** - the modes and motions above all work for real. Two simplifications versus real vim: Visual mode (\`v\`/\`V\`/\`Ctrl-v\`) always selects whole lines here, like real vim's Visual *Line* mode specifically, and \`.\` (repeat last change) isn't implemented. Piping or chaining \`vim\` with another command falls back to a read-only preview instead, since a full-screen app doesn't compose with pipes in a way that means anything.
 
 ## Try it
 
@@ -1581,7 +1581,7 @@ Notice \`man nosuchcommand\` fails cleanly with "No manual entry" - that's the c
 
 \`grep\`'s \`-i\`/\`-v\`/\`-n\` flags and \`sed\`'s \`s/find/replace/\` only get you so far when "find" needs to mean "any of these shapes" instead of one exact string. A **regular expression** (regex) is a tiny pattern language for describing shapes of text - and it's the single most useful skill layered on top of everything you've learned about \`grep\` and \`sed\` so far.
 
-> This sandbox's \`grep\` and \`sed\` use real, JavaScript-flavored regex syntax (the same family as \`grep -E\`, Python, and Perl) - bare parentheses for grouping, no backslash needed before \`+\`, \`?\`, or \`|\`. That is the modern, most-transferable dialect, so every pattern in this lesson runs here exactly as written.
+> The practice terminal's \`grep\` and \`sed\` use real, JavaScript-flavored regex syntax (the same family as \`grep -E\`, Python, and Perl) - bare parentheses for grouping, no backslash needed before \`+\`, \`?\`, or \`|\`. That is the modern, most-transferable dialect, so every pattern in this lesson runs there exactly as written.
 
 ## Anchors: where in the line
 
@@ -1632,7 +1632,7 @@ grep 'colou?r' log.txt     # matches BOTH "color" and "colour"
 grep -E '^(ERROR|WARN)' log.txt   # lines starting with either word
 \`\`\`
 
-\`|\` means "or," and parentheses group the alternatives so \`^\` applies to the whole \`(ERROR|WARN)\`, not just \`ERROR\`. \`-E\` isn't strictly required in this sandbox (its regex is always "extended"), but typing it is good muscle memory for real \`grep\`, where plain \`grep\` needs it to enable \`|\`, \`+\`, \`?\`, and unescaped \`()\`.
+\`|\` means "or," and parentheses group the alternatives so \`^\` applies to the whole \`(ERROR|WARN)\`, not just \`ERROR\`. \`-E\` isn't strictly required in the practice terminal (its regex is always "extended"), but typing it is good muscle memory for real \`grep\`, where plain \`grep\` needs it to enable \`|\`, \`+\`, \`?\`, and unescaped \`()\`.
 
 ## Groups and backreferences with sed
 
@@ -1815,7 +1815,7 @@ bg %1                # resume a STOPPED job (e.g. after Ctrl-Z) in the backgroun
 
 \`jobs\` prints each background job with a number like \`[1]\`; that number is what \`%1\` in \`fg\`/\`bg\` refers to. On a real terminal, **Ctrl-Z** suspends (stops, not kills) whatever's currently in the foreground, handing you back the prompt - \`bg\` then resumes it in the background, and \`fg\` resumes it in the foreground.
 
-> This sandbox has no true concurrency, so a backgrounded command still runs to completion immediately rather than continuing alongside your next command - \`jobs\` will show it as already \`Done\`. The commands and their purpose are exactly what you'd use on a real system; only the timing is simplified.
+> The practice terminal has no true concurrency, so a backgrounded command still runs to completion immediately rather than continuing alongside your next command - \`jobs\` will show it as already \`Done\`. The commands and their purpose are exactly what you'd use on a real system; only the timing is simplified.
 
 ## nohup: surviving a closed terminal
 
@@ -2262,7 +2262,7 @@ Every stage after \`checkout\` only runs if the one before it succeeded - that's
 
 Every pipeline needs somewhere to track changes before it can build anything from them - that's **git**, which you'll use constantly across this track.
 
-Try it in the sandbox:
+Try it in the [practice terminal](/terminal):
 
 \`\`\`bash
 git init

@@ -56,14 +56,12 @@ export function ShortcutsDialog() {
     },
     {
       title: 'On a lesson',
-      rows: [
-        { keys: [['['], [']']], label: 'Previous / next lesson' },
-        { keys: [['t']], label: 'Put the cursor in the sandbox' },
-      ],
+      rows: [{ keys: [['['], [']']], label: 'Previous / next lesson' }],
     },
     {
-      title: 'In the sandbox',
+      title: 'In the terminal',
       rows: [
+        { keys: [['t']], label: 'Put the cursor in the terminal' },
         { keys: [['Tab']], label: 'Complete a command or path' },
         { keys: [['↑'], ['↓']], label: 'Walk through history' },
         { keys: [['→']], label: 'Accept the dimmed suggestion' },

@@ -39,7 +39,7 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 - **Track-based lesson hub** — pick a track from `/lessons`, then search and filter within it (text + difficulty + completed / to-do / bookmarked). Filters can be deep-linked: `?hl=grep`, `?difficulty=beginner`, `?bookmarks=1`, or `?status=todo`.
 - Anonymous progress tracking via signed cookie (Docker) or localStorage (GitHub Pages). No signup, no DB.
 - Polished, terminal-inspired UI built on design tokens: theme colors are CSS variables, exposed to Tailwind as `lx-*` colors (`bg-lx-card`, `text-lx-muted`, `border-lx-accent/40`), plus a small component layer (`lx-card`, `lx-btn`, `lx-pill`, `lx-input`, `lx-progress`). Inter and JetBrains Mono are self-hosted at build time by `next/font`.
-- Keyboard shortcuts: `g` then a letter jumps to a page (`g h` home, `g l` lessons, `g s` terminal, `g b` boss, `g c` cheatsheet, `g f` flashcards, `g t` typing, `g e` explain, `g a` achievements, `g p` profile), `[` / `]` step through lessons, `t` puts the cursor in a lesson's sandbox, `/` searches, `Cmd/Ctrl+K` opens the palette, and `?` lists them all.
+- Keyboard shortcuts: `g` then a letter jumps to a page (`g h` home, `g l` lessons, `g s` terminal, `g b` boss, `g c` cheatsheet, `g f` flashcards, `g t` typing, `g e` explain, `g a` achievements, `g p` profile), `[` / `]` step through lessons, `t` puts the cursor in the practice terminal, `/` searches, `Cmd/Ctrl+K` opens the palette, and `?` lists them all.
 - Ships with Docker support for production-style deployments.
 
 ## Stack
@@ -162,7 +162,7 @@ learninx/
     │   ├── Markdown.tsx            # react-markdown wrapper (uses CodeBlock, adds heading ids)
     │   ├── CodeBlock.tsx           # Fenced code block with copy + language label
     │   ├── SiteHeader.tsx          # Sticky header: nav with active state, search, theme, streak, menu
-    │   ├── SiteMain.tsx            # Page column (wider on lesson / boss / terminal pages)
+    │   ├── SiteMain.tsx            # Page column (wider on boss / terminal pages)
     │   ├── SiteFooter.tsx          # Footer site map
     │   ├── Brand.tsx               # `~$ learninx` wordmark
     │   ├── KeyboardShortcuts.tsx   # `g <letter>`, `[`/`]`, `t`, `/`, `?` shortcuts
@@ -192,7 +192,7 @@ learninx/
         ├── site-nav.ts         # Page list shared by header, menu, footer, palette, shortcuts
         ├── theme.ts            # Theme preference hook (+ theme-script.ts, the pre-paint script)
         ├── next-lesson.ts      # "Continue learning" target
-        ├── ui-events.ts        # Cross-component events (open palette / shortcuts, focus sandbox)
+        ├── ui-events.ts        # Cross-component events (open palette / shortcuts, focus terminal)
         ├── use-modal.ts        # Escape, focus trap, scroll lock, focus restore for overlays
         └── shell/
             ├── fs.ts          # In-memory virtual filesystem
@@ -247,7 +247,7 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 | `/cheatsheet`      | Searchable command reference                              |
 | `/boss`            | Index of multi-step boss challenges                       |
 | `/boss/[slug]`     | One boss level with per-step grading + sandbox            |
-| `/terminal`        | Free-practice sandbox with no lesson attached             |
+| `/terminal`        | Free-practice terminal; lessons open it in a new tab      |
 | `/typing`          | Typing test — type real shell commands against the clock  |
 | `/flashcards`      | Spaced-repetition review of every sandbox command         |
 | `/explain`         | Explain a shell one-liner, token by token                 |
@@ -269,7 +269,7 @@ Clearing the cookie / localStorage (or browsing in a private window) starts a fr
 | `g` then `a`            | Jump to achievements                    |
 | `g` then `p`            | Jump to profile                         |
 | `[` / `]` (on a lesson) | Previous / next lesson (`g n` also goes next) |
-| `t` (on a lesson)       | Put the cursor in the sandbox terminal  |
+| `t` (on `/terminal`)    | Put the cursor in the terminal          |
 | `Cmd` / `Ctrl` + `K`    | Open the command palette                |
 | `/`                     | Focus the page's search box, or open the palette |
 | `?`                     | Show every shortcut                     |
@@ -308,7 +308,7 @@ export const LESSONS: Lesson[] = [
     description: 'Short blurb shown on the lessons index.',
     difficulty: 'beginner',         // beginner | intermediate | advanced
     order: 6,                       // next available order number
-    trackCommand: 'grep',           // command to surface in the sandbox hint
+    trackCommand: 'grep',           // headline command, matched by lesson search
     challenge: 'Find lines containing "hello" in notes.txt',
     solution: 'grep hello notes.txt', // pipe-separated alternatives: 'a || b'
     content: `# My new lesson
@@ -330,6 +330,8 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
 ```
 
 Save the file — Next.js dev server hot-reloads. The new lesson will be live at `/lessons/my-new-lesson`.
+
+A `## Try it` heading gets a note under it linking to the practice terminal, and links in lesson markdown open in a new tab, so readers keep their place.
 
 ## Adding a new cheatsheet entry
 
@@ -451,7 +453,7 @@ A few choices are deliberate and worth knowing if you plan to extend the project
 
 - **No database is a feature.** The whole point of a learning app is that a visitor can try it instantly. Spinning up Postgres or running migrations would be friction with no payoff for this app's scale. A signed cookie is the simplest store that still gives every browser a persistent profile.
 - **Lessons in code, not data.** `src/lib/lessons.ts` is the single source of truth. Edits are typed, reviewed via git, hot-reloaded by `next dev`, and ship in the JS bundle — no seed step, no migrations.
-- **No xterm.js on the server.** The terminal is loaded client-side via dynamic imports inside a `useEffect` so xterm's browser-only globals never reach the server bundle. This is why the lesson page is small on the client initial payload.
+- **No xterm.js on the server.** The terminal is loaded client-side via dynamic imports inside a `useEffect` so xterm's browser-only globals never reach the server bundle. Lesson pages don't load it at all; they link to `/terminal` in a new tab instead.
 - **`output: 'standalone'`.** The Next.js config emits a runnable `server.js` plus a traced `node_modules/` directory. The Dockerfile's runtime stage copies just that.
 - **Server actions, not API routes.** All writes (lesson completion, challenge submission, quiz grading, progress reset) are Next.js Server Actions colocated with the lesson route under `src/app/lessons/[slug]/actions.ts`. This keeps the data flow explicit and visible.
 - **Design tokens, not magic colors.** `src/app/globals.css` defines the palette (`--lx-bg`, `--lx-card`, `--lx-accent`, …) once for dark (`:root`) and once for light (`:root.light`); `.lx-theme-dark` pins a subtree, such as the terminal, to the dark palette. `tailwind.config.js` exposes every token as an `lx-*` color, so utilities like `bg-lx-surface` or `border-lx-success/30` follow the theme and accept opacity modifiers (a bare `bg-[var(--lx-success)]/10` silently generates no CSS in Tailwind 3). A small component library (`.lx-card`, `.lx-btn`, `.lx-pill`, `.lx-input`, `.lx-progress`) is registered in `@layer components`. New pages should compose these instead of inventing one-off styles.

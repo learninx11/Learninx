@@ -83,7 +83,7 @@ export default function Home() {
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-lx)] border border-lx-border bg-lx-border sm:grid-cols-4">
           <Stat value={lessons.length} label="Lessons" />
           <Stat value={TRACK_ORDER.length} label="Learning tracks" />
-          <Stat value={COMMAND_NAMES.length} label="Sandbox commands" />
+          <Stat value={COMMAND_NAMES.length} label="Terminal commands" />
           <Stat value={bosses.length} label="Boss levels" />
         </dl>
 
@@ -97,7 +97,7 @@ export default function Home() {
               <SparklesIcon size={12} /> How it works
             </>
           }
-          title="Three steps. One sandbox."
+          title="Three steps. Zero setup."
         />
         <ol className="grid gap-4 md:grid-cols-3">
           <FeatureCard
@@ -109,7 +109,7 @@ export default function Home() {
           <FeatureCard
             step="02"
             icon={<MonitorIcon size={20} />}
-            title="Practice in the sandbox"
+            title="Practice in the terminal"
             body="A realistic shell with a filesystem, history, and tab completion runs in your browser. Break anything — nothing touches your machine."
           />
           <FeatureCard
@@ -140,7 +140,7 @@ export default function Home() {
             href="/terminal"
             icon={<TerminalIcon size={18} />}
             title="Terminal"
-            body="A free-practice sandbox with no lesson attached. Explore, break, rebuild."
+            body="A free-practice shell in your browser. Try what a lesson taught you, break it, rebuild."
           />
           <ExploreCard
             href="/boss"
@@ -152,7 +152,7 @@ export default function Home() {
             href="/flashcards"
             icon={<BrainIcon size={18} />}
             title="Flashcards"
-            body="Spaced repetition for every sandbox command, so they stick for good."
+            body="Spaced repetition for every terminal command, so they stick for good."
           />
           <ExploreCard
             href="/typing"
@@ -164,7 +164,7 @@ export default function Home() {
             href="/cheatsheet"
             icon={<ListIcon size={18} />}
             title="Cheatsheet"
-            body="A searchable reference of every command the sandbox supports."
+            body="A searchable reference of every command the terminal supports."
           />
           <ExploreCard
             href="/explain"
@@ -221,7 +221,7 @@ export default function Home() {
   );
 }
 
-/** A static, illustrative sandbox session for the hero. */
+/** A static, illustrative practice-terminal session for the hero. */
 function TerminalPreview() {
   const prompt = (path: string) => (
     <>
@@ -239,7 +239,7 @@ function TerminalPreview() {
       />
       <figure
         role="img"
-        aria-label="Example sandbox session: make a project folder, write a config file, read it back with grep, and pass the lesson challenge."
+        aria-label="Example terminal session: make a project folder, write a config file, and read it back with grep."
         className="lx-theme-dark lx-terminal overflow-hidden text-left"
       >
         <div className="flex items-center gap-1.5 border-b border-lx-border bg-lx-bg-elevated/70 px-4 py-2.5">
@@ -248,7 +248,7 @@ function TerminalPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-[#34d399]/80" />
           <span className="ml-3 truncate font-mono text-xs text-lx-muted">learner@learninx: ~/projects/api</span>
           <span className="ml-auto hidden rounded-full border border-lx-border px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-lx-subtle sm:inline">
-            Lesson sandbox
+            Practice terminal
           </span>
         </div>
         <div aria-hidden className="space-y-1.5 overflow-x-auto p-4 font-mono text-[12.5px] leading-relaxed text-lx-fg sm:p-5 sm:text-[13.5px]">
@@ -263,9 +263,6 @@ function TerminalPreview() {
           </p>
           <p className="whitespace-nowrap">
             <span className="font-semibold text-lx-danger">PORT</span>=8080
-          </p>
-          <p className="my-2 inline-flex items-center gap-2 rounded-md border border-lx-success/30 bg-lx-success/10 px-2.5 py-1 text-lx-success">
-            <CheckIcon size={13} /> Challenge passed · lesson complete · +10 points
           </p>
           <p className="whitespace-nowrap">
             {prompt('~/projects/api')}

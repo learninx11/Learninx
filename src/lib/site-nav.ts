@@ -50,7 +50,7 @@ export const NAV_GROUPS: SiteNavGroup[] = [
   {
     label: 'Reference',
     items: [
-      { href: '/cheatsheet', label: 'Cheatsheet', blurb: 'Every sandbox command', icon: ListIcon, shortcut: 'c' },
+      { href: '/cheatsheet', label: 'Cheatsheet', blurb: 'Every terminal command', icon: ListIcon, shortcut: 'c' },
       { href: '/explain', label: 'Explain a command', barLabel: 'Explain', blurb: 'Break down any one-liner', icon: CodeIcon, shortcut: 'e' },
     ],
   },
@@ -72,14 +72,10 @@ export function isActivePath(pathname: string, href: string): boolean {
 }
 
 /**
- * Pages that sit a sandbox next to their content get a wider container
- * so the reading column isn't squeezed: a lesson, a boss level, and the
+ * Pages that sit a terminal next to their content get a wider container
+ * so the reading column isn't squeezed: a boss level and the
  * free-practice terminal.
  */
 export function isWideRoute(pathname: string): boolean {
-  return (
-    /^\/lessons\/(?!track\/)[^/]+\/?$/.test(pathname) ||
-    /^\/boss\/[^/]+\/?$/.test(pathname) ||
-    pathname === '/terminal'
-  );
+  return /^\/boss\/[^/]+\/?$/.test(pathname) || pathname === '/terminal';
 }

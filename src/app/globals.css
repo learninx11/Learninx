@@ -292,6 +292,20 @@ html[data-theme-switching] *::after {
   overflow-x: auto;
   margin: 1.1rem 0;
 }
+/* A fenced code block under its toolbar (see CodeBlock.tsx): the wrapper
+   carries the frame, so the <pre> inside drops its own. */
+.prose-lx .lx-codeblock {
+  margin: 1.1rem 0;
+  background: var(--lx-code-bg);
+  border: 1px solid var(--lx-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.prose-lx .lx-codeblock pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
 .prose-lx pre code {
   background: transparent;
   color: var(--lx-fg);
