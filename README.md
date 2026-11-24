@@ -65,7 +65,7 @@ A short autoplaying walkthrough of the lessons, the in-browser terminal, and the
 
 ```bash
 # 1. Install dependencies
-npm install
+npm install   
 
 # 2. Start the dev server
 npm run dev
